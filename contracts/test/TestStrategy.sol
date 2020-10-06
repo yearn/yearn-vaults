@@ -2,7 +2,7 @@
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
-import { BaseStrategy, StrategyParams } from "../BaseStrategy.sol";
+import {BaseStrategy, StrategyParams} from "../BaseStrategy.sol";
 
 /*
  * This Strategy serves as both a mock Strategy for testing, and an example
@@ -10,67 +10,38 @@ import { BaseStrategy, StrategyParams } from "../BaseStrategy.sol";
  */
 
 contract TestStrategy is BaseStrategy {
-    constructor(address _vault, address _governance)
-        BaseStrategy(_vault, _governance)
-        public
-    { }
+    constructor(address _vault, address _governance) public BaseStrategy(_vault, _governance) {}
 
     // When exiting the position, wait this many times to give everything back
-    uint countdownTimer = 3;
+    uint256 countdownTimer = 3;
 
-    function tendTrigger(uint256 gasCost)
-        public
-        view
-        override
-        returns (bool)
-    {
+    function tendTrigger(uint256 gasCost) public override view returns (bool) {
         StrategyParams memory params = vault.strategies(address(this));
-        return (
-            (params.debtLimit > 0 || params.totalDebt > 0)
-            && want.balanceOf(address(this)) == reserve
-            && gasCost < 0.1 ether
-        );
+        return ((params.debtLimit > 0 || params.totalDebt > 0) && want.balanceOf(address(this)) == reserve && gasCost < 0.1 ether);
     }
 
-    function harvestTrigger(uint256 gasCost)
-        public
-        view
-        override
-        returns (bool)
-    {
+    function harvestTrigger(uint256 gasCost) public override view returns (bool) {
         StrategyParams memory params = vault.strategies(address(this));
-        return (
-            (params.debtLimit > 0 || params.totalDebt > 0)
-            && want.balanceOf(address(this)) > reserve
-            && gasCost < 0.1 ether
-        );
+        return ((params.debtLimit > 0 || params.totalDebt > 0) && want.balanceOf(address(this)) > reserve && gasCost < 0.1 ether);
     }
 
-    function expectedReturn()
-        public
-        view
-        override
-        returns (uint256)
-    {
+    function expectedReturn() public override view returns (uint256) {
         return vault.expectedReturn();
     }
 
-    uint preparedReturn = 0;
+    function estimatedTotalAssets() public override view returns (uint256) {
+        return want.balanceOf(address(this));
+    }
 
-    function prepareReturn()
-        internal
-        override
-    {
+    uint256 preparedReturn = 0;
+
+    function prepareReturn() internal override {
         // During testing, send this contract some tokens to simulate "Rewards"
         preparedReturn = want.balanceOf(address(this)).sub(reserve);
     }
 
-    function adjustPosition()
-        internal
-        override
-    {
-        if (preparedReturn < want.balanceOf(address(this)).sub(reserve))
-        {
+    function adjustPosition() internal override {
+        if (preparedReturn < want.balanceOf(address(this)).sub(reserve)) {
             // Whatever we have, consider it "invested" now
             reserve = want.balanceOf(address(this));
         } else if (reserve >= preparedReturn) {
@@ -81,10 +52,7 @@ contract TestStrategy is BaseStrategy {
         }
     }
 
-    function exitPosition()
-        internal
-        override
-    {
+    function exitPosition() internal override {
         // Dump 25% each time this is called, the first 3 times
         if (countdownTimer > 0) {
             reserve -= want.balanceOf(address(this)).div(4);
@@ -95,10 +63,7 @@ contract TestStrategy is BaseStrategy {
         preparedReturn = want.balanceOf(address(this)).sub(reserve);
     }
 
-    function prepareMigration(address _newStrategy)
-        internal
-        override
-    {
+    function prepareMigration(address _newStrategy) internal override {
         want.transfer(_newStrategy, want.balanceOf(address(this)));
     }
 }

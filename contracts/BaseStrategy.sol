@@ -140,6 +140,21 @@ abstract contract BaseStrategy {
     function expectedReturn() public virtual view returns (uint256);
 
     /*
+     * Provide an accurate estimated value for the total value of assets
+     * (principle + return) that this strategy is currently managing, denominated
+     * in terms of `want` tokens. This total should be "realizable" e.g. the total
+     * value that could *actually* be obtained from this strategy if it were to divest
+     * it's entire position based on current on-chain conditions.
+     *
+     * NOTE: care must be taken in using this function, since it relies on external
+     *       systems, which could be manipulated by the attacker to give an inflated
+     *       (or reduced) value produced by this function, based on current on-chain
+     *       conditions (e.g. this function is possible to influence through flashloan
+     *       attacks, oracle manipulations, or other DeFi attack mechanisms).
+     */
+    function estimatedTotalAssets() public virtual view returns (uint256);
+
+    /*
      * Perform any strategy unwinding or other calls necessary to capture
      * the "free return" this strategy has generated since the last time it's
      * core position(s) were adusted. Examples include unwrapping extra rewards.

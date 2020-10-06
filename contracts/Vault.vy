@@ -13,6 +13,7 @@ interface DetailedERC20:
 
 interface Strategy:
     def strategist() -> address: view
+    def estimatedTotalAssets() -> uint256: view
 
 event Transfer:
     sender: indexed(address)
@@ -56,6 +57,7 @@ event StrategyUpdate:
 
 # NOTE: Track the total for overhead targeting purposes
 strategies: public(HashMap[address, StrategyParams])
+MAXIMUM_STRATEGIES: constant(uint256) = 20
 
 emergencyShutdown: public(bool)
 
@@ -191,6 +193,42 @@ def _totalAssets() -> uint256:
 @external
 def totalAssets() -> uint256:
     return self._totalAssets()
+
+
+@view
+@internal
+def _balanceSheetOfStrategy(_strategy: address) -> uint256:
+    return Strategy(_strategy).estimatedTotalAssets()
+
+
+@view
+@external
+def balanceSheetOfStrategy(_strategy: address) -> uint256:
+    return self._balanceSheetOfStrategy(_strategy)
+
+
+@view
+@external
+def totalBalanceSheet(_strategies: address[2 * MAXIMUM_STRATEGIES]) -> uint256:
+    """
+    Measure the total balance sheet of this Vault, using the list of strategies
+    given above. (2x the expected maximum is used for safety's sake)
+    NOTE: The safety of this function depends *entirely* on the list of strategies
+          given as the function argument. Care should be taken to choose this list
+          to ensure that the estimate is accurate. No additional checking is used.
+    NOTE: Guardian should use this value vs. `totalAssets()` to determine
+          if a condition exists where the Vault is experiencing a dangerous
+          'balance sheet' attack, leading Vault shares to be worth less than
+          what their price on paper is (based on their debt)
+    """
+    balanceSheet: uint256 = self.token.balanceOf(self)
+
+    for strategy in _strategies:
+        if strategy == ZERO_ADDRESS:
+            break
+        balanceSheet += self._balanceSheetOfStrategy(strategy)
+
+    return balanceSheet
 
 
 @internal
