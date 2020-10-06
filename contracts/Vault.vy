@@ -146,6 +146,8 @@ def setEmergencyShutdown(_active: bool):
 
 @internal
 def _transfer(_from: address, _to: address, _value: uint256):
+    # Protect people from accidentally sending their shares to bad places
+    assert not (_to in [self, ZERO_ADDRESS])
     self.balanceOf[_from] -= _value
     self.balanceOf[_to] += _value
     log Transfer(_from, _to, _value)
@@ -570,5 +572,6 @@ def sync(_return: uint256):
 
 @external
 def sweep(_token: address):
-    assert ERC20(_token) != self.token
+    # Can't be used to steal what this Vault is protecting
+    assert _token != self.token.address
     ERC20(_token).transfer(self.governance, ERC20(_token).balanceOf(self))

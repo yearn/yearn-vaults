@@ -255,8 +255,19 @@ abstract contract BaseStrategy {
         vault.sync(want.balanceOf(address(this)).sub(reserve));
     }
 
+    // Override this to add all tokens this contract manages on a *persistant* basis
+    // (e.g. not just for swapping back to want ephemerally)
+    // NOTE: Must inclide `want` token
+    function protectedTokens() internal view returns (address[] memory) {
+        address[] memory protected = new address[](1);
+        protected[0] = address(want);
+        return protected;
+    }
+
     function sweep(address _token) external {
-        require(_token != address(want), "!want");
+        address[] memory _protectedTokens = protectedTokens();
+        for (uint256 i; i < _protectedTokens.length; i++) require(_token != _protectedTokens[i], "!protected");
+
         IERC20(_token).transfer(governance, IERC20(_token).balanceOf(address(this)));
     }
 }
