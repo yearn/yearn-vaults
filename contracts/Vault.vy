@@ -256,7 +256,26 @@ def _issueSharesForAmount(_to: address, _amount: uint256) -> uint256:
 
 @external
 def deposit(_amount: uint256) -> uint256:
-    # Issue new shares (needs to be done before taking deposit)
+    # NOTE: Measuring this based on the total outstanding debt that this contract
+    #       has ("expected value") instead of the total balance sheet it has
+    #       ("estimated value") has important security considerations, and is
+    #       done intentionally. If this value were measured against external
+    #       systems, it could be purposely manipulated by an attacker to withdraw
+    #       more assets than they otherwise should be able to claim by redeeming
+    #       their shares.
+    #
+    #       On deposit, this means that shares are issued against the total amount
+    #       that the deposited capital can be given in service of the debt that
+    #       Strategies assume. If that number were to be lower than the "expected value"
+    #       at some future point, depositing shares via this method could entitle the
+    #       depositor to *less* than the deposited value once the "realized value" is
+    #       updated from further reportings by the Strategies to the Vaults.
+    #
+    #       Care should be taken by integrators to account for this discrepency,
+    #       by using the view-only methods of this contract (both off-chain and
+    #       on-chain) to determine if depositing into the Vault is a "good idea"
+
+    # Issue new shares (needs to be done before taking deposit to be accurate)
     shares: uint256 = self._issueSharesForAmount(msg.sender, _amount)
 
     # Get new collateral
@@ -293,6 +312,30 @@ def maxAvailableShares() -> uint256:
 def withdraw(_maxShares: uint256):
     # Take the lesser of _maxShares, or the "free" amount of outstanding shares
     shares: uint256 = min(_maxShares, self._maxAvailableShares())
+    # NOTE: Measuring this based on the total outstanding debt that this contract
+    #       has ("expected value") instead of the total balance sheet it has
+    #       ("estimated value") has important security considerations, and is
+    #       done intentionally. If this value were measured against external
+    #       systems, it could be purposely manipulated by an attacker to withdraw
+    #       more assets than they otherwise should be able to claim by redeeming
+    #       their shares.
+    #
+    #       On withdrawal, this means that shares are redeemed against the total
+    #       amount that the deposited capital had "realized" since the point it
+    #       was deposited, up until the point it was withdrawn. If that number
+    #       were to be higher than the "expected value" at some future point,
+    #       withdrawing shares via this method could entitle the depositor to
+    #       *more* than the expected value once the "realized value" is updated
+    #       from further reportings by the Strategies to the Vaults.
+    #
+    #       Note that this risk is mitgated partially through the withdrawal fee,
+    #       partially through the semi-frequent updates to the "realized value" of
+    #       the Vault's assets, but is a systemic risk to users of the Vault.
+    #       Under exceptional scenarios, this could cause earlier withdrawals to
+    #       earn "more" of the underlying assets than Users might otherwise be
+    #       entitled to, if the Vault's estimated value were otherwise measured
+    #       through external means, accounting for whatever exceptional scenarios
+    #       exist for the Vault (that aren't covered by the Vault's own design)
     value: uint256 = self._shareValue(shares)
 
     # Burn shares
