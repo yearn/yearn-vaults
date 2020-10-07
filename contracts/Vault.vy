@@ -1,4 +1,4 @@
-#@version 0.2.4
+#@version 0.2.5
 
 # TODO: Add ETH Configuration
 # TODO: Add Delegated Configuration
