@@ -1,1 +1,1 @@
-# yEarn Contracts
+# yVault Contracts
