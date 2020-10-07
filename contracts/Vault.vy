@@ -538,10 +538,14 @@ def report(_return: uint256) -> uint256:
     # Only approved strategies can call this function
     assert self.strategies[msg.sender].activation > 0
 
-    # Issue new shares to cover fees (if strategy is not shutting down)
+    # Issue new shares to cover fees
+    # NOTE: Applies if strategy is not shutting down, or it is but all debt paid off
     # NOTE: In effect, this reduces overall share price by the combined fee
-    # NOTE: No fee is taken when a strategy is unwinding it's position
-    if self.strategies[msg.sender].debtLimit > 0 and _return > 0:
+    # NOTE: No fee is taken when a strategy is unwinding it's position, until all debt is paid
+    if (
+        (self.strategies[msg.sender].debtLimit > 0 or self.strategies[msg.sender].totalDebt == 0)
+        and _return > 0
+    ):
         strategist_fee: uint256 = (
             _return * self.strategies[msg.sender].performanceFee
         ) / FEE_MAX
