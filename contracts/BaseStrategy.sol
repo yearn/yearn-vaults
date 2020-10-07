@@ -165,6 +165,25 @@ abstract contract BaseStrategy {
     function estimatedTotalAssets() public virtual view returns (uint256);
 
     /*
+     * Provide an accurate estimate for the total amount of assets that can be "safely"
+     * withdrawn (maintaining < 5% slippage) from this strategy, as priced in `want` tokens
+     * This estimate is only a guide, and should not affect `withdrawal(_amt)` which can
+     * withdraw up to the full amount of assets this strategy maintains (ignoring slippage)
+     *
+     * NOTE: care must be taken in using this function, since it relies on external
+     *       systems, which could be manipulated by the attacker to give an inflated
+     *       (or reduced) value produced by this function, based on current on-chain
+     *       conditions (e.g. this function is possible to influence through flashloan
+     *       attacks, oracle manipulations, or other DeFi attack mechanisms).
+     *
+     * NOTE: It is up to governance to use this function in order to correctly order
+     *       this strategy relative to its peers in order to minimize losses for the
+     *       Vault based on sudden withdrawals. The closer this value is to
+     *        `estimatedTotalAssets`, the "safer" it is, generally (ignoring volitility).
+     */
+    function estimatedWithdrawalLimit() public virtual view returns (uint256);
+
+    /*
      * Perform any strategy unwinding or other calls necessary to capture
      * the "free return" this strategy has generated since the last time it's
      * core position(s) were adusted. Examples include unwrapping extra rewards.
@@ -189,7 +208,8 @@ abstract contract BaseStrategy {
      * Make as much capital as possible "free" for the Vault to take. Some slippage
      * is allowed, since when this method is called the strategist is no longer receiving
      * their performance fee. The goal is for the strategy to divest as quickly as possible
-     * while not suffering exorbitant losses. This function is used instead of prepareReturn()
+     * while not suffering exorbitant losses. This function is used during emergency exit
+     * instead of `prepareReturn()`
      */
     function exitPosition() internal virtual;
 
@@ -242,6 +262,21 @@ abstract contract BaseStrategy {
 
         adjustPosition(); // Check if free returns are left, and re-invest them
         // TODO: Could move fee calculation here, would actually bias more towards growth
+    }
+
+    /*
+     * Liquidate as many assets as possible to `want`, irregardless of slippage,
+     * up to `_amount`. Any excess should be re-invested here as well.
+     */
+    function liquidatePosition(uint256 _amount) internal virtual;
+
+    function withdraw(uint256 _amount) external returns (uint256) {
+        require(msg.sender == address(vault), "!vault");
+        liquidatePosition(_amount); // Liquidates as much as possible to `want`, up to `_amount`
+        uint256 available = _amount;
+        if (_amount > want.balanceOf(address(this))) available = want.balanceOf(address(this));
+        want.transfer(msg.sender, available);
+        adjustPosition(); // Check if free returns are left, and re-invest them
     }
 
     /*

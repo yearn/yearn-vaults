@@ -38,6 +38,10 @@ contract TestStrategy is BaseStrategy {
         return want.balanceOf(address(this));
     }
 
+    function estimatedWithdrawalLimit() public override view returns (uint256) {
+        return want.balanceOf(address(this));
+    }
+
     function prepareReturn() internal override {
         // During testing, send this contract some tokens to simulate "Rewards"
     }
@@ -45,6 +49,14 @@ contract TestStrategy is BaseStrategy {
     function adjustPosition() internal override {
         // Whatever we have "free", consider it "invested" now
         reserve = want.balanceOf(address(this)).sub(outstanding);
+    }
+
+    function liquidatePosition(uint256 _amount) internal override {
+        if (_amount > reserve) {
+            reserve = 0;
+        } else {
+            reserve = reserve.sub(_amount);
+        }
     }
 
     function exitPosition() internal override {
