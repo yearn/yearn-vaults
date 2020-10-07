@@ -64,3 +64,7 @@ def test_reject_ether(gov, vault):
     # Fallback fails too
     with brownie.reverts("Cannot send ether to nonpayable function"):
         gov.transfer(vault, 1)
+
+    # NOTE: Just for coverage
+    with brownie.reverts():
+        gov.transfer(vault, 0)
