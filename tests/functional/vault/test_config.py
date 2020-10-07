@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 import pytest
 import brownie
 
@@ -17,7 +15,6 @@ def test_vault_deployment(guardian, gov, rewards, token, Vault):
     assert vault.decimals() == token.decimals()
 
     assert vault.creditAvailable() == 0
-    assert vault.estimateAdjustedDebtLimit(0) == 0
     assert vault.maxAvailableShares() == 0
     assert vault.totalAssets() == 0
 
@@ -30,7 +27,6 @@ def test_vault_deployment(guardian, gov, rewards, token, Vault):
         ("rewards", "setRewards", None),
         ("performanceFee", "setPerformanceFee", 1000),
         ("debtLimit", "setDebtLimit", 1000),
-        ("debtChangeLimit", "setDebtChangeLimit", Decimal("0.1")),
         ("guardian", "setGuardian", None),
     ],
 )

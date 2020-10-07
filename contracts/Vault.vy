@@ -64,7 +64,6 @@ MAXIMUM_STRATEGIES: constant(uint256) = 20
 emergencyShutdown: public(bool)
 
 debtLimit: public(uint256)  # Debt limit for the Vault across all strategies
-debtChangeLimit: public(decimal)  # Amount strategy debt limit can change based on return profile
 totalDebt: public(uint256)  # Amount of tokens that all strategies have borrowed
 
 rewards: public(address)
@@ -83,7 +82,6 @@ def __init__(_token: address, _governance: address, _rewards: address):
     self.guardian = msg.sender
     self.performanceFee = 450  # 4.5% of yield (per strategy)
     self.debtLimit = ERC20(_token).totalSupply() / 1000  # 0.1% of total supply of token
-    self.debtChangeLimit =  0.005  # up to +/- 0.5% change allowed for strategy debt limits
 
 
 # 2-phase commit for a change in governance
@@ -109,12 +107,6 @@ def setRewards(_rewards: address):
 def setDebtLimit(_limit: uint256):
     assert msg.sender == self.governance
     self.debtLimit = _limit
-
-
-@external
-def setDebtChangeLimit(_limit: decimal):
-    assert msg.sender == self.governance
-    self.debtChangeLimit = _limit
 
 
 @external
@@ -474,50 +466,6 @@ def expectedReturn(_strategy: address = msg.sender) -> uint256:
     return self._expectedReturn(_strategy)
 
 
-@view
-@internal
-def _adjustedDebtLimit(
-    _currDebtLimit: decimal,
-    _actual: decimal,
-    _expected: decimal,
-) -> decimal:
-    # NOTE: This works in Emergency Shutdown/Emergency Exit as well
-    if _currDebtLimit == 0.0:
-        return 0.0
-
-    if _expected == 0.0:
-        return _currDebtLimit
-
-    maxRatio: decimal = 1.0 + self.debtChangeLimit
-    minRatio: decimal = 1.0 - self.debtChangeLimit
-
-    # Check if saturated first, to avoid overflow errors
-    if _actual > maxRatio * _expected:
-        return maxRatio * _currDebtLimit
-
-    elif _actual < minRatio * _expected:
-        return minRatio * _currDebtLimit
-
-    else:
-        return _currDebtLimit * (_actual / _expected)
-
-
-@view
-@external
-def estimateAdjustedDebtLimit(
-    _estimatedReturn: uint256,
-    _strategy: address = msg.sender,
-) -> uint256:
-    return convert(
-        self._adjustedDebtLimit(
-            convert(self.strategies[_strategy].debtLimit, decimal),
-            convert(_estimatedReturn, decimal),
-            convert(self._expectedReturn(_strategy), decimal),
-        ),
-        uint256,
-    )
-
-
 @external
 def report(_return: uint256) -> uint256:
     """
@@ -564,24 +512,13 @@ def report(_return: uint256) -> uint256:
         # NOTE: Governance earns the dust
         self._transfer(self, self.rewards, self.balanceOf[self])
 
-    # Adjust debt limit based on current return vs. past performance
-    # NOTE: This must be called at the exact moment a return is "realized"
-    self.strategies[msg.sender].debtLimit = convert(
-        self._adjustedDebtLimit(
-            convert(self.strategies[msg.sender].debtLimit, decimal),
-            convert(_return, decimal),
-            convert(self._expectedReturn(msg.sender), decimal),
-        ),
-        uint256,
-    )
-
     # Compute the line of credit the Vault is able to offer the Strategy (if any)
     credit: uint256 = self._creditAvailable(msg.sender)
 
     # Give/take balance to Strategy, based on the difference between the return and
     # the credit increase we are offering (if any)
     # NOTE: This is just used to adjust the balance of tokens between the Strategy and
-    #       the Vault based on the adjusted debt limit.
+    #       the Vault based on the strategy's debt limit (as well as the Vault's).
     if _return < credit:  # credit surplus, give to strategy
         self.token.transfer(msg.sender, credit - _return)
     elif _return > credit:  # credit deficit, take from strategy
@@ -599,7 +536,7 @@ def report(_return: uint256) -> uint256:
         # Returns are always "realized gains"
         self.strategies[msg.sender].totalReturns += _return
 
-    elif _return > 0:  # We're repaying debt now
+    elif _return > 0:  # We're repaying debt now, so there are no gains
         if _return < self.strategies[msg.sender].totalDebt:
             # Pay down our debt with profit
             # NOTE: Cannot return more than you borrowed
@@ -607,15 +544,15 @@ def report(_return: uint256) -> uint256:
             self.totalDebt -= _return
 
         else:
-            # We are dealing with pure profit now
+            # We are dealing with residual profit now (above and beyond debt)
             profit: uint256 = _return - self.strategies[msg.sender].totalDebt
 
             # Pay off the last of our debt
-            if profit < _return:  # Only happens once
-                self.totalDebt -= _return - profit
+            if profit < _return:  # Should only happen once
+                self.totalDebt -= _return - profit  # same as Strategy.totalDebt
                 self.strategies[msg.sender].totalDebt = 0
 
-            # Returns are always "realized gains"
+            # Returns are always "realized gains" (after we have paid off our debt)
             self.strategies[msg.sender].totalReturns += profit
 
     # else, we are perfectly in balance

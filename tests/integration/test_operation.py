@@ -16,7 +16,7 @@ class NormalOperation:
         c = self.vault.creditAvailable(self.strategy)
         er = self.vault.expectedReturn(self.strategy)
         r = self.current_return()
-        dl = self.vault.estimateAdjustedDebtLimit(r, self.strategy)
+        dl = self.vault.strategies(self.strategy)[2]  # debtLimit
         print(
             f"""
     Available Credit: {c}
