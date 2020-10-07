@@ -262,7 +262,7 @@ abstract contract BaseStrategy {
         exitPosition();
         vault.revokeStrategy();
         if (reserve > want.balanceOf(address(this))) reserve = want.balanceOf(address(this));
-        vault.report(want.balanceOf(address(this)).sub(reserve));
+        outstanding = vault.report(want.balanceOf(address(this)).sub(reserve));
     }
 
     // Override this to add all tokens this contract manages on a *persistant* basis
