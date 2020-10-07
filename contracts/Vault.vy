@@ -43,7 +43,7 @@ struct StrategyParams:
     activation: uint256  # Activation block.number
     debtLimit: uint256  # Maximum borrow amount
     rateLimit: uint256  # Increase/decrease per block
-    lastSync: uint256  # block.number of the last time a sync occured
+    lastReport: uint256  # block.number of the last time a report occured
     totalDebt: uint256
     totalReturns: uint256
 
@@ -364,7 +364,7 @@ def addStrategy(
         activation: block.number,
         debtLimit: _debtLimit,
         rateLimit: _rateLimit,
-        lastSync: block.number,
+        lastReport: block.number,
         totalDebt: 0,
         totalReturns: 0,
     })
@@ -417,7 +417,7 @@ def _creditAvailable(_strategy: address) -> uint256:
     strategy_debtLimit: uint256 = self.strategies[_strategy].debtLimit
     strategy_totalDebt: uint256 = self.strategies[_strategy].totalDebt
     strategy_rateLimit: uint256 = self.strategies[_strategy].rateLimit
-    strategy_lastSync: uint256 = self.strategies[_strategy].lastSync
+    strategy_lastReport: uint256 = self.strategies[_strategy].lastReport
 
     # Exhausted credit line
     if strategy_debtLimit <= strategy_totalDebt or self.debtLimit <= self.totalDebt:
@@ -429,8 +429,8 @@ def _creditAvailable(_strategy: address) -> uint256:
     # Adjust by the global debt limit left
     available = min(available, self.debtLimit - self.totalDebt)
 
-    # Adjust by the rate limit algorithm (limits the step size per sync)
-    available = min(available, strategy_rateLimit * (block.number - strategy_lastSync))
+    # Adjust by the rate limit algorithm (limits the step size per reporting period)
+    available = min(available, strategy_rateLimit * (block.number - strategy_lastReport))
 
     # Can only borrow up to what the contract has in reserve
     # NOTE: Running near 100% is discouraged
@@ -446,11 +446,11 @@ def creditAvailable(_strategy: address = msg.sender) -> uint256:
 @view
 @internal
 def _expectedReturn(_strategy: address) -> uint256:
-    strategy_lastSync: uint256 = self.strategies[_strategy].lastSync
+    strategy_lastReport: uint256 = self.strategies[_strategy].lastReport
     strategy_totalReturns: uint256 = self.strategies[_strategy].totalReturns
     strategy_activation: uint256 = self.strategies[_strategy].activation
 
-    blockDelta: uint256 = (block.number - strategy_lastSync)
+    blockDelta: uint256 = (block.number - strategy_lastReport)
     if blockDelta > 0:
         return (strategy_totalReturns * blockDelta) / (block.number - strategy_activation)
     else:
@@ -508,10 +508,11 @@ def estimateAdjustedDebtLimit(
 
 
 @external
-def sync(_return: uint256):
+def report(_return: uint256):
     """
     Strategies call this.
-    _return: amount Strategy has made since last sync, and is given back to Vault
+    _return: amount Strategy has made on it's investment since its last report,
+             and is free to be given back to Vault as earnings
     """
     # NOTE: For approved strategies, this is the most efficient behavior.
     #       Strategy reports back what it has free (usually in terms of ROI)
@@ -600,8 +601,8 @@ def sync(_return: uint256):
 
     # else, we are perfectly in balance
 
-    # Update sync time
-    self.strategies[msg.sender].lastSync = block.number
+    # Update reporting time
+    self.strategies[msg.sender].lastReport = block.number
 
     log StrategyUpdate(
         msg.sender,

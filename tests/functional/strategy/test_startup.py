@@ -2,7 +2,7 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
     # Strategy has no debt or anything yet until, we call harvest
     assert token.balanceOf(strategy) == 0
 
-    # Never synced yet
+    # Never reported yet
     # NOTE: done for coverage
     vault.expectedReturn(strategy) == 0
 

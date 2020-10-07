@@ -21,14 +21,14 @@ interface VaultAPI {
 
     /*
      * View how much the Vault would increase this strategy's borrow limit,
-     * based on it's present performance (since last sync). Can be used to
+     * based on it's present performance (since its last report). Can be used to
      * determine expectedReturn in your strategy.
      */
     function creditAvailable() external view returns (uint256);
 
     /*
      * View how much the Vault expect this strategy to return at the current block,
-     * based on it's present performance (since last sync). Can be used to
+     * based on it's present performance (since its last report). Can be used to
      * determine expectedReturn in your strategy.
      */
     function expectedReturn() external view returns (uint256);
@@ -39,7 +39,7 @@ interface VaultAPI {
      * Therefore, this function will be called by BaseStrategy to make sure the
      * integration is correct.
      */
-    function sync(uint256 _return) external;
+    function report(uint256 _harvest) external;
 
     /*
      * This function is used in the scenario where there is a newer strategy that
@@ -134,7 +134,7 @@ abstract contract BaseStrategy {
 
     /*
      * Provide an accurate expected value for the return this strategy
-     * would provide to the Vault the next time `sync()` is called
+     * would provide to the Vault the next time `report()` is called
      * (since the last time it was called)
      */
     function expectedReturn() public virtual view returns (uint256);
@@ -168,10 +168,10 @@ abstract contract BaseStrategy {
 
     /*
      * Perform any adjustments to the core position(s) of this strategy given
-     * what change the Vault made in the "free return" available to the strategy.
-     * Note that all "free returns" in the strategy after the sync are available
-     * for reinvestment. Also note that this number could be 0, and you should
-     * handle that scenario accordingly.
+     * what change the Vault made in the "investable capital" available to the
+     * strategy. Note that all "free capital" in the strategy after the report
+     * was made is available for reinvestment. Also note that this number could
+     * be 0, and you should handle that scenario accordingly.
      */
     function adjustPosition() internal virtual;
 
@@ -226,8 +226,9 @@ abstract contract BaseStrategy {
 
         if (reserve > want.balanceOf(address(this))) reserve = want.balanceOf(address(this));
 
-        // Allow Vault to take up to the "free" balance of this contract
-        vault.sync(want.balanceOf(address(this)).sub(reserve));
+        // Allow Vault to take up to the "harvested" balance of this contract, which is
+        // the amount it has earned since the last time it reported to the Vault
+        vault.report(want.balanceOf(address(this)).sub(reserve));
 
         adjustPosition(); // Check if free returns are left, and re-invest them
         // TODO: Could move fee calculation here, would actually bias more towards growth
@@ -252,7 +253,7 @@ abstract contract BaseStrategy {
         exitPosition();
         vault.revokeStrategy();
         if (reserve > want.balanceOf(address(this))) reserve = want.balanceOf(address(this));
-        vault.sync(want.balanceOf(address(this)).sub(reserve));
+        vault.report(want.balanceOf(address(this)).sub(reserve));
     }
 
     // Override this to add all tokens this contract manages on a *persistant* basis
