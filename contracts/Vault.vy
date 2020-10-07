@@ -649,10 +649,3 @@ def sweep(_token: address):
     # Can't be used to steal what this Vault is protecting
     assert _token != self.token.address
     ERC20(_token).transfer(self.governance, ERC20(_token).balanceOf(self))
-
-
-@external
-def __default__():
-    # No default calls
-    # TODO: Vyper should automatically do this...
-    raise
