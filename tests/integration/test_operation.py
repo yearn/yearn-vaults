@@ -43,6 +43,7 @@ def test_normal_operation(gov, strategy, vault, token, andre, keeper, state_mach
         strategy,
         token.balanceOf(vault) // 2,  # Go up to 50% of Vault AUM
         token.balanceOf(vault) // 1000,  # 0.1% of Vault AUM per block
+        50,  # 0.5% performance fee for Strategist
         {"from": gov},
     )
     state_machine(NormalOperation, token, vault, strategy, gov, andre, keeper)

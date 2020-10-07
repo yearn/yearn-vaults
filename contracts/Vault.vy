@@ -41,12 +41,13 @@ guardian: public(address)
 pendingGovernance: address
 
 struct StrategyParams:
+    performanceFee: uint256  # Strategist's fee (basis points)
     activation: uint256  # Activation block.number
     debtLimit: uint256  # Maximum borrow amount
     rateLimit: uint256  # Increase/decrease per block
     lastReport: uint256  # block.number of the last time a report occured
-    totalDebt: uint256
-    totalReturns: uint256
+    totalDebt: uint256  # Total outstanding debt that Strategy has
+    totalReturns: uint256  # Total returns that Strategy has realized for Vault
 
 event StrategyUpdate:
     strategy: indexed(address)
@@ -67,9 +68,8 @@ debtChangeLimit: public(decimal)  # Amount strategy debt limit can change based 
 totalDebt: public(uint256)  # Amount of tokens that all strategies have borrowed
 
 rewards: public(address)
-performanceFee: public(uint256)  # Fee for strategist
-managementFee: public(uint256)  # Fee for governance rewards
-FEE_MAX: constant(uint256) = 10000
+performanceFee: public(uint256)  # Fee for governance rewards
+FEE_MAX: constant(uint256) = 10000  # 100%, or 10000 basis points
 
 @external
 def __init__(_token: address, _governance: address, _rewards: address):
@@ -82,7 +82,6 @@ def __init__(_token: address, _governance: address, _rewards: address):
     self.rewards = _rewards
     self.guardian = msg.sender
     self.performanceFee = 450  # 4.5% of yield (per strategy)
-    self.managementFee = 50  # 0.5% of yield (overall)
     self.debtLimit = ERC20(_token).totalSupply() / 1000  # 0.1% of total supply of token
     self.debtChangeLimit =  0.005  # up to +/- 0.5% change allowed for strategy debt limits
 
@@ -122,12 +121,6 @@ def setDebtChangeLimit(_limit: decimal):
 def setPerformanceFee(_fee: uint256):
     assert msg.sender == self.governance
     self.performanceFee = _fee
-
-
-@external
-def setManagementFee(_fee: uint256):
-    assert msg.sender == self.governance
-    self.managementFee = _fee
 
 
 @external
@@ -361,9 +354,11 @@ def addStrategy(
     _strategy: address,
     _debtLimit: uint256,
     _rateLimit: uint256,
+    _performanceFee: uint256,
 ):
     assert msg.sender == self.governance
     self.strategies[_strategy] = StrategyParams({
+        performanceFee: _performanceFee,
         activation: block.number,
         debtLimit: _debtLimit,
         rateLimit: _rateLimit,
@@ -375,11 +370,17 @@ def addStrategy(
 
 
 @external
-def updateStrategy(_strategy: address, _debtLimit: uint256, _rateLimit: uint256):
+def updateStrategy(
+    _strategy: address,
+    _debtLimit: uint256,
+    _rateLimit: uint256,
+    _performanceFee: uint256,
+):
     assert msg.sender == self.governance
     assert self.strategies[_strategy].activation > 0
     self.strategies[_strategy].debtLimit = _debtLimit
     self.strategies[_strategy].rateLimit = _rateLimit
+    self.strategies[_strategy].performanceFee = _performanceFee
 
 
 @external
@@ -540,19 +541,22 @@ def report(_return: uint256):
     # NOTE: In effect, this reduces overall share price by the combined fee
     # NOTE: No fee is taken when a strategy is unwinding it's position
     if self.strategies[msg.sender].debtLimit > 0 and _return > 0:
-        strategist_fee: uint256 = (_return * self.performanceFee) / FEE_MAX
-        management_fee: uint256 = (_return * self.managementFee) / FEE_MAX
-        total_fee: uint256 = management_fee + strategist_fee
+        strategist_fee: uint256 = (
+            _return * self.strategies[msg.sender].performanceFee
+        ) / FEE_MAX
+        governance_fee: uint256 = (_return * self.performanceFee) / FEE_MAX
+        total_fee: uint256 = governance_fee + strategist_fee
         # NOTE: This must be called prior to taking new collateral,
         #       or the calculation will be wrong!
         # NOTE: This must be done at the same time, to ensure the relative
-        #       ratio of management_fee : strategist_fee is kept intact
+        #       ratio of governance_fee : strategist_fee is kept intact
         shares: uint256 = self._issueSharesForAmount(self, total_fee)
 
         # Send the rewards out as new shares in this Vault
         strategist_fee *= shares
         strategist_fee /= total_fee
         self._transfer(self, Strategy(msg.sender).strategist(), strategist_fee)
+        # NOTE: Governance earns the dust
         self._transfer(self, self.rewards, self.balanceOf[self])
 
     # Adjust debt limit based on current return vs. past performance

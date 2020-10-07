@@ -6,6 +6,7 @@ import "@openzeppelinV3/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelinV3/contracts/math/SafeMath.sol";
 
 struct StrategyParams {
+    uint256 performanceFee;
     uint256 activation;
     uint256 debtLimit;
     uint256 rateLimit;

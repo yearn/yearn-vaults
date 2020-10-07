@@ -6,7 +6,7 @@ def test_emergency_shutdown(token, gov, vault, strategy, keeper, chain):
     add_yield = lambda: token.transfer(strategy, token.balanceOf(strategy) // 50, {"from": gov})
 
     # Just keep doing it until we're full up
-    while vault.strategies(strategy)[4] < vault.strategies(strategy)[1]:
+    while vault.strategies(strategy)[5] < vault.strategies(strategy)[2]:
         chain.mine(10)
         add_yield()
         strategy.harvest({"from": keeper})
@@ -27,10 +27,10 @@ def test_emergency_shutdown(token, gov, vault, strategy, keeper, chain):
 
     # All the debt is out of the system now
     assert vault.totalDebt() == 0
-    assert vault.strategies(strategy)[4] == 0
+    assert vault.strategies(strategy)[5] == 0
 
     # Vault didn't lose anything during shutdown
-    strategyReturn = vault.strategies(strategy)[5]
+    strategyReturn = vault.strategies(strategy)[6]
     assert strategyReturn > 0
     assert token.balanceOf(vault) == initial_investment + strategyReturn
 
@@ -43,7 +43,7 @@ def test_emergency_exit(token, gov, vault, strategy, keeper, chain):
     add_yield = lambda: token.transfer(strategy, token.balanceOf(strategy) // 50, {"from": gov})
 
     # Just keep doing it until we're full up
-    while vault.strategies(strategy)[4] < vault.strategies(strategy)[1]:
+    while vault.strategies(strategy)[5] < vault.strategies(strategy)[2]:
         chain.mine(10)
         add_yield()
         strategy.harvest({"from": keeper})
@@ -63,9 +63,9 @@ def test_emergency_exit(token, gov, vault, strategy, keeper, chain):
 
     # All the debt is out of the system now
     assert vault.totalDebt() == 0
-    assert vault.strategies(strategy)[4] == 0
+    assert vault.strategies(strategy)[5] == 0
 
     # Vault didn't lose anything during shutdown
-    strategyReturn = vault.strategies(strategy)[5]
+    strategyReturn = vault.strategies(strategy)[6]
     assert strategyReturn > 0
     assert token.balanceOf(vault) == initial_investment + strategyReturn

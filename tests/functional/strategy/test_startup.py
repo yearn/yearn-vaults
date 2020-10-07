@@ -7,7 +7,7 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
     vault.expectedReturn(strategy) == 0
 
     # Check accounting is maintained everywhere
-    assert vault.totalDebt() == 0 == vault.strategies(strategy)[4]  # totalDebt
+    assert vault.totalDebt() == 0 == vault.strategies(strategy)[5]  # totalDebt
 
     # Take on debt
     strategy.harvest({"from": keeper})
@@ -17,7 +17,7 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
     last_balance = token.balanceOf(strategy)
 
     # Check accounting is maintained everywhere
-    assert vault.totalDebt() == vault.strategies(strategy)[4] == token.balanceOf(strategy)  # totalDebt
+    assert vault.totalDebt() == vault.strategies(strategy)[5] == token.balanceOf(strategy)  # totalDebt
 
     # We only have 1 data point for E[R] calc, so E[R] = 0
     chain.mine(10)
@@ -33,7 +33,7 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
     last_balance = token.balanceOf(strategy)
 
     # Check accounting is maintained everywhere
-    assert vault.totalDebt() == vault.strategies(strategy)[4] == token.balanceOf(strategy)  # totalDebt
+    assert vault.totalDebt() == vault.strategies(strategy)[5] == token.balanceOf(strategy)  # totalDebt
 
     # We have 2 data points for E[R] calc, so E[R] = 0
     chain.mine(10)
@@ -47,14 +47,14 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
     last_balance = token.balanceOf(strategy)
 
     # Check accounting is maintained everywhere
-    assert vault.totalDebt() == vault.strategies(strategy)[4] == token.balanceOf(strategy)  # totalDebt
+    assert vault.totalDebt() == vault.strategies(strategy)[5] == token.balanceOf(strategy)  # totalDebt
 
     chain.mine(10)
     er = vault.expectedReturn(strategy)
     assert er > 0
 
     last_balance = 0
-    while vault.strategies(strategy)[4] < vault.strategies(strategy)[1]:  # totalDebt  # debtLimit
+    while vault.strategies(strategy)[5] < vault.strategies(strategy)[2]:  # totalDebt  # debtLimit
         token.transfer(strategy, er, {"from": gov})
         strategy.harvest({"from": keeper})
 
@@ -65,4 +65,4 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
         last_balance = token.balanceOf(strategy)
 
         # Check accounting is maintained everywhere
-        assert vault.totalDebt() == vault.strategies(strategy)[4] == token.balanceOf(strategy)  # totalDebt
+        assert vault.totalDebt() == vault.strategies(strategy)[5] == token.balanceOf(strategy)  # totalDebt
