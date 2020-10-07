@@ -257,6 +257,8 @@ def _issueSharesForAmount(_to: address, _amount: uint256) -> uint256:
 
 @external
 def deposit(_amount: uint256) -> uint256:
+    assert not self.emergencyShutdown  # Deposits are locked out
+
     # NOTE: Measuring this based on the total outstanding debt that this contract
     #       has ("expected value") instead of the total balance sheet it has
     #       ("estimated value") has important security considerations, and is
