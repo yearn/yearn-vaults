@@ -99,6 +99,6 @@ jobs:
         run: pip install -r requirements-dev.txt
 
       - name: Run black
-        run: black . --check --config black-config.toml
+        run: black --check --include "(tests|scripts)" .
 
 # TODO: Add Slither Static Analyzer

@@ -1,9 +1,0 @@
-[tool.black]
-line_length = 120
-skip-string-normalization = true
-include = '''
-/(
-    tests
-  | scripts
-)/
-'''

@@ -8,7 +8,9 @@ class NormalOperation:
         self.strategy = strategy
 
     def setup(self):
-        self.current_return = lambda: self.token.balanceOf(self.strategy) // 1000  # 0.1% return, every time
+        self.current_return = (
+            lambda: self.token.balanceOf(self.strategy) // 1000
+        )  # 0.1% return, every time
         self.last_price = 0.0
         self.returns = 0
 
@@ -29,11 +31,17 @@ class NormalOperation:
 
     def invariant_accounting(self):
         assert self.vault.totalDebt() == self.token.balanceOf(self.strategy)
-        assert self.vault.totalAssets() == sum(self.token.balanceOf(i) for i in (self.vault, self.strategy))
+        assert self.vault.totalAssets() == sum(
+            self.token.balanceOf(i) for i in (self.vault, self.strategy)
+        )
 
     def invariant_numbergoup(self):
         # Positive-return Strategy should never reduce the price of a share
-        price = self.vault.pricePerShare() / 10 ** self.vault.decimals() if self.vault.totalSupply() > 0 else 0.0
+        price = (
+            self.vault.pricePerShare() / 10 ** self.vault.decimals()
+            if self.vault.totalSupply() > 0
+            else 0.0
+        )
         assert price >= self.last_price
         self.last_price = price
 

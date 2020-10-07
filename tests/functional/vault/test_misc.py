@@ -42,7 +42,11 @@ def test_reject_ether(gov, vault):
         ("transfer", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1]),
         (
             "transferFrom",
-            ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1,],
+            [
+                "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+                "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+                1,
+            ],
         ),
         ("deposit", [1]),
         ("withdraw", [1]),
@@ -50,7 +54,10 @@ def test_reject_ether(gov, vault):
         ("updateStrategy", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1, 1, 1]),
         (
             "migrateStrategy",
-            ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",],
+            [
+                "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+                "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+            ],
         ),
         ("revokeStrategy", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
         ("report", [1]),

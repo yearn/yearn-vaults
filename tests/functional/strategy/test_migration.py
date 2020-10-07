@@ -1,7 +1,9 @@
 import brownie
 
 
-def test_good_migration(token, strategy, vault, gov, strategist, guardian, TestStrategy, rando):
+def test_good_migration(
+    token, strategy, vault, gov, strategist, guardian, TestStrategy, rando
+):
     # Call this once to seed the strategy with debt
     strategy.harvest({"from": strategist})
 

@@ -30,7 +30,9 @@ def test_vault_deployment(guardian, gov, rewards, token, Vault):
         ("guardian", "setGuardian", None),
     ],
 )
-def test_vault_setParams(guardian, gov, rewards, token, rando, getter, setter, val, Vault):
+def test_vault_setParams(
+    guardian, gov, rewards, token, rando, getter, setter, val, Vault
+):
     if not val:
         # Can't access fixtures, so use None to mean any random address
         val = rando

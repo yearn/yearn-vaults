@@ -45,7 +45,9 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
     assert er > 0
 
     last_balance = 0
-    while vault.strategies(strategy)[5] < vault.strategies(strategy)[2]:  # totalDebt  # debtLimit
+    while (
+        vault.strategies(strategy)[5] < vault.strategies(strategy)[2]
+    ):  # totalDebt  # debtLimit
         token.transfer(strategy, er, {"from": gov})
         strategy.harvest({"from": keeper})
 

@@ -3,7 +3,9 @@ def test_emergency_shutdown(token, gov, vault, strategy, keeper, chain):
     initial_investment = vault.totalSupply()
     # Do it once to seed it with debt
     strategy.harvest({"from": keeper})
-    add_yield = lambda: token.transfer(strategy, token.balanceOf(strategy) // 50, {"from": gov})
+    add_yield = lambda: token.transfer(
+        strategy, token.balanceOf(strategy) // 50, {"from": gov}
+    )
 
     # Just keep doing it until we're full up
     while vault.strategies(strategy)[5] < vault.strategies(strategy)[2]:
@@ -41,7 +43,9 @@ def test_emergency_exit(token, gov, vault, strategy, keeper, chain):
     initial_investment = vault.totalSupply()
     # Do it once to seed it with debt
     strategy.harvest({"from": keeper})
-    add_yield = lambda: token.transfer(strategy, token.balanceOf(strategy) // 50, {"from": gov})
+    add_yield = lambda: token.transfer(
+        strategy, token.balanceOf(strategy) // 50, {"from": gov}
+    )
 
     # Just keep doing it until we're full up
     while vault.strategies(strategy)[5] < vault.strategies(strategy)[2]:
