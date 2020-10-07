@@ -56,17 +56,14 @@ def test_updateStrategy(web3, gov, vault, strategy, rando):
     ]
 
 
-def test_migrateStrategy(accounts, gov, vault, rando):
-    strategy = accounts[2]
-    vault.addStrategy(strategy, 1000, 10, {"from": gov})
-
+def test_migrateStrategy(gov, vault, strategy, rando):
     # Not just anyone can migrate
     with brownie.reverts():
-        vault.migrateStrategy(strategy, {"from": rando})
+        vault.migrateStrategy(strategy, rando, {"from": rando})
 
     # Can't migrate to itself
     with brownie.reverts():
-        vault.migrateStrategy(strategy, {"from": strategy})
+        vault.migrateStrategy(strategy, strategy, {"from": gov})
 
 
 def test_revokeStrategy(web3, gov, vault, strategy, rando):

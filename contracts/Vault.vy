@@ -14,6 +14,7 @@ interface DetailedERC20:
 interface Strategy:
     def strategist() -> address: view
     def estimatedTotalAssets() -> uint256: view
+    def migrate(_newStrategy: address): nonpayable
 
 event Transfer:
     sender: indexed(address)
@@ -380,17 +381,24 @@ def updateStrategy(_strategy: address, _debtLimit: uint256, _rateLimit: uint256)
 
 
 @external
-def migrateStrategy(_newVersion: address):
+def migrateStrategy(_oldVersion: address, _newVersion: address):
     """
-    Only a strategy can migrate itself to a new version
+    Only Governance can migrate a strategy to a new version
     NOTE: Strategy must successfully migrate all capital and positions to
           new Strategy, or else this will upset the balance of the Vault
+    NOTE: The new strategy should be "empty" e.g. have no prior commitments
+          to this Vault, otherwise it could have issues
     """
-    assert self.strategies[msg.sender].activation > 0
+    assert msg.sender == self.governance
+
+    assert self.strategies[_oldVersion].activation > 0
     assert self.strategies[_newVersion].activation == 0
-    strategy: StrategyParams = self.strategies[msg.sender]
-    self.strategies[msg.sender] = empty(StrategyParams)
+
+    strategy: StrategyParams = self.strategies[_oldVersion]
+    self.strategies[_oldVersion] = empty(StrategyParams)
     self.strategies[_newVersion] = strategy
+
+    Strategy(_oldVersion).migrate(_newVersion)
     # TODO: Ensure a smooth transition in terms of  strategy return
 
 

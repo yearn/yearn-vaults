@@ -241,10 +241,9 @@ abstract contract BaseStrategy {
     function prepareMigration(address _newStrategy) internal virtual;
 
     function migrate(address _newStrategy) external {
-        require(msg.sender == strategist || msg.sender == governance);
+        require(msg.sender == address(vault) || msg.sender == governance);
         require(BaseStrategy(_newStrategy).vault() == vault);
         prepareMigration(_newStrategy);
-        vault.migrateStrategy(_newStrategy);
     }
 
     function setEmergencyExit() external {
