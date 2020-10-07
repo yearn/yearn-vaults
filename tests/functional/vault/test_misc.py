@@ -26,3 +26,41 @@ def test_sweep(gov, vault, rando, token, other_token):
     assert other_token.balanceOf(vault) == 0
     assert other_token.balanceOf(gov) == before
     assert other_token.balanceOf(rando) == 0
+
+
+def test_reject_ether(gov, vault):
+    # These functions should reject any calls with value
+    for func, args in [
+        ("setGovernance", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
+        ("acceptGovernance", []),
+        ("setRewards", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
+        ("setGuardian", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
+        ("setDebtLimit", [0]),
+        ("setDebtChangeLimit", [0]),
+        ("setPerformanceFee", [0]),
+        ("setEmergencyShutdown", [True]),
+        ("approve", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1]),
+        ("transfer", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1]),
+        (
+            "transferFrom",
+            ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1,],
+        ),
+        ("deposit", [1]),
+        ("withdraw", [1]),
+        ("addStrategy", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1, 1, 1]),
+        ("updateStrategy", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1, 1, 1]),
+        (
+            "migrateStrategy",
+            ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",],
+        ),
+        ("revokeStrategy", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
+        ("report", [1]),
+        ("sweep", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
+    ]:
+        with brownie.reverts("Cannot send ether to nonpayable function"):
+            # NOTE: gov can do anything
+            getattr(vault, func)(*args, {"from": gov, "value": 1})
+
+    # Fallback fails too
+    with brownie.reverts("Cannot send ether to nonpayable function"):
+        gov.transfer(vault, 1)
