@@ -519,11 +519,12 @@ def estimateAdjustedDebtLimit(
 
 
 @external
-def report(_return: uint256):
+def report(_return: uint256) -> uint256:
     """
     Strategies call this.
     _return: amount Strategy has made on it's investment since its last report,
              and is free to be given back to Vault as earnings
+    returns: amount of debt outstanding (iff totalDebt > debtLimit)
     """
     # NOTE: For approved strategies, this is the most efficient behavior.
     #       Strategy reports back what it has free (usually in terms of ROI)
@@ -626,6 +627,21 @@ def report(_return: uint256):
         self.strategies[msg.sender].totalDebt,
         self.strategies[msg.sender].debtLimit,
     )
+
+    if self.strategies[msg.sender].totalDebt == 0 or self.emergencyShutdown:
+        # Take every last penny the Strategy has (Emergency Exit/revokeStrategy)
+        return self._balanceSheetOfStrategy(msg.sender)
+    elif (
+        self.strategies[msg.sender].totalDebt
+        > self.strategies[msg.sender].debtLimit
+    ):
+        # The Strategy owes some money, so send notice
+        return (
+            self.strategies[msg.sender].totalDebt
+            - self.strategies[msg.sender].debtLimit
+        )
+    else:  # Credit available, or we are running at limit
+        return 0  # NOTE: Means "good to go"
 
 
 @external

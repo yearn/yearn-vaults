@@ -22,12 +22,13 @@ def test_emergency_shutdown(token, gov, vault, strategy, keeper, chain):
         strategy.harvest({"from": keeper})
 
         # Make sure we are divesting
-        assert token.balanceOf(strategy) < last_balance
+        assert token.balanceOf(strategy) <= last_balance
         last_balance = token.balanceOf(strategy)
 
     # All the debt is out of the system now
     assert vault.totalDebt() == 0
     assert vault.strategies(strategy)[5] == 0
+    assert strategy.outstanding() == 0
 
     # Vault didn't lose anything during shutdown
     strategyReturn = vault.strategies(strategy)[6]
@@ -64,6 +65,7 @@ def test_emergency_exit(token, gov, vault, strategy, keeper, chain):
     # All the debt is out of the system now
     assert vault.totalDebt() == 0
     assert vault.strategies(strategy)[5] == 0
+    assert strategy.outstanding() == 0
 
     # Vault didn't lose anything during shutdown
     strategyReturn = vault.strategies(strategy)[6]

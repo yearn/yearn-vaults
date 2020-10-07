@@ -40,7 +40,7 @@ interface VaultAPI {
      * Therefore, this function will be called by BaseStrategy to make sure the
      * integration is correct.
      */
-    function report(uint256 _harvest) external;
+    function report(uint256 _harvest) external returns (uint256);
 
     /*
      * This function is used in the scenario where there is a newer strategy that
@@ -100,6 +100,15 @@ abstract contract BaseStrategy {
     // Adjust this to keep some of the position in reserve in the strategy,
     // to accomodate larger variations needed to sustain the strategy's core positon(s)
     uint256 public reserve = 0;
+
+    // This gets adjusted every time the Strategy reports to the Vault,
+    // and should be used during adjustment of the strategy's positions to "deleverage"
+    // in order to pay back the amount the next time it reports.
+    //
+    // NOTE: Do not edit this variable, for safe usage (only read from it)
+    // NOTE: Strategy should not expect to increase it's working capital until this value
+    //       is zero.
+    uint256 public outstanding = 0;
 
     bool public emergencyExit;
 
@@ -229,7 +238,7 @@ abstract contract BaseStrategy {
 
         // Allow Vault to take up to the "harvested" balance of this contract, which is
         // the amount it has earned since the last time it reported to the Vault
-        vault.report(want.balanceOf(address(this)).sub(reserve));
+        outstanding = vault.report(want.balanceOf(address(this)).sub(reserve));
 
         adjustPosition(); // Check if free returns are left, and re-invest them
         // TODO: Could move fee calculation here, would actually bias more towards growth
