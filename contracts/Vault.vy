@@ -405,7 +405,7 @@ def _organizeWithdrawalQueue():
     # Reorganize based on premise that if there is an empty value between two
     # actual values, then the empty value should be replaced by the later value
     # NOTE: Relative ordering of non-zero values is maintained
-    offset: uint256 = 0
+    offset: int128 = 0
     for idx in range(MAXIMUM_STRATEGIES):
         strategy: address = self.withdrawalQueue[idx]
         if strategy == ZERO_ADDRESS:
