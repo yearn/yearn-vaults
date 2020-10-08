@@ -263,6 +263,7 @@ abstract contract BaseStrategy {
         if (_amount > want.balanceOf(address(this))) available = want.balanceOf(address(this));
         want.transfer(msg.sender, available);
         adjustPosition(); // Check if free returns are left, and re-invest them
+        return available;
     }
 
     /*
