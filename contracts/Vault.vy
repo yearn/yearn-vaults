@@ -14,6 +14,7 @@ interface DetailedERC20:
 interface Strategy:
     def strategist() -> address: view
     def estimatedTotalAssets() -> uint256: view
+    def withdraw(_amount: uint256) -> uint256: nonpayable
     def migrate(_newStrategy: address): nonpayable
 
 event Transfer:
@@ -60,6 +61,16 @@ event StrategyUpdate:
 # NOTE: Track the total for overhead targeting purposes
 strategies: public(HashMap[address, StrategyParams])
 MAXIMUM_STRATEGIES: constant(uint256) = 20
+
+# Ordering that `withdraw` uses to determine which strategies to pull funds from
+# NOTE: Does *NOT* have to match the ordering of all the current strategies that
+#       exist, but it is recommended that it does or else withdrawal depth is
+#       limited to only those inside the the queue.
+# NOTE: Ordering is determined by governance, and should be balanced according
+#       to risk, slippage, and/or volitility. Can also be ordered to increase the
+#       withdrawal speed of a particular strategy.
+# NOTE: The first time a ZERO_ADDRESS is encountered, it stops withdrawing
+withdrawalQueue: public(address[MAXIMUM_STRATEGIES])
 
 emergencyShutdown: public(bool)
 
@@ -128,6 +139,12 @@ def setEmergencyShutdown(_active: bool):
     """
     assert msg.sender in [self.guardian, self.governance]
     self.emergencyShutdown = _active
+
+
+@external
+def setWithdrawalQueue(_queue: address[MAXIMUM_STRATEGIES]):
+    assert msg.sender == self.governance
+    self.withdrawalQueue = _queue
 
 
 @internal
@@ -283,11 +300,24 @@ def _shareValue(_shares: uint256) -> uint256:
 
 @view
 @internal
-def _maxAvailableShares() -> uint256:
+def _sharesForAmount(_amount: uint256) -> uint256:
     if self._totalAssets() > 0:
-        return (self.token.balanceOf(self) * self.totalSupply) / self._totalAssets()
+        return (_amount * self.totalSupply) / self._totalAssets()
     else:
         return 0
+
+
+@view
+@internal
+def _maxAvailableShares() -> uint256:
+    shares: uint256 = self._sharesForAmount(self.token.balanceOf(self))
+
+    for strategy in self.withdrawalQueue:
+        if strategy == ZERO_ADDRESS:
+            break
+        shares += self._sharesForAmount(self._balanceSheetOfStrategy(strategy))
+
+    return shares
 
 
 @view
@@ -298,7 +328,7 @@ def maxAvailableShares() -> uint256:
 
 @external
 def withdraw(_maxShares: uint256):
-    # Take the lesser of _maxShares, or the "free" amount of outstanding shares
+    # Take the lesser of _maxShares, or the "available" amount of outstanding shares
     shares: uint256 = min(_maxShares, self._maxAvailableShares())
     # NOTE: Measuring this based on the total outstanding debt that this contract
     #       has ("expected value") instead of the total balance sheet it has
@@ -326,12 +356,41 @@ def withdraw(_maxShares: uint256):
     #       exist for the Vault (that aren't covered by the Vault's own design)
     value: uint256 = self._shareValue(shares)
 
-    # Burn shares
+    if value > self.token.balanceOf(self):
+        # We need to go get some from our strategies in the withdrawal queue
+        # NOTE: This performs forced withdrawals from each strategy. There is
+        #       a 0.5% withdrawal fee assessed on each forced withdrawal (<= 0.5% total)
+        totalFee: uint256 = 0
+        for strategy in self.withdrawalQueue:
+            # strategy != ZERO_ADDRESS because maxAvailableShares reduces amountNeeded
+            amountNeeded: uint256 = value - self.token.balanceOf(self)
+            if amountNeeded == 0:
+                break  # We're done withdrawing
+
+            # Force withdraw amount from each strategy in the order set by governance
+            withdrawn: uint256 = Strategy(strategy).withdraw(amountNeeded)
+            # NOTE: Should always be true, but check anyways since it's an assumption
+            assert withdrawn == amountNeeded - (value - self.token.balanceOf(self))
+
+            # Reduce the strategy's debt by the amount withdrawn ("realized returns")
+            # NOTE: This doesn't add to returns as it's not earned by "normal means"
+            self.strategies[strategy].totalDebt -= withdrawn
+
+            # send withdrawal fee directly to strategist
+            fee: uint256 = 50 * withdrawn / FEE_MAX
+            totalFee += fee
+            self.token.transfer(Strategy(strategy).strategist(), fee)
+
+        value -= totalFee  # fee is assessed here, sum(fee) above
+
+    # Invariant: value <= self.token.balanceOf(self) at this point
+
+    # Burn shares (full value of what was withdrawn)
     self.totalSupply -= shares
     self.balanceOf[msg.sender] -= shares
     log Transfer(msg.sender, ZERO_ADDRESS, shares)
 
-    # Withdraw balance
+    # Withdraw remaining balance (minus fee)
     self.token.transfer(msg.sender, value)
 
 
@@ -339,6 +398,21 @@ def withdraw(_maxShares: uint256):
 @external
 def pricePerShare() -> uint256:
     return self._shareValue(10 ** self.decimals)
+
+
+@internal
+def _organizeWithdrawalQueue():
+    # Reorganize based on premise that if there is an empty value between two
+    # actual values, then the empty value should be replaced by the later value
+    # NOTE: Relative ordering of non-zero values is maintained
+    offset: uint256 = 0
+    for idx in range(MAXIMUM_STRATEGIES):
+        strategy: address = self.withdrawalQueue[idx]
+        if strategy == ZERO_ADDRESS:
+            offset += 1  # how many values we need to shift, always `<= idx`
+        elif offset > 0:
+            self.withdrawalQueue[idx-offset] = strategy
+            self.withdrawalQueue[idx] = ZERO_ADDRESS
 
 
 @external
@@ -359,6 +433,11 @@ def addStrategy(
         totalReturns: 0,
     })
     log StrategyUpdate(_strategy, 0, 0, 0, 0, _debtLimit)
+
+    # queue is full
+    assert self.withdrawalQueue[MAXIMUM_STRATEGIES-1] == ZERO_ADDRESS
+    self.withdrawalQueue[MAXIMUM_STRATEGIES-1] = _strategy
+    self._organizeWithdrawalQueue()
 
 
 @external
@@ -396,6 +475,11 @@ def migrateStrategy(_oldVersion: address, _newVersion: address):
     Strategy(_oldVersion).migrate(_newVersion)
     # TODO: Ensure a smooth transition in terms of  strategy return
 
+    for idx in range(MAXIMUM_STRATEGIES):
+        if self.withdrawalQueue[idx] == _oldVersion:
+            self.withdrawalQueue[idx] = _newVersion
+            return  # Don't need to reorder anything because we swapped
+
 
 @external
 def revokeStrategy(_strategy: address = msg.sender):
@@ -404,8 +488,21 @@ def revokeStrategy(_strategy: address = msg.sender):
     OR
     A strategy can revoke itself (Emergency Exit Mode)
     """
-    assert msg.sender in [_strategy, self.governance]
+    assert msg.sender in [_strategy, self.governance, self.guardian]
     self.strategies[_strategy].debtLimit = 0
+
+
+@external
+def removeStrategyFromQueue(_strategy: address):
+    # NOTE: We don't do this with revokeStrategy because it should still
+    #       be possible to withdraw from it if it's unwinding
+    assert msg.sender in [self.governance, self.guardian]
+    for idx in range(MAXIMUM_STRATEGIES):
+        if self.withdrawalQueue[idx] == _strategy:
+            self.withdrawalQueue[idx] = ZERO_ADDRESS
+            self._organizeWithdrawalQueue()
+            return  # We found the right location and cleared it
+    raise  # We didn't find the strategy in the queue
 
 
 @view
