@@ -150,25 +150,11 @@ abstract contract BaseStrategy {
     function expectedReturn() public virtual view returns (uint256);
 
     /*
-     * Provide an accurate estimated value for the total value of assets
-     * (principle + return) that this strategy is currently managing, denominated
-     * in terms of `want` tokens. This total should be "realizable" e.g. the total
-     * value that could *actually* be obtained from this strategy if it were to divest
-     * it's entire position based on current on-chain conditions.
-     *
-     * NOTE: care must be taken in using this function, since it relies on external
-     *       systems, which could be manipulated by the attacker to give an inflated
-     *       (or reduced) value produced by this function, based on current on-chain
-     *       conditions (e.g. this function is possible to influence through flashloan
-     *       attacks, oracle manipulations, or other DeFi attack mechanisms).
-     */
-    function estimatedTotalAssets() public virtual view returns (uint256);
-
-    /*
-     * Provide an accurate estimate for the total amount of assets that can be "safely"
-     * withdrawn (maintaining < 5% slippage) from this strategy, as priced in `want` tokens
-     * This estimate is only a guide, and should not affect `withdrawal(_amt)` which can
-     * withdraw up to the full amount of assets this strategy maintains (ignoring slippage)
+     * Provide an accurate estimate for the total amount of assets (principle + return)
+     * that this strategy is currently managing, denominated in terms of `want` tokens.
+     * This total should be "realizable" e.g. the total value that could *actually* be
+     * obtained from this strategy if it were to divest it's entire position based on
+     * current on-chain conditions.
      *
      * NOTE: care must be taken in using this function, since it relies on external
      *       systems, which could be manipulated by the attacker to give an inflated
@@ -178,10 +164,10 @@ abstract contract BaseStrategy {
      *
      * NOTE: It is up to governance to use this function in order to correctly order
      *       this strategy relative to its peers in order to minimize losses for the
-     *       Vault based on sudden withdrawals. The closer this value is to
-     *        `estimatedTotalAssets`, the "safer" it is, generally (ignoring volitility).
+     *       Vault based on sudden withdrawals. This value should be higher than the
+     *       total debt of the strategy and higher than it's expected value to be "safe".
      */
-    function estimatedWithdrawalLimit() public virtual view returns (uint256);
+    function estimatedTotalAssets() public virtual view returns (uint256);
 
     /*
      * Perform any strategy unwinding or other calls necessary to capture

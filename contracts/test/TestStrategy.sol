@@ -38,10 +38,6 @@ contract TestStrategy is BaseStrategy {
         return want.balanceOf(address(this));
     }
 
-    function estimatedWithdrawalLimit() public override view returns (uint256) {
-        return want.balanceOf(address(this));
-    }
-
     function prepareReturn() internal override {
         // During testing, send this contract some tokens to simulate "Rewards"
     }
