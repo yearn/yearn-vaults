@@ -67,6 +67,18 @@ def test_transfer(accounts, token, vault, fn_isolation):
     assert vault.balanceOf(a) == token.balanceOf(vault)
     assert vault.balanceOf(b) == 0
 
+    # Can't send your balance to the Vault
+    with brownie.reverts():
+        vault.transfer(vault, vault.balanceOf(a), {"from": a})
+
+    # Can't send your balance to the zero address
+    with brownie.reverts():
+        vault.transfer(
+            "0x0000000000000000000000000000000000000000",
+            vault.balanceOf(a),
+            {"from": a},
+        )
+
     vault.transfer(b, vault.balanceOf(a), {"from": a})
 
     assert vault.balanceOf(a) == 0
