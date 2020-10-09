@@ -34,9 +34,7 @@ jobs:
         uses: actions/cache@v2
         id: yarn-cache
         with:
-          # mind node_modules backup
           path: |
-            **/node_modules
             ${{ steps.yarn-cache-dir-path.outputs.dir }}
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
@@ -44,7 +42,6 @@ jobs:
             ${{ runner.os }}-yarn-
 
       - name: Install node.js dependencies
-        if: steps.yarn-cache.outputs.cache-hit != 'true'
         run: yarn --frozen-lockfile
 
       - name: Run linter on *.sol and *.json
@@ -85,9 +82,7 @@ jobs:
         uses: actions/cache@v2
         id: pip-cache
         with:
-          # mind Linux runner
           path: |
-            /opt/hostedtoolcache/Python/3.8.*
             ${{ steps.pip-cache-dir-path.outputs.dir }}
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements-dev.txt') }}
           restore-keys: |
@@ -95,7 +90,6 @@ jobs:
             ${{ runner.os }}-pip-
 
       - name: Install python dependencies
-        if: steps.pip-cache.outputs.cache-hit != 'true'
         run: pip install -r requirements-dev.txt
 
       - name: Run black
