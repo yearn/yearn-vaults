@@ -32,6 +32,7 @@ def test_addStrategy(web3, gov, vault, strategy, rando):
         0,
         0,
     ]
+    assert vault.withdrawalQueue(0) == strategy
 
 
 def test_updateStrategy(web3, gov, vault, strategy, rando):
@@ -86,6 +87,44 @@ def test_revokeStrategy(web3, gov, vault, strategy, rando):
         0,
         0,
     ]
+
+    assert vault.withdrawalQueue(0) == strategy
+    vault.removeStrategyFromQueue(strategy, {"from": gov})
+    assert vault.withdrawalQueue(0) == "0x0000000000000000000000000000000000000000"
+
+
+def test_ordering(gov, vault, TestStrategy):
+    # Show that a lot of strategies get properly ordered
+    strategies = [gov.deploy(TestStrategy, vault, gov) for _ in range(3)]
+    [vault.addStrategy(s, 1000, 10, 50, {"from": gov}) for s in strategies]
+
+    for idx, strategy in enumerate(strategies):
+        assert vault.withdrawalQueue(idx) == strategy
+
+    # Show that strategies can be reordered
+    strategies = list(reversed(strategies))
+    vault.setWithdrawalQueue(
+        strategies
+        + ["0x0000000000000000000000000000000000000000"] * (20 - len(strategies))
+    )
+
+    for idx, strategy in enumerate(strategies):
+        assert vault.withdrawalQueue(idx) == strategy
+
+    # Show that adding a new one properly orders
+    strategy = gov.deploy(TestStrategy, vault, gov)
+    vault.addStrategy(strategy, 1000, 10, 50, {"from": gov})
+    strategies.append(strategy)
+
+    for idx, strategy in enumerate(strategies):
+        assert vault.withdrawalQueue(idx) == strategy
+
+    # Show that removing from the middle properly orders
+    strategy = strategies.pop(1)
+    vault.removeStrategyFromQueue(strategy, {"from": gov})
+
+    for idx, strategy in enumerate(strategies):
+        assert vault.withdrawalQueue(idx) == strategy
 
 
 def test_reporting(vault, strategy, gov, rando):
