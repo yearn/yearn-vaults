@@ -6,9 +6,12 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
     # NOTE: done for coverage
     vault.expectedReturn(strategy) == 0
     assert strategy.outstanding() == strategy.reserve() == 0
+    assert vault.balanceSheetOfStrategy(strategy) == 0
 
     # Check accounting is maintained everywhere
     assert vault.totalDebt() == 0 == vault.strategies(strategy)[5]  # totalDebt
+    withdrawal_queue = [strategy] + ["0x0000000000000000000000000000000000000000"] * 39
+    assert vault.totalBalanceSheet(withdrawal_queue) == token.balanceOf(vault)
 
     # Take on debt
     strategy.harvest({"from": keeper})
@@ -21,6 +24,11 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
     # Check accounting is maintained everywhere
     assert vault.totalDebt() == vault.strategies(strategy)[5]  # totalDebt
     assert strategy.outstanding() == 0
+    assert vault.balanceSheetOfStrategy(strategy) == vault.totalDebt()
+    assert (
+        vault.totalBalanceSheet(withdrawal_queue)
+        == token.balanceOf(vault) + vault.totalDebt()
+    )
 
     # We have 1 data point for E[R] calc, so E[R] = 0
     chain.mine(10)
@@ -38,6 +46,11 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
     # Check accounting is maintained everywhere
     assert vault.totalDebt() == vault.strategies(strategy)[5]  # totalDebt
     assert strategy.outstanding() == 0
+    assert vault.balanceSheetOfStrategy(strategy) == vault.totalDebt()
+    assert (
+        vault.totalBalanceSheet(withdrawal_queue)
+        == token.balanceOf(vault) + vault.totalDebt()
+    )
 
     # We have 2 data points now, so E[R] > 0
     chain.mine(10)
@@ -61,3 +74,8 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
         # Check accounting is maintained everywhere
         assert vault.totalDebt() == vault.strategies(strategy)[5]  # totalDebt
         assert strategy.outstanding() == 0
+        assert vault.balanceSheetOfStrategy(strategy) == vault.totalDebt()
+        assert (
+            vault.totalBalanceSheet(withdrawal_queue)
+            == token.balanceOf(vault) + vault.totalDebt()
+        )
