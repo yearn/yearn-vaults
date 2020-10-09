@@ -93,7 +93,7 @@ def test_revokeStrategy(web3, gov, vault, strategy, rando):
     assert vault.withdrawalQueue(0) == "0x0000000000000000000000000000000000000000"
 
 
-def test_ordering(gov, vault, TestStrategy):
+def test_ordering(gov, vault, TestStrategy, rando):
     # Show that a lot of strategies get properly ordered
     strategies = [gov.deploy(TestStrategy, vault, gov) for _ in range(3)]
     [vault.addStrategy(s, 1000, 10, 50, {"from": gov}) for s in strategies]
@@ -103,9 +103,17 @@ def test_ordering(gov, vault, TestStrategy):
 
     # Show that strategies can be reordered
     strategies = list(reversed(strategies))
+    # NOTE: Not just anyone can do this
+    with brownie.reverts():
+        vault.setWithdrawalQueue(
+            strategies
+            + ["0x0000000000000000000000000000000000000000"] * (20 - len(strategies)),
+            {"from": rando},
+        )
     vault.setWithdrawalQueue(
         strategies
-        + ["0x0000000000000000000000000000000000000000"] * (20 - len(strategies))
+        + ["0x0000000000000000000000000000000000000000"] * (20 - len(strategies)),
+        {"from": gov},
     )
 
     for idx, strategy in enumerate(strategies):
@@ -121,6 +129,9 @@ def test_ordering(gov, vault, TestStrategy):
 
     # Show that removing from the middle properly orders
     strategy = strategies.pop(1)
+    # NOTE: Not just anyone can do this
+    with brownie.reverts():
+        vault.removeStrategyFromQueue(strategy, {"from": rando})
     vault.removeStrategyFromQueue(strategy, {"from": gov})
 
     for idx, strategy in enumerate(strategies):
