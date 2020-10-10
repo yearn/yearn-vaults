@@ -2,6 +2,22 @@ import pytest
 import brownie
 
 
+def test_harvest_tend_authority(gov, keeper, strategist, strategy, rando):
+    # Only keeper, strategist, or gov can call tend
+    strategy.tend({"from": keeper})
+    strategy.tend({"from": strategist})
+    strategy.tend({"from": gov})
+    with brownie.reverts():
+        strategy.tend({"from": rando})
+
+    # Only keeper, strategist, or gov can call harvest
+    strategy.harvest({"from": keeper})
+    strategy.harvest({"from": strategist})
+    strategy.harvest({"from": gov})
+    with brownie.reverts():
+        strategy.harvest({"from": rando})
+
+
 @pytest.fixture
 def other_token(gov, Token):
     yield gov.deploy(Token)
