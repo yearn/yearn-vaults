@@ -59,7 +59,9 @@ def test_updateStrategy(web3, gov, vault, strategy, rando):
     ]
 
 
-def test_migrateStrategy(gov, vault, strategy, rando):
+def test_migrateStrategy(gov, vault, strategy, rando, TestStrategy):
+    vault.addStrategy(strategy, 1000, 10, 50, {"from": gov})
+
     # Not just anyone can migrate
     with brownie.reverts():
         vault.migrateStrategy(strategy, rando, {"from": rando})
@@ -67,6 +69,24 @@ def test_migrateStrategy(gov, vault, strategy, rando):
     # Can't migrate to itself
     with brownie.reverts():
         vault.migrateStrategy(strategy, strategy, {"from": gov})
+
+    # Migrating not in the withdrawal queue (for coverage)
+    vault.removeStrategyFromQueue(strategy, {"from": gov})
+    new_strategy = gov.deploy(TestStrategy, vault, gov)
+    vault.migrateStrategy(strategy, new_strategy, {"from": gov})
+
+    # Can migrate back again (but it starts out fresh)
+    vault.migrateStrategy(new_strategy, strategy, {"from": gov})
+
+    # Can't migrate an unapproved strategy
+    with brownie.reverts():
+        vault.migrateStrategy(new_strategy, strategy, {"from": gov})
+
+    # Can't migrate to an already approved strategy
+    approved_strategy = gov.deploy(TestStrategy, vault, gov)
+    vault.addStrategy(approved_strategy, 1000, 10, 50, {"from": gov})
+    with brownie.reverts():
+        vault.migrateStrategy(strategy, approved_strategy, {"from": gov})
 
 
 def test_revokeStrategy(web3, gov, vault, strategy, rando):
