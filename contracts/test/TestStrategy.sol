@@ -44,7 +44,11 @@ contract TestStrategy is BaseStrategy {
 
     function adjustPosition() internal override {
         // Whatever we have "free", consider it "invested" now
-        reserve = want.balanceOf(address(this)).sub(outstanding);
+        if (outstanding <= want.balanceOf(address(this))) {
+            reserve = want.balanceOf(address(this)).sub(outstanding);
+        } else {
+            reserve = 0;
+        }
     }
 
     function liquidatePosition(uint256 _amount) internal override {
@@ -61,8 +65,6 @@ contract TestStrategy is BaseStrategy {
             reserve = want.balanceOf(address(this)).div(4);
             countdownTimer -= 1;
         } else {
-            // NOTE: This is a testing-only invariant
-            require(outstanding == want.balanceOf(address(this)), "!invariant");
             reserve = 0;
         }
     }
