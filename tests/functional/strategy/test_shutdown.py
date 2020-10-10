@@ -32,6 +32,10 @@ def test_emergency_shutdown(token, gov, vault, strategy, keeper, chain):
     assert vault.strategies(strategy)[5] == 0
     assert strategy.outstanding() == 0
 
+    # Do it once more, for good luck (and also coverage)
+    token.transfer(strategy, token.balanceOf(gov), {"from": gov})
+    strategy.harvest({"from": keeper})
+
     # Vault didn't lose anything during shutdown
     strategyReturn = vault.strategies(strategy)[6]
     assert strategyReturn > 0
