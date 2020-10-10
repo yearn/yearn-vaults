@@ -57,10 +57,14 @@ def test_emergency_exit(token, gov, vault, strategy, keeper, chain):
         add_yield()
         strategy.harvest({"from": keeper})
 
+    # Oh my! There was a hack!
+    stolen_funds = token.balanceOf(strategy) // 10
+    strategy._takeFunds(stolen_funds, {"from": gov})
+
     # Call for an exit
     strategy.setEmergencyExit({"from": gov})
 
-    # Watch the strategy repay all its debt over time
+    # Watch the strategy repay the rest of its debt over time
     last_balance = token.balanceOf(strategy)
     while token.balanceOf(strategy) > 0:
         chain.mine(10)
@@ -70,12 +74,12 @@ def test_emergency_exit(token, gov, vault, strategy, keeper, chain):
         assert token.balanceOf(strategy) < last_balance
         last_balance = token.balanceOf(strategy)
 
-    # All the debt is out of the system now
-    assert vault.totalDebt() == 0
-    assert vault.strategies(strategy)[5] == 0
-    assert strategy.outstanding() == 0
+    # All the debt left is out of the system now
+    assert vault.totalDebt() == stolen_funds
+    assert vault.strategies(strategy)[5] == stolen_funds
+    assert strategy.outstanding() == stolen_funds
 
-    # Vault didn't lose anything during shutdown
+    # Vault returned something overall though
     strategyReturn = vault.strategies(strategy)[6]
     assert strategyReturn > 0
-    assert token.balanceOf(vault) == initial_investment + strategyReturn
+    assert token.balanceOf(vault) == initial_investment + strategyReturn - stolen_funds
