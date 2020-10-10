@@ -1,4 +1,4 @@
-#@version 0.2.5
+#@version 0.2.6
 
 # TODO: Add ETH Configuration
 # TODO: Add Delegated Configuration
@@ -405,7 +405,7 @@ def _organizeWithdrawalQueue():
     # Reorganize based on premise that if there is an empty value between two
     # actual values, then the empty value should be replaced by the later value
     # NOTE: Relative ordering of non-zero values is maintained
-    offset: int128 = 0
+    offset: uint256 = 0
     for idx in range(MAXIMUM_STRATEGIES):
         strategy: address = self.withdrawalQueue[idx]
         if strategy == ZERO_ADDRESS:
