@@ -22,12 +22,22 @@ contract TestStrategy is BaseStrategy {
 
     function tendTrigger(uint256 gasCost) public override view returns (bool) {
         StrategyParams memory params = vault.strategies(address(this));
-        return (params.activation > 0 && want.balanceOf(address(this)) == reserve && gasCost < 0.1 ether);
+        // Should not trigger if strategy is not activated
+        if (params.activation == 0) return false;
+        // Only trigger if it "makes sense" economically
+        if (want.balanceOf(address(this)) <= reserve) return false;
+        // NOTE: Assume a 1:1 price here, for testing purposes
+        return (gasCost <= want.balanceOf(address(this)).sub(reserve));
     }
 
     function harvestTrigger(uint256 gasCost) public override view returns (bool) {
         StrategyParams memory params = vault.strategies(address(this));
-        return (params.activation > 0 && want.balanceOf(address(this)) > reserve && gasCost < 0.1 ether);
+        // Should not trigger if strategy is not activated
+        if (params.activation == 0) return false;
+        // Only trigger if it "makes sense" economically
+        uint256 credit = vault.creditAvailable();
+        // NOTE: Assume a 1:1 price here, for testing purposes
+        return (gasCost <= credit);
     }
 
     function expectedReturn() public override view returns (uint256) {
