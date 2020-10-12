@@ -69,6 +69,8 @@ interface VaultAPI {
  * This interface is here for the keeper bot to use
  */
 interface StrategyAPI {
+    function vault() external view returns (address);
+
     function keeper() external view returns (address);
 
     function tendTrigger(uint256 gasCost) external view returns (bool);
