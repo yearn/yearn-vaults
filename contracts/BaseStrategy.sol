@@ -213,7 +213,7 @@ abstract contract BaseStrategy {
     function tendTrigger(uint256 gasCost) public virtual view returns (bool);
 
     function tend() external {
-        require(msg.sender == keeper || msg.sender == strategist || msg.sender == governance);
+        if (keeper != address(0)) require(msg.sender == keeper || msg.sender == strategist || msg.sender == governance);
         // NOTE: Don't take profits with this call, but adjust for better gains
         adjustPosition();
     }
@@ -231,7 +231,7 @@ abstract contract BaseStrategy {
     function harvestTrigger(uint256 gasCost) public virtual view returns (bool);
 
     function harvest() external {
-        require(msg.sender == keeper || msg.sender == strategist || msg.sender == governance);
+        if (keeper != address(0)) require(msg.sender == keeper || msg.sender == strategist || msg.sender == governance);
 
         if (emergencyExit) {
             exitPosition(); // Free up as much capital as possible

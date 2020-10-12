@@ -17,6 +17,13 @@ def test_harvest_tend_authority(gov, keeper, strategist, strategy, rando):
     with brownie.reverts():
         strategy.harvest({"from": rando})
 
+    # Special feature, if keeper is 0x0, it's unauthenticated
+    strategy.setKeeper(
+        "0x0000000000000000000000000000000000000000", {"from": strategist}
+    )
+    strategy.tend({"from": rando})
+    strategy.harvest({"from": rando})
+
 
 @pytest.fixture
 def other_token(gov, Token):
