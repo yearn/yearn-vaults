@@ -507,6 +507,27 @@ def removeStrategyFromQueue(_strategy: address):
 
 @view
 @internal
+def _debtOutstanding(_strategy: address) -> uint256:
+    """
+    Amount of tokens in strtaegy that Vault wants to recall
+    """
+    strategy_debtLimit: uint256 = self.strategies[_strategy].debtLimit
+    strategy_totalDebt: uint256 = self.strategies[_strategy].totalDebt
+
+    if strategy_totalDebt <= strategy_debtLimit:
+        return 0
+    else:
+        return strategy_totalDebt - strategy_debtLimit
+
+
+@view
+@external
+def debtOutstanding(_strategy: address = msg.sender) -> uint256:
+    return self._debtOutstanding(_strategy)
+
+
+@view
+@internal
 def _creditAvailable(_strategy: address) -> uint256:
     """
     Amount of tokens in vault a strategy has access to as a credit line

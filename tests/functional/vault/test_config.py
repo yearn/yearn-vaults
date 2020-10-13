@@ -15,6 +15,7 @@ def test_vault_deployment(guardian, gov, rewards, token, Vault):
     assert vault.decimals() == token.decimals()
 
     assert vault.creditAvailable() == 0
+    assert vault.debtOutstanding() == 0
     assert vault.maxAvailableShares() == 0
     assert vault.totalAssets() == 0
 

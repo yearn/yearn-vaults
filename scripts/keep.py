@@ -34,8 +34,11 @@ def main():
 
     while True:
         # Display some relevant statistics
+        symbol = vault.symbol()[1:]
         credit = vault.creditAvailable(strategy) / 10 ** vault.decimals()
-        print(f"Credit Available: {credit} {vault.symbol()[1:]}")
+        print(f"Credit Available: {credit:0.3f} {symbol}")
+        debt = vault.debtOutstanding(strategy) / 10 ** vault.decimals()
+        print(f"Debt Outstanding: {debt:0.3f} {symbol}")
 
         gas_price = get_gas_price()
         starting_balance = bot.balance()

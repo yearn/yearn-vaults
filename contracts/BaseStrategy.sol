@@ -28,6 +28,13 @@ interface VaultAPI {
     function creditAvailable() external view returns (uint256);
 
     /*
+     * View how much the Vault would like to pull back from the Strategy,
+     * based on it's present performance (since its last report). Can be used to
+     * determine expectedReturn in your strategy.
+     */
+    function debtOutstanding() external view returns (uint256);
+
+    /*
      * View how much the Vault expect this strategy to return at the current block,
      * based on it's present performance (since its last report). Can be used to
      * determine expectedReturn in your strategy.
