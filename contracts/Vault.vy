@@ -596,18 +596,21 @@ def report(_return: uint256) -> uint256:
         ) / FEE_MAX
         governance_fee: uint256 = (_return * self.performanceFee) / FEE_MAX
         total_fee: uint256 = governance_fee + strategist_fee
-        # NOTE: This must be called prior to taking new collateral,
-        #       or the calculation will be wrong!
-        # NOTE: This must be done at the same time, to ensure the relative
-        #       ratio of governance_fee : strategist_fee is kept intact
-        shares: uint256 = self._issueSharesForAmount(self, total_fee)
 
-        # Send the rewards out as new shares in this Vault
-        strategist_fee *= shares
-        strategist_fee /= total_fee
-        self._transfer(self, Strategy(msg.sender).strategist(), strategist_fee)
-        # NOTE: Governance earns the dust
-        self._transfer(self, self.rewards, self.balanceOf[self])
+        # NOTE: In certain cases, the calculated fee might be too small
+        if total_fee > 0:
+            # NOTE: This must be called prior to taking new collateral,
+            #       or the calculation will be wrong!
+            # NOTE: This must be done at the same time, to ensure the relative
+            #       ratio of governance_fee : strategist_fee is kept intact
+            shares: uint256 = self._issueSharesForAmount(self, total_fee)
+
+            # Send the rewards out as new shares in this Vault
+            strategist_fee *= shares
+            strategist_fee /= total_fee
+            self._transfer(self, Strategy(msg.sender).strategist(), strategist_fee)
+            # NOTE: Governance earns the dust
+            self._transfer(self, self.rewards, self.balanceOf[self])
 
     # Compute the line of credit the Vault is able to offer the Strategy (if any)
     credit: uint256 = self._creditAvailable(msg.sender)
