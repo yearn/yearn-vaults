@@ -22,8 +22,10 @@ contract TestStrategy is BaseStrategy {
 
     function tendTrigger(uint256 gasCost) public override view returns (bool) {
         StrategyParams memory params = vault.strategies(address(this));
+
         // Should not trigger if strategy is not activated
         if (params.activation == 0) return false;
+
         // Only trigger if it "makes sense" economically
         if (want.balanceOf(address(this)) <= reserve) return false;
         // NOTE: Assume a 1:1 price here, for testing purposes
@@ -32,8 +34,16 @@ contract TestStrategy is BaseStrategy {
 
     function harvestTrigger(uint256 gasCost) public override view returns (bool) {
         StrategyParams memory params = vault.strategies(address(this));
+
         // Should not trigger if strategy is not activated
         if (params.activation == 0) return false;
+
+        // Shortcircuit, in case of emergency exit or normal shutdown
+        if (emergencyExit || params.debtLimit == 0) return (want.balanceOf(address(this)) > 0);
+
+        // If some amount is owed, pay it back
+        if (outstanding > 0) return true;
+
         // Only trigger if it "makes sense" economically
         uint256 credit = vault.creditAvailable();
         // NOTE: Assume a 1:1 price here, for testing purposes
@@ -71,12 +81,8 @@ contract TestStrategy is BaseStrategy {
 
     function exitPosition() internal override {
         // Dump 25% each time this is called, the first 3 times
-        if (countdownTimer > 0) {
-            reserve = want.balanceOf(address(this)).div(4);
-            countdownTimer -= 1;
-        } else {
-            reserve = 0;
-        }
+        reserve = want.balanceOf(address(this)).mul(countdownTimer).div(4);
+        countdownTimer.sub(1); // NOTE: This should never be called after it hits 0
     }
 
     function prepareMigration(address _newStrategy) internal override {

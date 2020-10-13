@@ -41,6 +41,19 @@ def test_harvest_tend_trigger(gov, vault, token, TestStrategy):
     assert not strategy.harvestTrigger(10 ** 9)
     assert strategy.harvestTrigger(0)
 
+    vault.revokeStrategy(strategy, {"from": gov})
+    assert strategy.harvestTrigger(10 ** 9)  # Gas cost doesn't matter now
+
+    strategy.setEmergencyExit({"from": gov})
+    assert strategy.harvestTrigger(10 ** 9)
+
+    # Stops after it runs out of balance
+    while strategy.harvestTrigger(0):
+        strategy.harvest({"from": gov})
+
+    assert strategy.estimatedTotalAssets() == 0
+    assert not strategy.harvestTrigger(0)
+
 
 @pytest.fixture
 def other_token(gov, Token):
