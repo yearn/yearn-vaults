@@ -1,7 +1,6 @@
 #@version 0.2.6
 
 CONTRACT_VERSION: constant(String[28]) = "0.1.0"
-version: public(String[28])
 
 # TODO: Add ETH Configuration
 # TODO: Add Delegated Configuration
@@ -93,8 +92,6 @@ def __init__(
     _nameOverride: String[64],
     _symbolOverride: String[32]
 ):
-    self.version = CONTRACT_VERSION
-
     # TODO: Non-detailed Configuration?
     self.token = ERC20(_token)
     if _nameOverride == "":
@@ -112,6 +109,12 @@ def __init__(
     self.performanceFee = 450  # 4.5% of yield (per strategy)
     self.depositLimit = MAX_UINT256  # Start unlimited
     self.debtLimit = ERC20(_token).totalSupply() / 1000  # 0.1% of total supply of token
+
+
+@pure
+@external
+def version() -> String[28]:
+    return CONTRACT_VERSION
 
 
 # 2-phase commit for a change in governance
