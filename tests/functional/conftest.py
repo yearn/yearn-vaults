@@ -45,7 +45,7 @@ def keeper(accounts):
 
 @pytest.fixture
 def strategy(gov, strategist, keeper, token, vault, TestStrategy):
-    strategy = strategist.deploy(TestStrategy, vault, gov)
+    strategy = strategist.deploy(TestStrategy, vault)
     strategy.setKeeper(keeper, {"from": strategist})
     vault.addStrategy(
         strategy,

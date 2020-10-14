@@ -1,5 +1,5 @@
 def test_multiple_withdrawals(token, gov, vault, TestStrategy):
-    strategies = [gov.deploy(TestStrategy, vault, gov) for _ in range(5)]
+    strategies = [gov.deploy(TestStrategy, vault) for _ in range(5)]
     [vault.addStrategy(s, 1000, 10, 50, {"from": gov}) for s in strategies]
 
     before_balance = token.balanceOf(gov)

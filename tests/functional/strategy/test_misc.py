@@ -26,7 +26,7 @@ def test_harvest_tend_authority(gov, keeper, strategist, strategy, rando):
 
 
 def test_harvest_tend_trigger(gov, vault, token, TestStrategy):
-    strategy = gov.deploy(TestStrategy, vault, gov)
+    strategy = gov.deploy(TestStrategy, vault)
     assert not strategy.harvestTrigger(0)
 
     vault.addStrategy(strategy, 10 ** 18, 1000, 50, {"from": gov})
@@ -81,8 +81,6 @@ def test_sweep(gov, strategy, rando, token, other_token):
 def test_reject_ether(gov, strategy):
     # These functions should reject any calls with value
     for func, args in [
-        ("setGovernance", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
-        ("acceptGovernance", []),
         ("setStrategist", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
         ("setKeeper", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
         ("tend", []),
