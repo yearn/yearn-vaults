@@ -70,6 +70,14 @@ interface VaultAPI {
      * dependency.
      */
     function revokeStrategy() external;
+
+    /*
+     * View the governance address of the Vault to assert privileged functions
+     * can only be called by governance. The Strategy serves the Vault, so it
+     * is subject to governance defined by the Vault.
+     *
+     */
+    function governance() external view returns (address);
 }
 
 /*
@@ -101,8 +109,6 @@ abstract contract BaseStrategy {
     VaultAPI public vault;
     address public strategist;
     address public keeper;
-    address public governance;
-    address public pendingGovernance;
 
     IERC20 public want;
 
@@ -121,34 +127,30 @@ abstract contract BaseStrategy {
 
     bool public emergencyExit;
 
-    constructor(address _vault, address _governance) public {
+    constructor(address _vault) public {
         vault = VaultAPI(_vault);
         want = IERC20(vault.token());
         want.approve(_vault, uint256(-1)); // Give Vault unlimited access (might save gas)
         strategist = msg.sender;
         keeper = msg.sender;
-        governance = _governance;
-    }
-
-    // 2-stage commit to takeover governance role
-    function setGovernance(address _governance) external {
-        require(msg.sender == governance, "!governance");
-        pendingGovernance = _governance;
-    }
-
-    function acceptGovernance() external {
-        require(msg.sender == pendingGovernance, "!governance");
-        governance = pendingGovernance;
     }
 
     function setStrategist(address _strategist) external {
-        require(msg.sender == strategist || msg.sender == governance, "!governance");
+        require(msg.sender == strategist || msg.sender == governance(), "!governance");
         strategist = _strategist;
     }
 
     function setKeeper(address _keeper) external {
-        require(msg.sender == strategist || msg.sender == governance, "!governance");
+        require(msg.sender == strategist || msg.sender == governance(), "!governance");
         keeper = _keeper;
+    }
+
+    /*
+     * Resolve governance address from Vault contract, used to make
+     * assertions on protected functions in the Strategy
+     */
+    function governance() internal view returns (address) {
+        return vault.governance();
     }
 
     /*
@@ -222,7 +224,7 @@ abstract contract BaseStrategy {
     function tendTrigger(uint256 gasCost) public virtual view returns (bool);
 
     function tend() external {
-        if (keeper != address(0)) require(msg.sender == keeper || msg.sender == strategist || msg.sender == governance);
+        if (keeper != address(0)) require(msg.sender == keeper || msg.sender == strategist || msg.sender == governance());
         // NOTE: Don't take profits with this call, but adjust for better gains
         adjustPosition();
     }
@@ -240,7 +242,7 @@ abstract contract BaseStrategy {
     function harvestTrigger(uint256 gasCost) public virtual view returns (bool);
 
     function harvest() external {
-        if (keeper != address(0)) require(msg.sender == keeper || msg.sender == strategist || msg.sender == governance);
+        if (keeper != address(0)) require(msg.sender == keeper || msg.sender == strategist || msg.sender == governance());
 
         if (emergencyExit) {
             exitPosition(); // Free up as much capital as possible
@@ -282,13 +284,13 @@ abstract contract BaseStrategy {
     function prepareMigration(address _newStrategy) internal virtual;
 
     function migrate(address _newStrategy) external {
-        require(msg.sender == address(vault) || msg.sender == governance);
+        require(msg.sender == address(vault) || msg.sender == governance());
         require(BaseStrategy(_newStrategy).vault() == vault);
         prepareMigration(_newStrategy);
     }
 
     function setEmergencyExit() external {
-        require(msg.sender == strategist || msg.sender == governance);
+        require(msg.sender == strategist || msg.sender == governance());
         emergencyExit = true;
         exitPosition();
         vault.revokeStrategy();
@@ -309,6 +311,6 @@ abstract contract BaseStrategy {
         address[] memory _protectedTokens = protectedTokens();
         for (uint256 i; i < _protectedTokens.length; i++) require(_token != _protectedTokens[i], "!protected");
 
-        IERC20(_token).transfer(governance, IERC20(_token).balanceOf(address(this)));
+        IERC20(_token).transfer(governance(), IERC20(_token).balanceOf(address(this)));
     }
 }
