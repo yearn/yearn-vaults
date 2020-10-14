@@ -514,7 +514,9 @@ def _debtOutstanding(_strategy: address) -> uint256:
     strategy_debtLimit: uint256 = self.strategies[_strategy].debtLimit
     strategy_totalDebt: uint256 = self.strategies[_strategy].totalDebt
 
-    if strategy_totalDebt <= strategy_debtLimit:
+    if self.emergencyShutdown:
+        return strategy_totalDebt
+    elif strategy_totalDebt <= strategy_debtLimit:
         return 0
     else:
         return strategy_totalDebt - strategy_debtLimit
@@ -604,18 +606,18 @@ def report(_return: uint256) -> uint256:
     # Only approved strategies can call this function
     assert self.strategies[msg.sender].activation > 0
 
+    # Outstanding debt the Vault wants to take back from the Strategy (if any)
+    debt: uint256 = self._debtOutstanding(msg.sender)
+
     # Issue new shares to cover fees
     # NOTE: Applies if strategy is not shutting down, or it is but all debt paid off
     # NOTE: In effect, this reduces overall share price by the combined fee
     # NOTE: No fee is taken when a strategy is unwinding it's position, until all debt is paid
-    if (
-        (self.strategies[msg.sender].debtLimit > 0 or self.strategies[msg.sender].totalDebt == 0)
-        and _return > 0
-    ):
+    if  _return > debt:
         strategist_fee: uint256 = (
-            _return * self.strategies[msg.sender].performanceFee
+            (_return - debt) * self.strategies[msg.sender].performanceFee
         ) / FEE_MAX
-        governance_fee: uint256 = (_return * self.performanceFee) / FEE_MAX
+        governance_fee: uint256 = ((_return - debt) * self.performanceFee) / FEE_MAX
         total_fee: uint256 = governance_fee + strategist_fee
 
         # NOTE: In certain cases, the calculated fee might be too small
@@ -624,12 +626,11 @@ def report(_return: uint256) -> uint256:
             #       or the calculation will be wrong!
             # NOTE: This must be done at the same time, to ensure the relative
             #       ratio of governance_fee : strategist_fee is kept intact
-            shares: uint256 = self._issueSharesForAmount(self, total_fee)
+            reward: uint256 = self._issueSharesForAmount(self, total_fee)
 
             # Send the rewards out as new shares in this Vault
-            strategist_fee *= shares
-            strategist_fee /= total_fee
-            self._transfer(self, Strategy(msg.sender).strategist(), strategist_fee)
+            strategist_reward: uint256 = (strategist_fee * reward) / total_fee
+            self._transfer(self, Strategy(msg.sender).strategist(), strategist_reward)
             # NOTE: Governance earns the dust
             self._transfer(self, self.rewards, self.balanceOf[self])
 
@@ -650,6 +651,7 @@ def report(_return: uint256) -> uint256:
     # Update the actual debt based on the full credit we are extending to the Strategy
     # or the returns if we are taking funds back
     # NOTE: credit + self.strategies[msg.sender].totalDebt is always < self.debtLimit
+    # NOTE: At least one of `credit` or `debt` is always 0 (both can be 0)
     if credit > 0:
         self.strategies[msg.sender].totalDebt += credit
         self.totalDebt += credit
@@ -657,26 +659,27 @@ def report(_return: uint256) -> uint256:
         # Returns are always "realized gains"
         self.strategies[msg.sender].totalReturns += _return
 
-    elif _return > 0:  # We're repaying debt now, so there are no gains
-        if _return < self.strategies[msg.sender].totalDebt:
+    elif debt > 0:  # We're repaying debt now, so there are no gains
+        if _return <= debt:
             # Pay down our debt with profit
             # NOTE: Cannot return more than you borrowed
             self.strategies[msg.sender].totalDebt -= _return
             self.totalDebt -= _return
+            debt -= _return  # Debt payment complete (to report back to strategy)
 
         else:
-            # We are dealing with residual profit now (above and beyond debt)
-            profit: uint256 = _return - self.strategies[msg.sender].totalDebt
-
-            # Pay off the last of our debt
-            if profit < _return:  # Should only happen once
-                self.totalDebt -= _return - profit  # same as Strategy.totalDebt
-                self.strategies[msg.sender].totalDebt = 0
+            # Finish off our debt payments here
+            self.totalDebt -= debt
+            self.strategies[msg.sender].totalDebt -= debt
 
             # Returns are always "realized gains" (after we have paid off our debt)
-            self.strategies[msg.sender].totalReturns += profit
+            self.strategies[msg.sender].totalReturns += _return - debt
+            debt = 0  # All debts paid off (to report back to strategy)
 
-    # else, we are perfectly in balance
+    elif _return > 0:  # No debt to pay, nor credit to expand with, add to profit!
+        self.strategies[msg.sender].totalReturns += _return
+
+    # else, no credit/debt to manage, nor returns to report. Nothing really happened!
 
     # Update reporting time
     self.strategies[msg.sender].lastReport = block.number
@@ -692,18 +695,11 @@ def report(_return: uint256) -> uint256:
 
     if self.strategies[msg.sender].totalDebt == 0 or self.emergencyShutdown:
         # Take every last penny the Strategy has (Emergency Exit/revokeStrategy)
+        # NOTE: This is different than `debt` in order to extract *all* of the returns
         return self._balanceSheetOfStrategy(msg.sender)
-    elif (
-        self.strategies[msg.sender].totalDebt
-        > self.strategies[msg.sender].debtLimit
-    ):
-        # The Strategy owes some money, so send notice
-        return (
-            self.strategies[msg.sender].totalDebt
-            - self.strategies[msg.sender].debtLimit
-        )
-    else:  # Credit available, or we are running at limit
-        return 0  # NOTE: Means "good to go"
+    else:
+        # Otherwise, just return what we have as debt outstanding
+        return debt
 
 
 @external
