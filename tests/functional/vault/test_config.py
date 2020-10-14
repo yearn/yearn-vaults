@@ -23,6 +23,7 @@ def test_vault_deployment(guardian, gov, rewards, token, Vault):
     assert vault.decimals() == token.decimals()
     assert vault.version() == PACKAGE_VERSION
 
+    assert vault.depositLimit() == 2 ** 256 - 1
     assert vault.creditAvailable() == 0
     assert vault.debtOutstanding() == 0
     assert vault.maxAvailableShares() == 0
@@ -36,6 +37,7 @@ def test_vault_deployment(guardian, gov, rewards, token, Vault):
         ("guardian", "setGuardian", None),
         ("rewards", "setRewards", None),
         ("performanceFee", "setPerformanceFee", 1000),
+        ("depositLimit", "setDepositLimit", 1000),
         ("debtLimit", "setDebtLimit", 1000),
         ("guardian", "setGuardian", None),
     ],

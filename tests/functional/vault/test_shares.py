@@ -37,6 +37,12 @@ def test_deposit_withdraw(gov, vault, token, fn_isolation):
     assert vault.totalDebt() == 0
     assert token.balanceOf(gov) == balance
 
+    vault.setDepositLimit(0, {"from": gov})
+
+    # Deposits are locked out
+    with brownie.reverts():
+        vault.deposit(token.balanceOf(gov), {"from": gov})
+
 
 def test_emergencyShutdown(gov, vault, token, fn_isolation):
     balance = token.balanceOf(gov)

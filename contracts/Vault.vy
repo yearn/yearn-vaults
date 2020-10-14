@@ -77,6 +77,7 @@ withdrawalQueue: public(address[MAXIMUM_STRATEGIES])
 
 emergencyShutdown: public(bool)
 
+depositLimit: public(uint256)  # Limit for totalAssets the Vault can hold
 debtLimit: public(uint256)  # Debt limit for the Vault across all strategies
 totalDebt: public(uint256)  # Amount of tokens that all strategies have borrowed
 
@@ -97,6 +98,7 @@ def __init__(_token: address, _governance: address, _rewards: address):
     self.rewards = _rewards
     self.guardian = msg.sender
     self.performanceFee = 450  # 4.5% of yield (per strategy)
+    self.depositLimit = MAX_UINT256  # Start unlimited
     self.debtLimit = ERC20(_token).totalSupply() / 1000  # 0.1% of total supply of token
 
 
@@ -117,6 +119,12 @@ def acceptGovernance():
 def setRewards(_rewards: address):
     assert msg.sender == self.governance
     self.rewards = _rewards
+
+
+@external
+def setDepositLimit(_limit: uint256):
+    assert msg.sender == self.governance
+    self.depositLimit = _limit
 
 
 @external
@@ -265,6 +273,7 @@ def _issueSharesForAmount(_to: address, _amount: uint256) -> uint256:
 @external
 def deposit(_amount: uint256) -> uint256:
     assert not self.emergencyShutdown  # Deposits are locked out
+    assert self._totalAssets() + _amount <= self.depositLimit  # Max deposit reached
 
     # NOTE: Measuring this based on the total outstanding debt that this contract
     #       has ("expected value") instead of the total balance sheet it has
