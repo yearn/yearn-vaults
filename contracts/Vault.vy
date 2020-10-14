@@ -1,5 +1,8 @@
 #@version 0.2.6
 
+CONTRACT_VERSION: constant(String[28]) = "0.1.0"
+version: public(String[28])
+
 # TODO: Add ETH Configuration
 # TODO: Add Delegated Configuration
 from vyper.interfaces import ERC20
@@ -83,6 +86,8 @@ FEE_MAX: constant(uint256) = 10000  # 100%, or 10000 basis points
 
 @external
 def __init__(_token: address, _governance: address, _rewards: address):
+    self.version = CONTRACT_VERSION
+
     # TODO: Non-detailed Configuration?
     self.token = ERC20(_token)
     self.name = concat("yearn ", DetailedERC20(_token).name())
