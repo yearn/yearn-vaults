@@ -42,7 +42,7 @@ contract TestStrategy is BaseStrategy {
         uint256 profit = 0;
         if (want.balanceOf(address(this)) > reserve) profit = want.balanceOf(address(this)).sub(reserve);
         // NOTE: Assume a 1:1 price here, for testing purposes
-        return (100 * gasCost <= credit.add(profit));
+        return (100 * gasCost < credit.add(profit));
     }
 
     function expectedReturn() public override view returns (uint256) {
