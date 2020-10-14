@@ -11,7 +11,8 @@ PACKAGE_VERSION = yaml.safe_load(
 
 
 def test_vault_deployment(guardian, gov, rewards, token, Vault):
-    vault = guardian.deploy(Vault, token, gov, rewards)
+    # Deploy the Vault without any name/symbol overrides
+    vault = guardian.deploy(Vault, token, gov, rewards, "", "")
     # Addresses
     assert vault.governance() == gov
     assert vault.guardian() == guardian
@@ -28,6 +29,16 @@ def test_vault_deployment(guardian, gov, rewards, token, Vault):
     assert vault.debtOutstanding() == 0
     assert vault.maxAvailableShares() == 0
     assert vault.totalAssets() == 0
+
+
+def test_vault_deployment_with_overrides(guardian, gov, rewards, token, Vault):
+    # Deploy the Vault with name/symbol overrides
+    vault = guardian.deploy(
+        Vault, token, gov, rewards, "yearn Better Name", "yOVERRIDE"
+    )
+    # Assert that the overrides worked
+    assert vault.name() == "yearn Better Name"
+    assert vault.symbol() == "yOVERRIDE"
 
 
 @pytest.mark.parametrize(
@@ -49,7 +60,7 @@ def test_vault_setParams(
         # Can't access fixtures, so use None to mean any random address
         val = rando
 
-    vault = guardian.deploy(Vault, token, gov, rewards)
+    vault = guardian.deploy(Vault, token, gov, rewards, "", "")
 
     # Only governance can set this param
     with brownie.reverts():
@@ -60,7 +71,7 @@ def test_vault_setParams(
 
 
 def test_vault_setGovernance(guardian, gov, rewards, token, rando, Vault):
-    vault = guardian.deploy(Vault, token, gov, rewards)
+    vault = guardian.deploy(Vault, token, gov, rewards, "", "")
     newGov = rando
     # No one can set governance but governance
     with brownie.reverts():

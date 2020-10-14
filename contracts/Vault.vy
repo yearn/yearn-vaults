@@ -86,13 +86,25 @@ performanceFee: public(uint256)  # Fee for governance rewards
 FEE_MAX: constant(uint256) = 10000  # 100%, or 10000 basis points
 
 @external
-def __init__(_token: address, _governance: address, _rewards: address):
+def __init__(
+    _token: address,
+    _governance: address,
+    _rewards: address,
+    _nameOverride: String[64],
+    _symbolOverride: String[32]
+):
     self.version = CONTRACT_VERSION
 
     # TODO: Non-detailed Configuration?
     self.token = ERC20(_token)
-    self.name = concat("yearn ", DetailedERC20(_token).name())
-    self.symbol = concat("y", DetailedERC20(_token).symbol())
+    if _nameOverride == "":
+        self.name = concat("yearn ", DetailedERC20(_token).name())
+    else:
+        self.name = _nameOverride
+    if _symbolOverride == "":
+        self.symbol = concat("y", DetailedERC20(_token).symbol())
+    else:
+        self.symbol = _symbolOverride
     self.decimals = DetailedERC20(_token).decimals()
     self.governance = _governance
     self.rewards = _rewards

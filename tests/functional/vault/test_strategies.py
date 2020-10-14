@@ -5,7 +5,7 @@ import brownie
 @pytest.fixture
 def vault(gov, token, Vault):
     # NOTE: Because the fixture has tokens in it already
-    yield gov.deploy(Vault, token, gov, gov)
+    yield gov.deploy(Vault, token, gov, gov, "", "")
 
 
 @pytest.fixture

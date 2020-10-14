@@ -36,7 +36,7 @@ def test_good_migration(
 def test_bad_migration(
     token, vault, strategy, gov, strategist, TestStrategy, Vault, rando
 ):
-    different_vault = gov.deploy(Vault, token, gov, gov)
+    different_vault = gov.deploy(Vault, token, gov, gov, "", "")
     new_strategy = strategist.deploy(TestStrategy, different_vault, gov)
 
     # Can't migrate to a strategy with a different vault

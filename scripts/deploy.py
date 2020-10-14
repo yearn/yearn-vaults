@@ -18,4 +18,4 @@ def main():
     gov = get_address("yEarn Governance: ")
     rewards = get_address("Rewards contract: ")
     print("Deploying Vault...")
-    vault = dev.deploy(Vault, token, gov, rewards)
+    vault = dev.deploy(Vault, token, gov, rewards, "", "")
