@@ -21,15 +21,11 @@ contract TestStrategy is BaseStrategy {
     }
 
     function tendTrigger(uint256 gasCost) public override view returns (bool) {
-        StrategyParams memory params = vault.strategies(address(this));
-
-        // Should not trigger if strategy is not activated
-        if (params.activation == 0) return false;
-
-        // Only trigger if it "makes sense" economically
-        if (want.balanceOf(address(this)) <= reserve) return false;
-        // NOTE: Assume a 1:1 price here, for testing purposes
-        return (gasCost <= want.balanceOf(address(this)).sub(reserve));
+        // In our example, we don't ever need tend, but if there are positions
+        // that need active maintainence, this is how you would signal for that
+        // NOTE: Must be mutually exclusive of `harvestTrigger`
+        //       (both can be false, but both should not be true)
+        return false;
     }
 
     function harvestTrigger(uint256 gasCost) public override view returns (bool) {
@@ -38,16 +34,15 @@ contract TestStrategy is BaseStrategy {
         // Should not trigger if strategy is not activated
         if (params.activation == 0) return false;
 
-        // Shortcircuit, in case of emergency exit or normal shutdown
-        if (emergencyExit || params.debtLimit == 0) return (want.balanceOf(address(this)) > 0);
-
         // If some amount is owed, pay it back
-        if (outstanding > 0) return true;
+        if (outstanding > 0 || vault.debtOutstanding() > 0) return true;
 
-        // Only trigger if it "makes sense" economically
+        // Only trigger if it "makes sense" economically (<1% of value moved)
         uint256 credit = vault.creditAvailable();
+        uint256 profit = 0;
+        if (want.balanceOf(address(this)) > reserve) profit = want.balanceOf(address(this)).sub(reserve);
         // NOTE: Assume a 1:1 price here, for testing purposes
-        return (gasCost <= credit);
+        return (100 * gasCost <= credit.add(profit));
     }
 
     function expectedReturn() public override view returns (uint256) {
