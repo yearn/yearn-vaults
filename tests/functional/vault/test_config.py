@@ -30,12 +30,16 @@ def test_vault_deployment(guardian, gov, rewards, token, Vault):
     assert vault.maxAvailableShares() == 0
     assert vault.totalAssets() == 0
 
+
 def test_vault_deployment_with_overrides(guardian, gov, rewards, token, Vault):
     # Deploy the Vault with name/symbol overrides
-    vault = guardian.deploy(Vault, token, gov, rewards, "yearn Better Name", "yOVERRIDE")
+    vault = guardian.deploy(
+        Vault, token, gov, rewards, "yearn Better Name", "yOVERRIDE"
+    )
     # Assert that the overrides worked
     assert vault.name() == "yearn Better Name"
     assert vault.symbol() == "yOVERRIDE"
+
 
 @pytest.mark.parametrize(
     "getter,setter,val",
