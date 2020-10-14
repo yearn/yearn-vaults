@@ -1,6 +1,6 @@
 # yEarn Vault Contracts
 
-Please read and be familiar with the [Specificaton](SPECIFICATION.md).
+Please read and be familiar with the [Specification](SPECIFICATION.md).
 
 This repository is the set of smart contracts that are used for the Yearn Vaults.
 It contains the requirements, code, deployment scripts, and tests necessary for the
@@ -70,7 +70,7 @@ Any command `in code blocks` is meant to be executed from a Mac/Linux terminal o
         * If you're on Windows (pure Windows, not WSL), you'll need to install the [C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) before executing this
 5. Install Node.js 10.x
     * Linux or Mac: via your [package manager](https://nodejs.org/en/download/package-manager/)
-    * Windows: [x64 installer](https://nodejs.org/dist/latest-v10.x/node-v10.22.1-x64.msi) 
+    * Windows: [x64 installer](https://nodejs.org/dist/latest-v10.x/node-v10.22.1-x64.msi)
     * Other [10.x downloads](https://nodejs.org/dist/latest-v10.x)
 6. Install [Ganache](https://github.com/trufflesuite/ganache-cli)
     * `npm install -g ganache-cli@6.11`
@@ -115,7 +115,7 @@ Any command `in code blocks` is meant to be executed from a Mac/Linux terminal o
             * Search for *format on save* and check the box
 17. Lastly, you'll want to add .vscode to to your global .gitignore
     * Use a terminal on Mac / Linux, use Git Bash on Windows
-    * `touch ~/.gitignore_global` 
+    * `touch ~/.gitignore_global`
     * use your favorite editor and add `.vscode/` to the ignore file
         * Using vi:
             * `vi ~/.gitignore_global`

@@ -11,7 +11,7 @@
 
 ### Definitions
 
-- Guardian: Trusted with privledged access for limited operations (ensuring safety of Vaults)
+- Guardian: Trusted with privileged access for limited operations (ensuring safety of Vaults)
 
 ### Normal Operation
 
@@ -20,7 +20,7 @@ NOTE: Users should only withdraw "free" assets as some strategies need to divest
 NOTE: "free" assets in the Vault means the amount the Vault has freely available (e.g. not invested in Strategies)
 
 1. A User is able to deposit any amount of the single asset the Vault accepts in exchange for shares of the Vault's underlying assets.
-2. A User is able to withdraw an amount of their shares up to the "free" deposits that the Vault has not lent out with no addional fee.
+2. A User is able to withdraw an amount of their shares up to the "free" deposits that the Vault has not lent out with no additional fee.
 3. A User is able to withdraw an amount of their shares above and beyond the "free" deposits that the Vault has not lent out with an additional fee based on the amount forcibly withdrawn from the Vault's Strategies.
 4. A User is able to transfer any amount of Vault shares to anyone else.
 5. Only Governance can approve Strategies to interact with Vaults and take on debt.
@@ -34,7 +34,7 @@ NOTE: "free" assets in the Vault means the amount the Vault has freely available
 
 - The Treasury (which benefits Governance) collects a "performance fee" based on the amount of returns a Strategy produces during Normal Operation, assessed each time the Strategy interacts with the Vault, and is provided as newly minted shares to the Treasury
 - Each Strategist collects a "performance fee" based on the amount of returns their Strategy produces during Normal Operation, assessed each time the Strategy interacts with the Vault, and is provided as newly minted shares to the Strategist
-- A "withdrawal fee" is assessed each time a User withdraws more than the Vault has "freely" available, which is assessed as a penalty paid to both the Tresurary and each Strategist affected depending on the amount withdrawn.
+- A "withdrawal fee" is assessed each time a User withdraws more than the Vault has "freely" available, which is assessed as a penalty paid to both the Treasury and each Strategist affected depending on the amount withdrawn.
 
 ### Emergency Shutdown Mode
 
@@ -66,7 +66,7 @@ NOTE: Updates must not trigger an instability in the Vault, especially when cons
 
 ### Emergency Exit Mode
 
-NOTE: In this mode, the Strategy defines a reversionary position that seeks to unwind and divest funds back to the Vault as quickly and smoothly as possible, with up to a nomimal amount of slippage expected
+NOTE: In this mode, the Strategy defines a reversionary position that seeks to unwind and divest funds back to the Vault as quickly and smoothly as possible, with up to a nominal amount of slippage expected
 
 1. During Emergency Exit, the Strategy does not pull more funds from the connected Vault
 2. During Emergency Exit, the Strategy can still interact with any external system, but must be able to handle a failure of that system as best as it can manage
@@ -82,7 +82,7 @@ NOTE: Governance is expected to manage each deployed Vault and the strategies co
 
 NOTE: Rewards are given as shares of each Vault, which are redeemable for the underlying token that Vault is wrapping.
 
-NOTE: It is up to the design of the Treasury to unwrap and further account for the share of the underyling awarded to governance participants, and the other parties in the Yearn ecosystem (including keeper gas fees, protocol development and maintainence costs, etc.)
+NOTE: It is up to the design of the Treasury to unwrap and further account for the share of the underlying awarded to governance participants, and the other parties in the Yearn ecosystem (including keeper gas fees, protocol development and maintenance costs, etc.)
 
 NOTE: The Treasury system could leverage the Vault design, with strategies that just market sell the rewards for YFI.
 
