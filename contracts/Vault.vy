@@ -86,7 +86,13 @@ performanceFee: public(uint256)  # Fee for governance rewards
 FEE_MAX: constant(uint256) = 10000  # 100%, or 10000 basis points
 
 @external
-def __init__(_token: address, _governance: address, _rewards: address, _nameOverride: String[64], _symbolOverride: String[32]):
+def __init__(
+    _token: address,
+    _governance: address,
+    _rewards: address,
+    _nameOverride: String[64],
+    _symbolOverride: String[32]
+):
     self.version = CONTRACT_VERSION
 
     # TODO: Non-detailed Configuration?
