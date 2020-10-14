@@ -11,7 +11,7 @@ def vault(gov, token, Vault):
 @pytest.fixture
 def strategy(gov, vault, TestStrategy):
     # NOTE: Because the fixture has tokens in it already
-    yield gov.deploy(TestStrategy, vault, gov)
+    yield gov.deploy(TestStrategy, vault)
 
 
 def test_addStrategy(web3, gov, vault, strategy, rando):
@@ -72,7 +72,7 @@ def test_migrateStrategy(gov, vault, strategy, rando, TestStrategy):
 
     # Migrating not in the withdrawal queue (for coverage)
     vault.removeStrategyFromQueue(strategy, {"from": gov})
-    new_strategy = gov.deploy(TestStrategy, vault, gov)
+    new_strategy = gov.deploy(TestStrategy, vault)
     vault.migrateStrategy(strategy, new_strategy, {"from": gov})
 
     # Can migrate back again (but it starts out fresh)
@@ -83,7 +83,7 @@ def test_migrateStrategy(gov, vault, strategy, rando, TestStrategy):
         vault.migrateStrategy(new_strategy, strategy, {"from": gov})
 
     # Can't migrate to an already approved strategy
-    approved_strategy = gov.deploy(TestStrategy, vault, gov)
+    approved_strategy = gov.deploy(TestStrategy, vault)
     vault.addStrategy(approved_strategy, 1000, 10, 50, {"from": gov})
     with brownie.reverts():
         vault.migrateStrategy(strategy, approved_strategy, {"from": gov})
@@ -118,7 +118,7 @@ def test_revokeStrategy(web3, gov, vault, strategy, rando):
 
 def test_ordering(gov, vault, TestStrategy, rando):
     # Show that a lot of strategies get properly ordered
-    strategies = [gov.deploy(TestStrategy, vault, gov) for _ in range(19)]
+    strategies = [gov.deploy(TestStrategy, vault) for _ in range(19)]
     [vault.addStrategy(s, 1000, 10, 50, {"from": gov}) for s in strategies]
 
     for idx, strategy in enumerate(strategies):
@@ -143,7 +143,7 @@ def test_ordering(gov, vault, TestStrategy, rando):
         assert vault.withdrawalQueue(idx) == strategy
 
     # Show that adding a new one properly orders
-    strategy = gov.deploy(TestStrategy, vault, gov)
+    strategy = gov.deploy(TestStrategy, vault)
     vault.addStrategy(strategy, 1000, 10, 50, {"from": gov})
     strategies.append(strategy)
 
@@ -152,9 +152,7 @@ def test_ordering(gov, vault, TestStrategy, rando):
 
     # NOTE: limited to only a certain amount of strategies
     with brownie.reverts():
-        vault.addStrategy(
-            gov.deploy(TestStrategy, vault, gov), 1000, 10, 50, {"from": gov}
-        )
+        vault.addStrategy(gov.deploy(TestStrategy, vault), 1000, 10, 50, {"from": gov})
 
     # Show that removing from the middle properly orders
     strategy = strategies.pop(1)

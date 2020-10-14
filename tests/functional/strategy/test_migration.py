@@ -12,7 +12,7 @@ def test_good_migration(
     assert strategy_debt > 0
     assert prior_position > 0
 
-    new_strategy = strategist.deploy(TestStrategy, vault, gov)
+    new_strategy = strategist.deploy(TestStrategy, vault)
     assert vault.strategies(new_strategy)[4] == 0
     assert token.balanceOf(new_strategy) == 0
 
@@ -37,13 +37,13 @@ def test_bad_migration(
     token, vault, strategy, gov, strategist, TestStrategy, Vault, rando
 ):
     different_vault = gov.deploy(Vault, token, gov, gov, "", "")
-    new_strategy = strategist.deploy(TestStrategy, different_vault, gov)
+    new_strategy = strategist.deploy(TestStrategy, different_vault)
 
     # Can't migrate to a strategy with a different vault
     with brownie.reverts():
         vault.migrateStrategy(strategy, new_strategy, {"from": gov})
 
-    new_strategy = strategist.deploy(TestStrategy, vault, gov)
+    new_strategy = strategist.deploy(TestStrategy, vault)
 
     # Can't migrate if you're not the Vault  or governance
     with brownie.reverts():
