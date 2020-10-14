@@ -1,5 +1,13 @@
+from pathlib import Path
+import yaml
+
 import pytest
 import brownie
+
+
+PACKAGE_VERSION = yaml.safe_load(
+    (Path(__file__).parent.parent.parent.parent / "ethpm-config.yaml").read_text()
+)["version"]
 
 
 def test_vault_deployment(guardian, gov, rewards, token, Vault):
@@ -13,6 +21,7 @@ def test_vault_deployment(guardian, gov, rewards, token, Vault):
     assert vault.name() == "yearn " + token.name()
     assert vault.symbol() == "y" + token.symbol()
     assert vault.decimals() == token.decimals()
+    assert vault.version() == PACKAGE_VERSION
 
     assert vault.creditAvailable() == 0
     assert vault.debtOutstanding() == 0
