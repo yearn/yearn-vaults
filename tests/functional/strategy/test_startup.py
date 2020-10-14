@@ -7,6 +7,8 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
     vault.expectedReturn(strategy) == 0
     assert strategy.outstanding() == strategy.reserve() == 0
     assert vault.balanceSheetOfStrategy(strategy) == 0
+    assert not strategy.harvestTrigger(0)
+    chain.mine(50)
     assert strategy.harvestTrigger(0)
 
     # Check accounting is maintained everywhere
