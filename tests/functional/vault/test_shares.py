@@ -5,7 +5,7 @@ import brownie
 @pytest.fixture
 def vault(gov, token, Vault):
     # NOTE: Overriding the one in conftest because it has values already
-    yield gov.deploy(Vault, token, gov, gov)
+    yield gov.deploy(Vault, token, gov, gov, "", "")
 
 
 def test_deposit_withdraw(gov, vault, token, fn_isolation):
