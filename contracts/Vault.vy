@@ -1,4 +1,4 @@
-#@version 0.2.6
+#@version 0.2.7
 
 CONTRACT_VERSION: constant(String[28]) = "0.1.0"
 
