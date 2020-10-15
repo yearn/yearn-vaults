@@ -9,6 +9,8 @@ def test_withdraw(gov, token, vault, strategy, rando):
 
     balance = strategy.estimatedTotalAssets()
     strategy.withdraw(balance // 2, {"from": vault.address})
+    # TODO: This fails because test and I guess the whole system
+    # believes that all strategies can have assets withdrawn from.
     assert strategy.estimatedTotalAssets() == balance // 2
 
     # Not just anyone can call it

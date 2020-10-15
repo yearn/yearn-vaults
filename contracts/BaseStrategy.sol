@@ -113,7 +113,7 @@ abstract contract BaseStrategy {
     IERC20 public want;
 
     // Adjust this to keep some of the position in reserve in the strategy,
-    // to accomodate larger variations needed to sustain the strategy's core positon(s)
+    // to accomodate larger variations needed to sustain the strategy's core position(s)
     uint256 public reserve = 0;
 
     // This gets adjusted every time the Strategy reports to the Vault,
@@ -158,7 +158,7 @@ abstract contract BaseStrategy {
      * would provide to the Vault the next time `report()` is called
      * (since the last time it was called)
      */
-    function expectedReturn() public virtual view returns (uint256);
+    function expectedReturn() public view virtual returns (uint256);
 
     /*
      * Provide an accurate estimate for the total amount of assets (principle + return)
@@ -178,7 +178,7 @@ abstract contract BaseStrategy {
      *       Vault based on sudden withdrawals. This value should be higher than the
      *       total debt of the strategy and higher than it's expected value to be "safe".
      */
-    function estimatedTotalAssets() public virtual view returns (uint256);
+    function estimatedTotalAssets() public view virtual returns (uint256);
 
     /*
      * Perform any strategy unwinding or other calls necessary to capture
@@ -221,7 +221,7 @@ abstract contract BaseStrategy {
      * NOTE: this call and `harvestTrigger` should never return `true` at the same time.
      * NOTE: if `tend()` is never intended to be called, it should always return `false`
      */
-    function tendTrigger(uint256 gasCost) public virtual view returns (bool);
+    function tendTrigger(uint256 gasCost) public view virtual returns (bool);
 
     function tend() external {
         if (keeper != address(0)) require(msg.sender == keeper || msg.sender == strategist || msg.sender == governance());
@@ -239,7 +239,7 @@ abstract contract BaseStrategy {
      *
      * NOTE: this call and `tendTrigger` should never return `true` at the same time.
      */
-    function harvestTrigger(uint256 gasCost) public virtual view returns (bool);
+    function harvestTrigger(uint256 gasCost) public view virtual returns (bool);
 
     function harvest() external {
         if (keeper != address(0)) require(msg.sender == keeper || msg.sender == strategist || msg.sender == governance());
@@ -278,7 +278,7 @@ abstract contract BaseStrategy {
     }
 
     /*
-     * Do anything necesseary to prepare this strategy for migration, such
+     * Do anything necessary to prepare this strategy for migration, such
      * as transfering any reserve or LP tokens, CDPs, or other tokens or stores of value.
      */
     function prepareMigration(address _newStrategy) internal virtual;

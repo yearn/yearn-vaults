@@ -50,7 +50,7 @@ def keeper(accounts):
 
 @pytest.fixture
 def strategy(gov, strategist, keeper, vault, TestStrategy):
-    strategy = strategist.deploy(TestStrategy, vault)
+    strategy = strategist.deploy(TwoWeeksLockStrategy, vault)
     strategy.setKeeper(keeper)
     yield strategy
 
