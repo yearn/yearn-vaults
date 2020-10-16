@@ -24,36 +24,42 @@ def main():
     print(f"You are using the '{network.show_active()}' network")
     bot = accounts.load("bot")
     print(f"You are using: 'bot' [{bot.address}]")
-    # TODO: Manage a list of strategies
     # TODO: Allow adding/removing strategies during operation
-    strategy = interface.StrategyAPI(get_address("Strategy to farm: "))
+    strategies = [interface.StrategyAPI(get_address("Strategy to farm: "))]
+    while input("Add another strategy? (y/[N]): ").lower() == "y":
+        strategies.append(interface.StrategyAPI(get_address("Strategy to farm: ")))
 
-    assert strategy.keeper() == bot.address, "Bot is not set as keeper!"
+    vault = Vault.at(strategies[0].vault())
 
-    vault = Vault.at(strategy.vault())
+    for strategy in strategies:
+        assert (
+            strategy.keeper() == bot.address
+        ), "Bot is not set as keeper! [{strategy.address}]"
+        assert strategy.vault() == vault.address, "Vault mismatch! [{strategy.address}]"
 
     while True:
-        # Display some relevant statistics
-        symbol = vault.symbol()[1:]
-        credit = vault.creditAvailable(strategy) / 10 ** vault.decimals()
-        print(f"Credit Available: {credit:0.3f} {symbol}")
-        debt = vault.debtOutstanding(strategy) / 10 ** vault.decimals()
-        print(f"Debt Outstanding: {debt:0.3f} {symbol}")
-
         gas_price = get_gas_price()
         starting_balance = bot.balance()
-        # TODO: Actually estimate gas
-        if strategy.tendTrigger(40000 * gas_price):
-            print(f"tending... [{strategy.address}]")
-            strategy.tend({"from": bot, "gas_price": gas_price})
-            print(f"`tend()` [{starting_balance - bot.balance()} wei]")
 
-        elif strategy.harvestTrigger(180000 * gas_price):
-            print(f"harvesting... [{strategy.address}]")
-            strategy.harvest({"from": bot, "gas_price": gas_price})
-            print(f"`harvest()` [{starting_balance - bot.balance()} wei]")
+        no_action = True
+        for strategy in strategies:
+            # Display some relevant statistics
+            symbol = vault.symbol()[1:]
+            credit = vault.creditAvailable(strategy) / 10 ** vault.decimals()
+            print(f"[{strategy.address}] Credit Available: {credit:0.3f} {symbol}")
+            debt = vault.debtOutstanding(strategy) / 10 ** vault.decimals()
+            print(f"[{strategy.address}] Debt Outstanding: {debt:0.3f} {symbol}")
 
-        else:
+            # TODO: Actually estimate gas
+            if strategy.tendTrigger(40000 * gas_price):
+                strategy.tend({"from": bot, "gas_price": gas_price})
+                no_action = False
+
+            elif strategy.harvestTrigger(180000 * gas_price):
+                strategy.harvest({"from": bot, "gas_price": gas_price})
+                no_action = False
+
+        if no_action:
             print("Sleeping for 60 seconds...")
             sleep(60)
 
