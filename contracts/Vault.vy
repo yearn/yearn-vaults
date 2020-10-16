@@ -52,7 +52,13 @@ struct StrategyParams:
     totalDebt: uint256  # Total outstanding debt that Strategy has
     totalReturns: uint256  # Total returns that Strategy has realized for Vault
 
-event StrategyUpdate:
+event StrategyAdded:
+    strategy: indexed(address)
+    debtLimit: uint256  # Maximum borrow amount
+    rateLimit: uint256  # Increase/decrease per block
+    performanceFee: uint256  # Strategist's fee (basis points)
+
+event StrategyReported:
     strategy: indexed(address)
     returnAdded: uint256
     debtAdded: uint256
@@ -455,7 +461,7 @@ def addStrategy(
         totalReturns: 0,
     })
     self.debtLimit += _debtLimit
-    log StrategyUpdate(_strategy, 0, 0, 0, 0, _debtLimit)
+    log StrategyAdded(_strategy, _debtLimit, _rateLimit, _performanceFee)
 
     # queue is full
     assert self.withdrawalQueue[MAXIMUM_STRATEGIES-1] == ZERO_ADDRESS
@@ -710,7 +716,7 @@ def report(_return: uint256) -> uint256:
     # Update reporting time
     self.strategies[msg.sender].lastReport = block.number
 
-    log StrategyUpdate(
+    log StrategyReported(
         msg.sender,
         _return,
         credit,
