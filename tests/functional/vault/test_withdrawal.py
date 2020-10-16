@@ -1,7 +1,5 @@
 import brownie
 
-from brownie import Wei
-
 
 def test_multiple_withdrawals(token, gov, vault, TestStrategy):
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(5)]
@@ -35,31 +33,30 @@ def test_multiple_withdrawals(token, gov, vault, TestStrategy):
         assert vault.balanceSheetOfStrategy(s) == 0
 
 
-def test_malicius_user_withdrawal(token, gov, vault, TestStrategy, rando):
+def test_malicius_user_withdrawal(token, gov, vault, TestStrategy, rando, chain):
     # Add strategies
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(5)]
     [vault.addStrategy(s, 1000, 10, 50, {"from": gov}) for s in strategies]
 
     # Send tokens to the rando user
     token.approve(gov, 2 ** 256 - 1, {"from": gov})
-    token.transferFrom(gov, rando, Wei("100 ether"), {"from": gov})
-    assert token.balanceOf(rando) == Wei("100 ether")
+    token.transferFrom(gov, rando, 1000, {"from": gov})
+    assert token.balanceOf(rando) == 1000
 
     # rando and gov deposits tokens to the vault
     token.approve(vault, 2 ** 256 - 1, {"from": gov})
     token.approve(vault, 2 ** 256 - 1, {"from": rando})
-
-    # TODO: Vault v2 doesn't have depositAll()? why?
-    vault.deposit(token.balanceOf(rando), {"from": rando})
-    vault.deposit(Wei("10 ether"), {"from": gov})
+    vault.deposit(1000, {"from": rando})
+    vault.deposit(4000, {"from": gov})
 
     assert token.balanceOf(rando) == 0
     assert vault.balanceOf(rando) > 0
     assert vault.balanceOf(gov) > 0
 
-    # invest tokens into strategies
-    [s.harvest({"from": gov}) for s in strategies]
-
-    # User shouldn't be able to withdraw more than what they have
-    with brownie.reverts():
-        vault.withdraw(Wei("110 ether"), {"from": rando})
+    # Withdrawal should fail, no matter the distribution of tokens between
+    # the vault and the strategies
+    while vault.totalDebt() < vault.debtLimit():
+        chain.mine(25)
+        [s.harvest({"from": gov}) for s in strategies]
+        with brownie.reverts():
+            vault.withdraw(5000, {"from": rando})
