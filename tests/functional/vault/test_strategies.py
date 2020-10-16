@@ -38,21 +38,51 @@ def test_addStrategy(web3, gov, vault, strategy, rando):
 def test_updateStrategy(web3, gov, vault, strategy, rando):
     # Can't update an unapproved strategy
     with brownie.reverts():
-        vault.updateStrategy(strategy, 1500, 15, 75, {"from": gov})
+        vault.updateStrategyDebtLimit(strategy, 1500, {"from": gov})
+    with brownie.reverts():
+        vault.updateStrategyRateLimit(strategy, 15, {"from": gov})
+    with brownie.reverts():
+        vault.updateStrategyPerformanceFee(strategy, 75, {"from": gov})
 
     vault.addStrategy(strategy, 1000, 10, 50, {"from": gov})
     activation_block = web3.eth.blockNumber  # Deployed right before test started
 
     # Not just anyone can update a strategy
     with brownie.reverts():
-        vault.updateStrategy(strategy, 1500, 15, 75, {"from": rando})
+        vault.updateStrategyDebtLimit(strategy, 1500, {"from": rando})
+    with brownie.reverts():
+        vault.updateStrategyRateLimit(strategy, 15, {"from": rando})
+    with brownie.reverts():
+        vault.updateStrategyPerformanceFee(strategy, 75, {"from": rando})
 
-    vault.updateStrategy(strategy, 1500, 15, 75, {"from": gov})
+    vault.updateStrategyDebtLimit(strategy, 1500, {"from": gov})
     assert vault.strategies(strategy) == [
-        75,
+        50,
         activation_block,
         1500,  # This changed
+        10,
+        activation_block,
+        0,
+        0,
+    ]
+
+    vault.updateStrategyRateLimit(strategy, 15, {"from": gov})
+    assert vault.strategies(strategy) == [
+        50,
+        activation_block,
+        1500,
         15,  # This changed
+        activation_block,
+        0,
+        0,
+    ]
+
+    vault.updateStrategyPerformanceFee(strategy, 75, {"from": gov})
+    assert vault.strategies(strategy) == [
+        75,  # This changed
+        activation_block,
+        1500,
+        15,
         activation_block,
         0,
         0,

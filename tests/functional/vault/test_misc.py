@@ -50,7 +50,12 @@ def test_reject_ether(gov, vault):
         ("deposit", [1]),
         ("withdraw", [1]),
         ("addStrategy", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1, 1, 1]),
-        ("updateStrategy", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1, 1, 1]),
+        ("updateStrategyDebtLimit", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1]),
+        ("updateStrategyRateLimit", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1]),
+        (
+            "updateStrategyPerformanceFee",
+            ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1],
+        ),
         (
             "migrateStrategy",
             [

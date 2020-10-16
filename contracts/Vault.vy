@@ -470,18 +470,34 @@ def addStrategy(
 
 
 @external
-def updateStrategy(
+def updateStrategyDebtLimit(
     _strategy: address,
     _debtLimit: uint256,
-    _rateLimit: uint256,
-    _performanceFee: uint256,
 ):
     assert msg.sender == self.governance
     assert self.strategies[_strategy].activation > 0
     self.debtLimit -= self.strategies[_strategy].debtLimit
     self.strategies[_strategy].debtLimit = _debtLimit
     self.debtLimit += _debtLimit
+
+
+@external
+def updateStrategyRateLimit(
+    _strategy: address,
+    _rateLimit: uint256,
+):
+    assert msg.sender == self.governance
+    assert self.strategies[_strategy].activation > 0
     self.strategies[_strategy].rateLimit = _rateLimit
+
+
+@external
+def updateStrategyPerformanceFee(
+    _strategy: address,
+    _performanceFee: uint256,
+):
+    assert msg.sender == self.governance
+    assert self.strategies[_strategy].activation > 0
     self.strategies[_strategy].performanceFee = _performanceFee
 
 
