@@ -33,7 +33,7 @@ def test_multiple_withdrawals(token, gov, vault, TestStrategy):
         assert vault.balanceSheetOfStrategy(s) == 0
 
 
-def test_malicius_user_withdrawal(token, gov, vault, TestStrategy, rando, chain):
+def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
     # Add strategies
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(5)]
     [vault.addStrategy(s, 1000, 10, 50, {"from": gov}) for s in strategies]
