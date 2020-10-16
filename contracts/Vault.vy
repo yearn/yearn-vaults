@@ -108,7 +108,6 @@ def __init__(
     self.guardian = msg.sender
     self.performanceFee = 450  # 4.5% of yield (per strategy)
     self.depositLimit = MAX_UINT256  # Start unlimited
-    self.debtLimit = ERC20(_token).totalSupply() / 1000  # 0.1% of total supply of token
 
 
 @pure
@@ -140,12 +139,6 @@ def setRewards(_rewards: address):
 def setDepositLimit(_limit: uint256):
     assert msg.sender == self.governance
     self.depositLimit = _limit
-
-
-@external
-def setDebtLimit(_limit: uint256):
-    assert msg.sender == self.governance
-    self.debtLimit = _limit
 
 
 @external
@@ -461,6 +454,7 @@ def addStrategy(
         totalDebt: 0,
         totalReturns: 0,
     })
+    self.debtLimit += _debtLimit
     log StrategyUpdate(_strategy, 0, 0, 0, 0, _debtLimit)
 
     # queue is full
@@ -478,7 +472,9 @@ def updateStrategy(
 ):
     assert msg.sender == self.governance
     assert self.strategies[_strategy].activation > 0
+    self.debtLimit -= self.strategies[_strategy].debtLimit
     self.strategies[_strategy].debtLimit = _debtLimit
+    self.debtLimit += _debtLimit
     self.strategies[_strategy].rateLimit = _rateLimit
     self.strategies[_strategy].performanceFee = _performanceFee
 
@@ -518,6 +514,7 @@ def revokeStrategy(_strategy: address = msg.sender):
     A strategy can revoke itself (Emergency Exit Mode)
     """
     assert msg.sender in [_strategy, self.governance, self.guardian]
+    self.debtLimit -= self.strategies[_strategy].debtLimit
     self.strategies[_strategy].debtLimit = 0
 
 

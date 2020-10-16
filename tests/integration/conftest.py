@@ -32,7 +32,6 @@ def guardian(accounts):
 @pytest.fixture
 def vault(gov, rewards, guardian, token, Vault):
     vault = guardian.deploy(Vault, token, gov, rewards, "", "")
-    vault.setDebtLimit(token.totalSupply(), {"from": gov})  # Adjust from 0.1% to 100%
     yield vault
 
 
