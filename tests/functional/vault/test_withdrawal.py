@@ -38,7 +38,7 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(5)]
     [vault.addStrategy(s, 1000, 10, 50, {"from": gov}) for s in strategies]
 
-    # Send tokens to the rando user
+    # Send tokens to random user
     token.approve(gov, 2 ** 256 - 1, {"from": gov})
     token.transferFrom(gov, rando, 1000, {"from": gov})
     assert token.balanceOf(rando) == 1000
