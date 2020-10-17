@@ -60,3 +60,51 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
         [s.harvest({"from": gov}) for s in strategies]
         with brownie.reverts():
             vault.withdraw(5000, {"from": rando})
+
+
+def test_progressive_withdrawal(token, gov, Vault, guardian, rewards, TestStrategy):
+    vault = guardian.deploy(Vault, token, gov, rewards, "", "")
+
+    strategies = [gov.deploy(TestStrategy, vault) for _ in range(2)]
+    [vault.addStrategy(s, 1000, 10, 50, {"from": gov}) for s in strategies]
+
+    token.approve(vault, 2 ** 256 - 1, {"from": gov})
+    vault.deposit(1000, {"from": gov})
+    token.approve(gov, 2 ** 256 - 1, {"from": gov})
+    token.transferFrom(
+        gov, guardian, token.balanceOf(gov), {"from": gov}
+    )  # Remove all tokens from gov
+    assert vault.balanceOf(gov) > 0
+    assert token.balanceOf(gov) == 0
+
+    # Deposit something in strategies
+    [s.harvest({"from": gov}) for s in strategies]
+    assert token.balanceOf(vault) < vault.totalAssets()  # Some debt is in strategies
+
+    # First withdraw everything possible without fees
+    free_balance = token.balanceOf(vault)
+    vault.withdraw(
+        free_balance * vault.pricePerShare() // 10 ** vault.decimals(), {"from": gov}
+    )
+    assert token.balanceOf(gov) == free_balance
+    assert vault.balanceOf(gov) > 0
+
+    # Then withdraw everything from the first strategy
+    balance_strat1 = token.balanceOf(strategies[0])
+    assert balance_strat1 > 0
+    vault.withdraw(
+        balance_strat1 * vault.pricePerShare() // 10 ** vault.decimals(), {"from": gov}
+    )
+    assert token.balanceOf(gov) == free_balance + balance_strat1
+    assert vault.balanceOf(gov) > 0
+    assert vault.maxAvailableShares() == token.balanceOf(strategies[1])
+
+    # Withdraw the final part
+    balance_strat2 = token.balanceOf(strategies[1])
+    assert balance_strat2 > 0
+    vault.withdraw(
+        balance_strat2 * vault.pricePerShare() // 10 ** vault.decimals(), {"from": gov}
+    )
+    assert token.balanceOf(gov) == free_balance + balance_strat1 + balance_strat2
+    assert vault.balanceOf(gov) == 0
+    assert token.balanceOf(vault) == 0
