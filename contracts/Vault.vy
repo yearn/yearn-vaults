@@ -403,6 +403,7 @@ def withdraw(_maxShares: uint256):
             # Reduce the strategy's debt by the amount withdrawn ("realized returns")
             # NOTE: This doesn't add to returns as it's not earned by "normal means"
             self.strategies[strategy].totalDebt -= withdrawn
+            self.totalDebt -= withdrawn
 
             # send withdrawal fee directly to strategist
             fee: uint256 = 50 * withdrawn / FEE_MAX
