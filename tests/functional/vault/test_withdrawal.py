@@ -1,3 +1,6 @@
+import brownie
+
+
 def test_multiple_withdrawals(token, gov, vault, TestStrategy):
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(5)]
     [vault.addStrategy(s, 1000, 10, 50, {"from": gov}) for s in strategies]
@@ -28,3 +31,32 @@ def test_multiple_withdrawals(token, gov, vault, TestStrategy):
 
     for s in strategies:  # Should have pulled everything from each strategy
         assert vault.balanceSheetOfStrategy(s) == 0
+
+
+def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
+    # Add strategies
+    strategies = [gov.deploy(TestStrategy, vault) for _ in range(5)]
+    [vault.addStrategy(s, 1000, 10, 50, {"from": gov}) for s in strategies]
+
+    # Send tokens to random user
+    token.approve(gov, 2 ** 256 - 1, {"from": gov})
+    token.transferFrom(gov, rando, 1000, {"from": gov})
+    assert token.balanceOf(rando) == 1000
+
+    # rando and gov deposits tokens to the vault
+    token.approve(vault, 2 ** 256 - 1, {"from": gov})
+    token.approve(vault, 2 ** 256 - 1, {"from": rando})
+    vault.deposit(1000, {"from": rando})
+    vault.deposit(4000, {"from": gov})
+
+    assert token.balanceOf(rando) == 0
+    assert vault.balanceOf(rando) > 0
+    assert vault.balanceOf(gov) > 0
+
+    # Withdrawal should fail, no matter the distribution of tokens between
+    # the vault and the strategies
+    while vault.totalDebt() < vault.debtLimit():
+        chain.mine(25)
+        [s.harvest({"from": gov}) for s in strategies]
+        with brownie.reverts():
+            vault.withdraw(5000, {"from": rando})
