@@ -336,28 +336,24 @@ def _sharesForAmount(_amount: uint256) -> uint256:
 
 
 @view
-@internal
-def _maxAvailableShares() -> uint256:
+@external
+def maxAvailableShares() -> uint256:
     shares: uint256 = self._sharesForAmount(self.token.balanceOf(self))
 
     for strategy in self.withdrawalQueue:
         if strategy == ZERO_ADDRESS:
             break
-        shares += self._sharesForAmount(self._balanceSheetOfStrategy(strategy))
+        shares += self._sharesForAmount(self.strategies[strategy].totalDebt)
 
     return shares
 
 
-@view
 @external
-def maxAvailableShares() -> uint256:
-    return self._maxAvailableShares()
+def withdraw(_shares: uint256):
+    # Limit to only the shares they own
+    assert _shares <= self.balanceOf[msg.sender]
+    shares: uint256 = _shares  # May reduce this number below
 
-
-@external
-def withdraw(_maxShares: uint256):
-    # Take the lesser of _maxShares, or the "available" amount of outstanding shares
-    shares: uint256 = min(_maxShares, self._maxAvailableShares())
     # NOTE: Measuring this based on the total outstanding debt that this contract
     #       has ("expected value") instead of the total balance sheet it has
     #       ("estimated value") has important security considerations, and is
@@ -374,9 +370,6 @@ def withdraw(_maxShares: uint256):
     #       *more* than the expected value once the "realized value" is updated
     #       from further reportings by the Strategies to the Vaults.
     #
-    #       Note that this risk is mitgated partially through the withdrawal fee,
-    #       partially through the semi-frequent updates to the "realized value" of
-    #       the Vault's assets, but is a systemic risk to users of the Vault.
     #       Under exceptional scenarios, this could cause earlier withdrawals to
     #       earn "more" of the underlying assets than Users might otherwise be
     #       entitled to, if the Vault's estimated value were otherwise measured
@@ -390,10 +383,21 @@ def withdraw(_maxShares: uint256):
         #       a 0.5% withdrawal fee assessed on each forced withdrawal (<= 0.5% total)
         totalFee: uint256 = 0
         for strategy in self.withdrawalQueue:
-            # strategy != ZERO_ADDRESS because maxAvailableShares reduces amountNeeded
+            if strategy == ZERO_ADDRESS:
+                break  # We've exhausted the queue
+
             amountNeeded: uint256 = value - self.token.balanceOf(self)
+
             if amountNeeded == 0:
                 break  # We're done withdrawing
+
+            # NOTE: Don't withdraw more than the debt so that strategy can still
+            #       continue to work based on the profits it has
+            # NOTE: This means that user will lose out on any profits that each
+            #       strategy in the queue would return on next harvest, benefitting others
+            amountNeeded = min(amountNeeded, self.strategies[strategy].totalDebt)
+            if amountNeeded == 0:
+                continue  # Nothing to withdraw from this strategy, try the next one
 
             # Force withdraw amount from each strategy in the order set by governance
             before: uint256 = self.token.balanceOf(self)
@@ -412,9 +416,14 @@ def withdraw(_maxShares: uint256):
 
         value -= totalFee  # fee is assessed here, sum(fee) above
 
-    # Invariant: value <= self.token.balanceOf(self) at this point
+    # NOTE: We have withdrawn everything possible out of the withdrawal queue
+    #       but we still don't have enough to fully pay them back, so adjust
+    #       to the total amount we've freed up through forced withdrawals
+    if value > self.token.balanceOf(self):
+        value = self.token.balanceOf(self)
+        shares = self._sharesForAmount(value)
 
-    # Burn shares (full value of what was withdrawn)
+    # Burn shares (full value of what is being withdrawn)
     self.totalSupply -= shares
     self.balanceOf[msg.sender] -= shares
     log Transfer(msg.sender, ZERO_ADDRESS, shares)
