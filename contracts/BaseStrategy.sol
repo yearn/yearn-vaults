@@ -267,14 +267,10 @@ abstract contract BaseStrategy {
      */
     function liquidatePosition(uint256 _amount) internal virtual;
 
-    function withdraw(uint256 _amount) external returns (uint256) {
+    function withdraw(uint256 _amount) external {
         require(msg.sender == address(vault), "!vault");
         liquidatePosition(_amount); // Liquidates as much as possible to `want`, up to `_amount`
-        uint256 available = _amount;
-        if (_amount > want.balanceOf(address(this))) available = want.balanceOf(address(this));
-        want.transfer(msg.sender, available);
-        adjustPosition(); // Check if free returns are left, and re-invest them
-        return available;
+        want.transfer(msg.sender, want.balanceOf(address(this)).sub(reserve));
     }
 
     /*

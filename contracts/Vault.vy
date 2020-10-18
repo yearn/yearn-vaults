@@ -16,7 +16,7 @@ interface DetailedERC20:
 interface Strategy:
     def strategist() -> address: view
     def estimatedTotalAssets() -> uint256: view
-    def withdraw(_amount: uint256) -> uint256: nonpayable
+    def withdraw(_amount: uint256): nonpayable
     def migrate(_newStrategy: address): nonpayable
 
 event Transfer:
@@ -396,9 +396,9 @@ def withdraw(_maxShares: uint256):
                 break  # We're done withdrawing
 
             # Force withdraw amount from each strategy in the order set by governance
-            withdrawn: uint256 = Strategy(strategy).withdraw(amountNeeded)
-            # NOTE: Should always be true, but check anyways since it's an assumption
-            assert withdrawn == amountNeeded - (value - self.token.balanceOf(self))
+            before: uint256 = self.token.balanceOf(self)
+            Strategy(strategy).withdraw(amountNeeded)
+            withdrawn: uint256 = self.token.balanceOf(self) - before
 
             # Reduce the strategy's debt by the amount withdrawn ("realized returns")
             # NOTE: This doesn't add to returns as it's not earned by "normal means"
