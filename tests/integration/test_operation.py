@@ -1,57 +1,56 @@
 class NormalOperation:
-    def __init__(self, token, vault, strategy, gov, mint, keeper):
+    def __init__(self, token, vault, strategy, user, farm, keeper):
         self.token = token
         self.vault = vault
-        self.gov = gov
-        self.mint = mint
-        self.keeper = keeper
         self.strategy = strategy
+        self.farm = farm
+        self.keeper = keeper
+        self.user = user
 
     def setup(self):
-        self.current_return = (
-            lambda: self.token.balanceOf(self.strategy) // 1000
-        )  # 0.1% return, every time
-        self.last_price = 0.0
-        self.returns = 0
+        self.last_price = 1.0
+
+    def rule_deposit(self):
+        print("  NormalOperation.deposit()")
+        # Deposit 50% of what they have left
+        self.vault.deposit(self.token.balanceOf(self.user) // 2, {"from": self.user})
+
+    def rule_withdraw(self):
+        print("  NormalOperation.withdraw()")
+        # Withdraw 50% of what they have in the Vault
+        self.vault.withdraw(self.vault.balanceOf(self.user) // 2, {"from": self.user})
+
+    def rule_yield(self):
+        print("  NormalOperation.yield()")
+        # Earn 1% yield on deposits in some farming protocol
+        self.token.transfer(
+            self.strategy,
+            self.token.balanceOf(self.strategy) // 100,
+            {"from": self.farm},
+        )
 
     def rule_harvest(self):
-        c = self.vault.creditAvailable(self.strategy)
-        er = self.vault.expectedReturn(self.strategy)
-        r = self.current_return()
-        dl = self.vault.strategies(self.strategy)[2]  # debtLimit
-        print(
-            f"""
-    Available Credit: {c}
-    Expected Return: {er}
-    Actual Return: {r}
-    Adjusted Debt: {dl}"""
-        )
-        self.token.transfer(self.strategy, r, {"from": self.mint})
+        print("  NormalOperation.harvest()")
+        # Keeper decides to harvest the yield
         self.strategy.harvest({"from": self.keeper})
-
-    def invariant_accounting(self):
-        assert self.vault.totalDebt() == self.token.balanceOf(self.strategy)
-        assert self.vault.totalAssets() == sum(
-            self.token.balanceOf(i) for i in (self.vault, self.strategy)
-        )
 
     def invariant_numbergoup(self):
         # Positive-return Strategy should never reduce the price of a share
-        price = (
-            self.vault.pricePerShare() / 10 ** self.vault.decimals()
-            if self.vault.totalSupply() > 0
-            else 0.0
-        )
+        price = self.vault.pricePerShare() / 10 ** self.vault.decimals()
         assert price >= self.last_price
         self.last_price = price
 
 
-def test_normal_operation(gov, strategy, vault, token, andre, keeper, state_machine):
+def test_normal_operation(
+    gov, strategy, vault, token, chad, andre, keeper, state_machine
+):
     vault.addStrategy(
         strategy,
-        token.balanceOf(vault) // 2,  # Go up to 50% of Vault AUM
-        token.balanceOf(vault) // 1000,  # 0.1% of Vault AUM per block
+        token.balanceOf(vault),  # Go up to 100% of Vault AUM
+        token.balanceOf(vault),  # 100% of Vault AUM per block (no rate limit)
         50,  # 0.5% performance fee for Strategist
         {"from": gov},
     )
-    state_machine(NormalOperation, token, vault, strategy, gov, andre, keeper)
+    strategy.harvest({"from": keeper})
+    assert token.balanceOf(vault) == 0
+    state_machine(NormalOperation, token, vault, strategy, chad, andre, keeper)
