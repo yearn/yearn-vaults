@@ -1,5 +1,6 @@
 class NormalOperation:
-    def __init__(self, token, vault, strategy, user, farm, keeper):
+    def __init__(self, web3, token, vault, strategy, user, farm, keeper):
+        self.web3 = web3
         self.token = token
         self.vault = vault
         self.strategy = strategy
@@ -7,42 +8,37 @@ class NormalOperation:
         self.keeper = keeper
         self.user = user
 
-    def setup(self):
-        self.last_price = 1.0
-
     def rule_deposit(self):
-        print("  NormalOperation.deposit()")
+        print("  Vault.deposit()")
+
         # Deposit 50% of what they have left
-        self.vault.deposit(self.token.balanceOf(self.user) // 2, {"from": self.user})
+        amt = self.token.balanceOf(self.user) // 2
+        self.vault.deposit(amt, {"from": self.user})
 
     def rule_withdraw(self):
-        print("  NormalOperation.withdraw()")
-        # Withdraw 50% of what they have in the Vault
-        self.vault.withdraw(self.vault.balanceOf(self.user) // 2, {"from": self.user})
+        print("  Vault.withdraw()")
 
-    def rule_yield(self):
-        print("  NormalOperation.yield()")
-        # Earn 1% yield on deposits in some farming protocol
-        self.token.transfer(
-            self.strategy,
-            self.token.balanceOf(self.strategy) // 100,
-            {"from": self.farm},
-        )
+        # Withdraw 50% of what they have in the Vault
+        amt = self.vault.balanceOf(self.user) // 2
+        self.vault.withdraw(amt, {"from": self.user})
 
     def rule_harvest(self):
-        print("  NormalOperation.harvest()")
+        print("  Strategy.harvest()")
+
+        # Earn 1% yield on deposits in some farming protocol
+        amt = self.token.balanceOf(self.strategy) // 100
+        self.token.transfer(self.strategy, amt, {"from": self.farm})
+
         # Keeper decides to harvest the yield
         self.strategy.harvest({"from": self.keeper})
 
-    def invariant_numbergoup(self):
-        # Positive-return Strategy should never reduce the price of a share
-        price = self.vault.pricePerShare() / 10 ** self.vault.decimals()
-        assert price >= self.last_price
-        self.last_price = price
+    # TODO: Invariant that user did not get > they should have
+    # TODO: Invariant that fees/accounting is all perfect
+    # TODO: Invariant that all economic assumptions are maintained
 
 
 def test_normal_operation(
-    gov, strategy, vault, token, chad, andre, keeper, state_machine
+    web3, gov, strategy, vault, token, chad, andre, keeper, state_machine
 ):
     vault.addStrategy(
         strategy,
@@ -53,4 +49,4 @@ def test_normal_operation(
     )
     strategy.harvest({"from": keeper})
     assert token.balanceOf(vault) == 0
-    state_machine(NormalOperation, token, vault, strategy, chad, andre, keeper)
+    state_machine(NormalOperation, web3, token, vault, strategy, chad, andre, keeper)

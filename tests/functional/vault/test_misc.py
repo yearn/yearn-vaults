@@ -36,6 +36,7 @@ def test_reject_ether(gov, vault):
         ("setRewards", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
         ("setGuardian", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
         ("setPerformanceFee", [0]),
+        ("setManagementFee", [0]),
         ("setEmergencyShutdown", [True]),
         ("approve", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1]),
         ("transfer", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1]),

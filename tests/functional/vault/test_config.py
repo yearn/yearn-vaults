@@ -49,6 +49,7 @@ def test_vault_deployment_with_overrides(guardian, gov, rewards, token, Vault):
         ("guardian", "setGuardian", None),
         ("rewards", "setRewards", None),
         ("performanceFee", "setPerformanceFee", 1000),
+        ("managementFee", "setManagementFee", 1000),
         ("depositLimit", "setDepositLimit", 1000),
         ("guardian", "setGuardian", None),
     ],
