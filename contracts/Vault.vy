@@ -388,7 +388,6 @@ def withdraw(_shares: uint256):
         # We need to go get some from our strategies in the withdrawal queue
         # NOTE: This performs forced withdrawals from each strategy. There is
         #       a 0.5% withdrawal fee assessed on each forced withdrawal (<= 0.5% total)
-        totalFee: uint256 = 0
         for strategy in self.withdrawalQueue:
             if strategy == ZERO_ADDRESS:
                 break  # We've exhausted the queue
@@ -415,13 +414,6 @@ def withdraw(_shares: uint256):
             # NOTE: This doesn't add to returns as it's not earned by "normal means"
             self.strategies[strategy].totalDebt -= withdrawn
             self.totalDebt -= withdrawn
-
-            # send withdrawal fee directly to strategist
-            fee: uint256 = 50 * withdrawn / FEE_MAX
-            totalFee += fee
-            self.token.transfer(Strategy(strategy).strategist(), fee)
-
-        value -= totalFee  # fee is assessed here, sum(fee) above
 
     # NOTE: We have withdrawn everything possible out of the withdrawal queue
     #       but we still don't have enough to fully pay them back, so adjust
