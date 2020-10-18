@@ -30,9 +30,11 @@ def test_deposit_withdraw(gov, vault, token, fn_isolation):
     assert vault.totalDebt() == 0
     assert vault.pricePerShare() == 10 ** token.decimals()  # 1:1 price
 
-    # This works because it's *max* shares, and it adjusts by total available
-    vault.withdraw(2 * vault.balanceOf(gov), {"from": gov})
+    # Can't withdraw more shares than we have
+    with brownie.reverts():
+        vault.withdraw(2 * vault.balanceOf(gov), {"from": gov})
 
+    vault.withdraw(vault.balanceOf(gov), {"from": gov})
     assert vault.totalSupply() == token.balanceOf(vault) == 0
     assert vault.totalDebt() == 0
     assert token.balanceOf(gov) == balance
