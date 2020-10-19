@@ -618,7 +618,12 @@ def _creditAvailable(_strategy: address) -> uint256:
     available = min(available, self.debtLimit - self.totalDebt)
 
     # Adjust by the rate limit algorithm (limits the step size per reporting period)
-    available = min(available, strategy_rateLimit * (block.number - strategy_lastReport))
+    blockDelta: uint256 = block.number - strategy_lastReport
+    # NOTE: Protect against unnecessary overflow faults here
+    # NOTE: Set `strategy_rateLimit` to a really high number to disable the rate limit
+    # NOTE: *NEVER* set `strategy_rateLimit` to 0 or else this will always throw
+    if available / strategy_rateLimit >= blockDelta:
+        available = min(available, strategy_rateLimit * blockDelta)
 
     # Can only borrow up to what the contract has in reserve
     # NOTE: Running near 100% is discouraged
