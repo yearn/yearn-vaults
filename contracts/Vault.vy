@@ -171,7 +171,11 @@ def setEmergencyShutdown(_active: bool):
 @external
 def setWithdrawalQueue(_queue: address[MAXIMUM_STRATEGIES]):
     assert msg.sender == self.governance
-    self.withdrawalQueue = _queue
+    # HACK: Temporary until Vyper adds support for Dynamic arrays
+    for i in range(MAXIMUM_STRATEGIES):
+        if _queue[i] == ZERO_ADDRESS and self.withdrawalQueue[i] == ZERO_ADDRESS:
+            break
+        self.withdrawalQueue[i] = _queue[i]
 
 
 @internal
