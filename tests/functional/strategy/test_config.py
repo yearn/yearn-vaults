@@ -1,4 +1,11 @@
+from pathlib import Path
+import yaml
+
 import brownie
+
+PACKAGE_VERSION = yaml.safe_load(
+    (Path(__file__).parent.parent.parent.parent / "ethpm-config.yaml").read_text()
+)["version"]
 
 
 def test_strategy_deployment(strategist, vault, TestStrategy):
@@ -7,6 +14,8 @@ def test_strategy_deployment(strategist, vault, TestStrategy):
     assert strategy.strategist() == strategist
     assert strategy.keeper() == strategist
     assert strategy.want() == vault.token()
+    assert vault.version() == PACKAGE_VERSION
+
     assert strategy.reserve() == 0
     assert not strategy.emergencyExit()
 

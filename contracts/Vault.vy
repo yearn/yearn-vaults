@@ -1,6 +1,6 @@
 #@version 0.2.7
 
-CONTRACT_VERSION: constant(String[28]) = "0.1.0"
+CONTRACT_VERSION: constant(String[28]) = "0.1.1"
 
 # TODO: Add ETH Configuration
 # TODO: Add Delegated Configuration

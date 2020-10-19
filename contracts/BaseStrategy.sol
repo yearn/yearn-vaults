@@ -106,6 +106,11 @@ interface StrategyAPI {
 abstract contract BaseStrategy {
     using SafeMath for uint256;
 
+    // Version of this contract
+    function version() external pure returns (string memory) {
+        return "0.1.1";
+    }
+
     VaultAPI public vault;
     address public strategist;
     address public keeper;
