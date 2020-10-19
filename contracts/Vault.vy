@@ -467,6 +467,7 @@ def addStrategy(
     _performanceFee: uint256,
 ):
     assert msg.sender == self.governance
+    assert self.strategies[_strategy].activation == 0
     self.strategies[_strategy] = StrategyParams({
         performanceFee: _performanceFee,
         activation: block.number,
