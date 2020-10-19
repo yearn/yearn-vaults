@@ -171,7 +171,11 @@ def setEmergencyShutdown(_active: bool):
 @external
 def setWithdrawalQueue(_queue: address[MAXIMUM_STRATEGIES]):
     assert msg.sender == self.governance
-    self.withdrawalQueue = _queue
+    # HACK: Temporary until Vyper adds support for Dynamic arrays
+    for i in range(MAXIMUM_STRATEGIES):
+        if _queue[i] == ZERO_ADDRESS and self.withdrawalQueue[i] == ZERO_ADDRESS:
+            break
+        self.withdrawalQueue[i] = _queue[i]
 
 
 @internal
@@ -269,15 +273,17 @@ def _issueSharesForAmount(_to: address, _amount: uint256) -> uint256:
     #       or calculation will be wrong. This means that only *trusted*
     #       tokens (with no capability for exploitive behavior) can be used
     shares: uint256 = 0
-    if self.totalSupply > 0:
+    # HACK: Saves 2 SLOADs (~4000 gas)
+    totalSupply: uint256 = self.totalSupply
+    if totalSupply > 0:
         # Mint amount of shares based on what the Vault is managing overall
-        shares = _amount * self.totalSupply / self._totalAssets()
+        shares = _amount * totalSupply / self._totalAssets()
     else:
         # No existing shares, so mint 1:1
         shares = _amount
 
     # Mint new shares
-    self.totalSupply += shares
+    self.totalSupply = totalSupply + shares
     self.balanceOf[_to] += shares
     log Transfer(ZERO_ADDRESS, _to, shares)
 
@@ -461,6 +467,7 @@ def addStrategy(
     _performanceFee: uint256,
 ):
     assert msg.sender == self.governance
+    assert self.strategies[_strategy].activation == 0
     self.strategies[_strategy] = StrategyParams({
         performanceFee: _performanceFee,
         activation: block.number,
@@ -760,8 +767,24 @@ def report(_return: uint256) -> uint256:
         return debt
 
 
+@internal
+def erc20_safe_transfer(_token: address, _to: address, _value: uint256):
+    # HACK: Used to handle non-compliant tokens like USDT
+    _response: Bytes[32] = raw_call(
+        _token,
+        concat(
+            method_id("transfer(address,uint256)"),
+            convert(_to, bytes32),
+            convert(_value, bytes32)
+        ),
+        max_outsize=32
+    )
+    if len(_response) > 0:
+        assert convert(_response, bool), "Transfer failed!"
+
+
 @external
 def sweep(_token: address):
     # Can't be used to steal what this Vault is protecting
     assert _token != self.token.address
-    ERC20(_token).transfer(self.governance, ERC20(_token).balanceOf(self))
+    self.erc20_safe_transfer(_token, self.governance, ERC20(_token).balanceOf(self))

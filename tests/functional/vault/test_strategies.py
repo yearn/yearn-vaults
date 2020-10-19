@@ -34,6 +34,10 @@ def test_addStrategy(web3, gov, vault, strategy, rando):
     ]
     assert vault.withdrawalQueue(0) == strategy
 
+    # Can't add a strategy twice
+    with brownie.reverts():
+        vault.addStrategy(strategy, 1000, 10, 50, {"from": gov})
+
 
 def test_updateStrategy(web3, gov, vault, strategy, rando):
     # Can't update an unapproved strategy
