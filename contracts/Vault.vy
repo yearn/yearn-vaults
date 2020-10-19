@@ -273,15 +273,17 @@ def _issueSharesForAmount(_to: address, _amount: uint256) -> uint256:
     #       or calculation will be wrong. This means that only *trusted*
     #       tokens (with no capability for exploitive behavior) can be used
     shares: uint256 = 0
-    if self.totalSupply > 0:
+    # HACK: Saves 2 SLOADs (~4000 gas)
+    totalSupply: uint256 = self.totalSupply
+    if totalSupply > 0:
         # Mint amount of shares based on what the Vault is managing overall
-        shares = _amount * self.totalSupply / self._totalAssets()
+        shares = _amount * totalSupply / self._totalAssets()
     else:
         # No existing shares, so mint 1:1
         shares = _amount
 
     # Mint new shares
-    self.totalSupply += shares
+    self.totalSupply = totalSupply + shares
     self.balanceOf[_to] += shares
     log Transfer(ZERO_ADDRESS, _to, shares)
 
