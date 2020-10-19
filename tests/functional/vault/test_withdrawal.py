@@ -151,9 +151,7 @@ def test_withdrawal_with_empty_queue(
     assert token.balanceOf(gov) == free_balance
 
     # Re-establish the withdrawal queue
-    queue = [vault.withdrawalQueue(4)] * 20
-    queue[0] = strategy
-    vault.setWithdrawalQueue(queue, {"from": gov})
+    vault.addStrategyToQueue(strategy, {"from": gov})
 
     vault.withdraw(
         strategy_balance * vault.pricePerShare() // 10 ** vault.decimals(),
