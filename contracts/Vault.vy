@@ -766,8 +766,24 @@ def report(_return: uint256) -> uint256:
         return debt
 
 
+@internal
+def erc20_safe_transfer(_token: address, _to: address, _value: uint256):
+    # HACK: Used to handle non-compliant tokens like USDT
+    _response: Bytes[32] = raw_call(
+        _token,
+        concat(
+            method_id("transfer(address,uint256)"),
+            convert(_to, bytes32),
+            convert(_value, bytes32)
+        ),
+        max_outsize=32
+    )
+    if len(_response) > 0:
+        assert convert(_response, bool), "Transfer failed!"
+
+
 @external
 def sweep(_token: address):
     # Can't be used to steal what this Vault is protecting
     assert _token != self.token.address
-    ERC20(_token).transfer(self.governance, ERC20(_token).balanceOf(self))
+    self.erc20_safe_transfer(_token, self.governance, ERC20(_token).balanceOf(self))
