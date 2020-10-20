@@ -571,6 +571,7 @@ def addStrategyToQueue(_strategy: address):
     self.withdrawalQueue[MAXIMUM_STRATEGIES-1] = _strategy
     self._organizeWithdrawalQueue()
 
+
 @external
 def removeStrategyFromQueue(_strategy: address):
     # NOTE: We don't do this with revokeStrategy because it should still
