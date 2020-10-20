@@ -128,7 +128,7 @@ def test_withdrawal_with_empty_queue(
     strategy.harvest({"from": gov})
     assert token.balanceOf(vault) < vault.totalAssets()
 
-    vault.removeStrategyFromQueue(strategy)
+    vault.removeStrategyFromQueue(strategy, {"from": gov})
 
     free_balance = token.balanceOf(vault)
     strategy_balance = token.balanceOf(strategy)
