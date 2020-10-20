@@ -85,10 +85,13 @@ emergencyShutdown: public(bool)
 depositLimit: public(uint256)  # Limit for totalAssets the Vault can hold
 debtLimit: public(uint256)  # Debt limit for the Vault across all strategies
 totalDebt: public(uint256)  # Amount of tokens that all strategies have borrowed
+lastReport: public(uint256)  # Number of blocks since last report
 
-rewards: public(address)
-performanceFee: public(uint256)  # Fee for governance rewards
-FEE_MAX: constant(uint256) = 10000  # 100%, or 10000 basis points
+rewards: public(address)  # Rewards contract where Governance fees are sent to
+managementFee: public(uint256)  # Governance Fee for management of Vault (given to `rewards`)
+performanceFee: public(uint256)  # Governance Fee for performance of Vault (given to `rewards`)
+FEE_MAX: constant(uint256) = 10_000  # 100%, or 10k basis points
+BLOCKS_PER_YEAR: constant(uint256) = 2_300_000
 
 @external
 def __init__(
@@ -113,7 +116,9 @@ def __init__(
     self.rewards = _rewards
     self.guardian = msg.sender
     self.performanceFee = 450  # 4.5% of yield (per strategy)
+    self.managementFee = 200  # 2% per year
     self.depositLimit = MAX_UINT256  # Start unlimited
+    self.lastReport = block.number
 
 
 @pure
@@ -151,6 +156,12 @@ def setDepositLimit(_limit: uint256):
 def setPerformanceFee(_fee: uint256):
     assert msg.sender == self.governance
     self.performanceFee = _fee
+
+
+@external
+def setManagementFee(_fee: uint256):
+    assert msg.sender == self.governance
+    self.managementFee = _fee
 
 
 @external
@@ -388,7 +399,6 @@ def withdraw(_shares: uint256):
         # We need to go get some from our strategies in the withdrawal queue
         # NOTE: This performs forced withdrawals from each strategy. There is
         #       a 0.5% withdrawal fee assessed on each forced withdrawal (<= 0.5% total)
-        totalFee: uint256 = 0
         for strategy in self.withdrawalQueue:
             if strategy == ZERO_ADDRESS:
                 break  # We've exhausted the queue
@@ -415,13 +425,6 @@ def withdraw(_shares: uint256):
             # NOTE: This doesn't add to returns as it's not earned by "normal means"
             self.strategies[strategy].totalDebt -= withdrawn
             self.totalDebt -= withdrawn
-
-            # send withdrawal fee directly to strategist
-            fee: uint256 = 50 * withdrawn / FEE_MAX
-            totalFee += fee
-            self.token.transfer(Strategy(strategy).strategist(), fee)
-
-        value -= totalFee  # fee is assessed here, sum(fee) above
 
     # NOTE: We have withdrawn everything possible out of the withdrawal queue
     #       but we still don't have enough to fully pay them back, so adjust
@@ -697,29 +700,34 @@ def report(_return: uint256) -> uint256:
     debt: uint256 = self._debtOutstanding(msg.sender)
 
     # Issue new shares to cover fees
-    # NOTE: Applies if strategy is not shutting down, or it is but all debt paid off
     # NOTE: In effect, this reduces overall share price by the combined fee
+    governance_fee: uint256 = (
+        self._totalAssets() * (block.number - self.lastReport) * self.managementFee
+    ) / FEE_MAX / BLOCKS_PER_YEAR
+    self.lastReport = block.number
+    strategist_fee: uint256 = 0  # Only applies in certain conditions
+
+    # NOTE: Applies if strategy is not shutting down, or it is but all debt paid off
     # NOTE: No fee is taken when a strategy is unwinding it's position, until all debt is paid
     if  _return > debt:
-        strategist_fee: uint256 = (
+        strategist_fee = (
             (_return - debt) * self.strategies[msg.sender].performanceFee
         ) / FEE_MAX
-        governance_fee: uint256 = ((_return - debt) * self.performanceFee) / FEE_MAX
-        total_fee: uint256 = governance_fee + strategist_fee
+        governance_fee += (_return - debt) * self.performanceFee / FEE_MAX
 
-        # NOTE: In certain cases, the calculated fee might be too small
-        if total_fee > 0:
-            # NOTE: This must be called prior to taking new collateral,
-            #       or the calculation will be wrong!
-            # NOTE: This must be done at the same time, to ensure the relative
-            #       ratio of governance_fee : strategist_fee is kept intact
-            reward: uint256 = self._issueSharesForAmount(self, total_fee)
+    # NOTE: This must be called prior to taking new collateral,
+    #       or the calculation will be wrong!
+    # NOTE: This must be done at the same time, to ensure the relative
+    #       ratio of governance_fee : strategist_fee is kept intact
+    total_fee: uint256 = governance_fee + strategist_fee
+    reward: uint256 = self._issueSharesForAmount(self, total_fee)
 
-            # Send the rewards out as new shares in this Vault
-            strategist_reward: uint256 = (strategist_fee * reward) / total_fee
-            self._transfer(self, Strategy(msg.sender).strategist(), strategist_reward)
-            # NOTE: Governance earns the dust
-            self._transfer(self, self.rewards, self.balanceOf[self])
+    # Send the rewards out as new shares in this Vault
+    if strategist_fee > 0:
+        strategist_reward: uint256 = (strategist_fee * reward) / total_fee
+        self._transfer(self, Strategy(msg.sender).strategist(), strategist_reward)
+    # NOTE: Governance earns any dust leftover from flooring math above
+    self._transfer(self, self.rewards, self.balanceOf[self])
 
     # Compute the line of credit the Vault is able to offer the Strategy (if any)
     credit: uint256 = self._creditAvailable(msg.sender)

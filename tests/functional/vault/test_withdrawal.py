@@ -1,36 +1,59 @@
 import brownie
 
 
-def test_multiple_withdrawals(token, gov, vault, TestStrategy):
+def test_multiple_withdrawals(token, gov, Vault, TestStrategy):
+    # Need a fresh vault to do this math right
+    vault = Vault.deploy(token, gov, gov, "", "", {"from": gov})
+    starting_balance = token.balanceOf(gov)
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(5)]
-    [vault.addStrategy(s, 1000, 10, 50, {"from": gov}) for s in strategies]
-
-    before_balance = token.balanceOf(gov)
+    [
+        vault.addStrategy(
+            s,
+            token.balanceOf(gov) // 10,  # 10% of all tokens
+            2 ** 256 - 1,  # No rate limit
+            0,  # No fee
+            {"from": gov},
+        )
+        for s in strategies
+    ]
 
     token.approve(vault, 2 ** 256 - 1, {"from": gov})
     vault.deposit(token.balanceOf(gov), {"from": gov})
 
-    assert token.balanceOf(gov) < before_balance
-    before_balance = token.balanceOf(gov)
+    assert token.balanceOf(gov) == 0
+    assert token.balanceOf(vault) == starting_balance
 
     [s.harvest({"from": gov}) for s in strategies]  # Seed all the strategies with debt
 
+    assert token.balanceOf(vault) == starting_balance // 2
     for s in strategies:  # All of them have debt
-        print(s, vault.balanceSheetOfStrategy(s))
-        assert vault.balanceSheetOfStrategy(s) > 0
-        assert vault.balanceSheetOfStrategy(s) == token.balanceOf(s)
+        assert (
+            vault.balanceSheetOfStrategy(s)
+            == token.balanceOf(s)
+            == starting_balance // 10
+        )
 
-    # We withdraw from all the strategies
-    vault.withdraw(vault.balanceOf(gov) // 2, {"from": gov})
-    assert token.balanceOf(gov) > before_balance
-    before_balance = token.balanceOf(gov)
+    # Withdraw only from Vault
+    before = token.balanceOf(vault)
+    vault.withdraw(vault.balanceOf(gov) // 2 + 1, {"from": gov})
+    assert token.balanceOf(vault) == 0
+    assert token.balanceOf(gov) == before
+    for s in strategies:
+        assert (
+            vault.balanceSheetOfStrategy(s)
+            == token.balanceOf(s)
+            == starting_balance // 10
+        )
 
-    assert vault.balanceOf(gov) > 0
+    # We've drained all the debt
     vault.withdraw(vault.balanceOf(gov), {"from": gov})
-    assert token.balanceOf(gov) > before_balance
-
-    for s in strategies:  # Should have pulled everything from each strategy
+    for s in strategies:
         assert vault.balanceSheetOfStrategy(s) == 0
+        assert token.balanceOf(s) == 0
+
+    assert vault.totalDebt() == 0
+    for s in strategies:
+        assert vault.balanceSheetOfStrategy(s) == token.balanceOf(s) == 0
 
 
 def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
