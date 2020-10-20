@@ -559,7 +559,9 @@ def revokeStrategy(_strategy: address = msg.sender):
 @external
 def addStrategyToQueue(_strategy: address):
     assert msg.sender in [self.governance, self.guardian]
-    # queue is full
+    # Must be a current strategy
+    assert self.strategies[_strategy].activation > 0 and self.strategies[_strategy].totalDebt > 0
+    # Check if queue is full
     assert self.withdrawalQueue[MAXIMUM_STRATEGIES-1] == ZERO_ADDRESS
     self.withdrawalQueue[MAXIMUM_STRATEGIES-1] = _strategy
     self._organizeWithdrawalQueue()
