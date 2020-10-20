@@ -95,6 +95,8 @@ interface StrategyAPI {
     function harvestTrigger(uint256 gasCost) external view returns (bool);
 
     function harvest() external;
+
+    event Harvested(uint256 wantEarned, uint256 lifetimeEarned);
 }
 
 /*
@@ -116,6 +118,9 @@ abstract contract BaseStrategy {
     address public keeper;
 
     IERC20 public want;
+
+    // So indexers can keep track of this
+    event Harvested(uint256 wantEarned, uint256 lifetimeEarned);
 
     // Adjust this to keep some of the position in reserve in the strategy,
     // to accomodate larger variations needed to sustain the strategy's core positon(s)
@@ -260,10 +265,12 @@ abstract contract BaseStrategy {
 
         // Allow Vault to take up to the "harvested" balance of this contract, which is
         // the amount it has earned since the last time it reported to the Vault
-        outstanding = vault.report(want.balanceOf(address(this)).sub(reserve));
+        uint256 wantEarned = want.balanceOf(address(this)).sub(reserve);
+        outstanding = vault.report(wantEarned);
 
         adjustPosition(); // Check if free returns are left, and re-invest them
-        // TODO: Could move fee calculation here, would actually bias more towards growth
+
+        emit Harvested(wantEarned, vault.strategies(address(this)).totalReturns);
     }
 
     /*
