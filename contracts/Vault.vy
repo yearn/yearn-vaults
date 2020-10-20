@@ -556,6 +556,7 @@ def revokeStrategy(_strategy: address = msg.sender):
     self.debtLimit -= self.strategies[_strategy].debtLimit
     self.strategies[_strategy].debtLimit = 0
 
+
 @external
 def addStrategyToQueue(_strategy: address):
     assert msg.sender == self.governance
