@@ -558,7 +558,7 @@ def revokeStrategy(_strategy: address = msg.sender):
 
 @external
 def addStrategyToQueue(_strategy: address):
-    assert msg.sender in [self.governance, self.guardian]
+    assert msg.sender == self.governance
     # Must be a current strategy
     assert self.strategies[_strategy].activation > 0 and self.strategies[_strategy].totalDebt > 0
     # Check if queue is full
@@ -575,7 +575,7 @@ def addStrategyToQueue(_strategy: address):
 def removeStrategyFromQueue(_strategy: address):
     # NOTE: We don't do this with revokeStrategy because it should still
     #       be possible to withdraw from it if it's unwinding
-    assert msg.sender in [self.governance, self.guardian]
+    assert msg.sender == self.governance
     for idx in range(MAXIMUM_STRATEGIES):
         if self.withdrawalQueue[idx] == _strategy:
             self.withdrawalQueue[idx] = ZERO_ADDRESS
