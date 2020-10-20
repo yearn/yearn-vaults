@@ -563,6 +563,11 @@ def addStrategyToQueue(_strategy: address):
     assert self.strategies[_strategy].activation > 0 and self.strategies[_strategy].totalDebt > 0
     # Check if queue is full
     assert self.withdrawalQueue[MAXIMUM_STRATEGIES-1] == ZERO_ADDRESS
+    # Can't already be in the queue
+    for strategy in self.withdrawalQueue:
+        if strategy == ZERO_ADDRESS:
+            break
+        assert strategy != _strategy
     self.withdrawalQueue[MAXIMUM_STRATEGIES-1] = _strategy
     self._organizeWithdrawalQueue()
 
