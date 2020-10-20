@@ -175,6 +175,7 @@ def setWithdrawalQueue(_queue: address[MAXIMUM_STRATEGIES]):
     for i in range(MAXIMUM_STRATEGIES):
         if _queue[i] == ZERO_ADDRESS and self.withdrawalQueue[i] == ZERO_ADDRESS:
             break
+        assert self.strategies[_queue[i]].activation > 0
         self.withdrawalQueue[i] = _queue[i]
 
 
