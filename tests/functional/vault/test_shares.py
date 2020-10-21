@@ -8,6 +8,27 @@ def vault(gov, token, Vault):
     yield gov.deploy(Vault, token, gov, gov, "", "")
 
 
+def test_deposit_with_zero_funds(vault, token, rando):
+    assert token.balanceOf(rando) == 0
+    token.approve(vault, 2 ** 256 - 1, {"from": rando})
+    with brownie.reverts():
+        vault.depositAll({"from": rando})
+
+
+def test_deposit_with_wrong_amount(vault, token, gov):
+    balance = token.balanceOf(gov) + 1
+    token.approve(vault, balance, {"from": gov})
+    with brownie.reverts():
+        vault.deposit(balance, {"from": gov})
+
+
+def test_deposit_all(gov, vault, token):
+    balance = token.balanceOf(gov)
+    token.approve(vault, token.balanceOf(gov), {"from": gov})
+    vault.depositAll({"from": gov})
+    assert token.balanceOf(vault) == balance
+
+
 def test_deposit_withdraw(gov, vault, token, fn_isolation):
     balance = token.balanceOf(gov)
     token.approve(vault, balance, {"from": gov})
