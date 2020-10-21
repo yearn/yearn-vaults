@@ -308,7 +308,7 @@ def _deposit(_sender: address, _amount: uint256) -> uint256:
     assert self._totalAssets() + _amount <= self.depositLimit  # Max deposit reached
 
     # Depositer should have funds
-    assert self.token.balanceOf(_sender) > 0
+    assert _amount > 0
     assert self.token.balanceOf(_sender) >= _amount
 
     # NOTE: Measuring this based on the total outstanding debt that this contract
