@@ -307,7 +307,7 @@ def _deposit(_sender: address, _amount: uint256) -> uint256:
     assert not self.emergencyShutdown  # Deposits are locked out
     assert self._totalAssets() + _amount <= self.depositLimit  # Max deposit reached
 
-    # Depositer should have funds
+    # Ensure we are depositing something
     assert _amount > 0
 
     # NOTE: Measuring this based on the total outstanding debt that this contract
