@@ -309,7 +309,6 @@ def _deposit(_sender: address, _amount: uint256) -> uint256:
 
     # Depositer should have funds
     assert self.token.balanceOf(_sender) > 0
-    assert self.token.balanceOf(_sender) >= _amount
 
     # NOTE: Measuring this based on the total outstanding debt that this contract
     #       has ("expected value") instead of the total balance sheet it has
