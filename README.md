@@ -89,7 +89,7 @@ Any command `in code blocks` is meant to be executed from a Mac/Linux terminal o
 12. If you don't have git yet, go [set it up](https://docs.github.com/en/free-pro-team@latest/github/getting-started-with-github/set-up-git)
 13. Pull the repository from GitHub and install its dependencies
     * `git clone https://github.com/iearn-finance/yearn-vaults`
-    * `cd yearn-protocol`
+    * `cd yearn-vaults`
     * `yarn install --lock-file`
         * You may have to install with `--ignore-engines` (try this if you get an error)
 14. Compile the Smart Contracts:
