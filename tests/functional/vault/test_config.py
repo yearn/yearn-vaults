@@ -19,8 +19,8 @@ def test_vault_deployment(guardian, gov, rewards, token, Vault):
     assert vault.rewards() == rewards
     assert vault.token() == token
     # UI Stuff
-    assert vault.name() == "yearn " + token.name()
-    assert vault.symbol() == "y" + token.symbol()
+    assert vault.name() == token.symbol() + " yVault"
+    assert vault.symbol() == "yv" + token.symbol()
     assert vault.decimals() == token.decimals()
     assert vault.version() == PACKAGE_VERSION
 
@@ -34,12 +34,10 @@ def test_vault_deployment(guardian, gov, rewards, token, Vault):
 
 def test_vault_deployment_with_overrides(guardian, gov, rewards, token, Vault):
     # Deploy the Vault with name/symbol overrides
-    vault = guardian.deploy(
-        Vault, token, gov, rewards, "yearn Better Name", "yOVERRIDE"
-    )
+    vault = guardian.deploy(Vault, token, gov, rewards, "crvY yVault", "yvcrvY")
     # Assert that the overrides worked
-    assert vault.name() == "yearn Better Name"
-    assert vault.symbol() == "yOVERRIDE"
+    assert vault.name() == "crvY yVault"
+    assert vault.symbol() == "yvcrvY"
 
 
 @pytest.mark.parametrize(
@@ -92,3 +90,25 @@ def test_vault_setGovernance(guardian, gov, rewards, token, rando, Vault):
     # Only new governance can accept a change of governance
     with brownie.reverts():
         vault.acceptGovernance({"from": gov})
+
+
+def test_vault_setName(guardian, gov, rewards, token, rando, Vault):
+    vault = guardian.deploy(Vault, token, gov, rewards, "", "")
+
+    # No one can set name but governance
+    with brownie.reverts():
+        vault.setName("NewName yVault", {"from": rando})
+
+    vault.setName("NewName yVault", {"from": gov})
+    assert vault.name() == "NewName yVault"
+
+
+def test_vault_setSymbol(guardian, gov, rewards, token, rando, Vault):
+    vault = guardian.deploy(Vault, token, gov, rewards, "", "")
+
+    # No one can set symbol but governance
+    with brownie.reverts():
+        vault.setSymbol("yvNEW", {"from": rando})
+
+    vault.setSymbol("yvNEW", {"from": gov})
+    assert vault.symbol() == "yvNEW"
