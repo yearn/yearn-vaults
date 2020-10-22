@@ -1,6 +1,21 @@
 import brownie
 
 
+def test_withdraw_all_should_fail(token, gov, Vault):
+    vault = Vault.deploy(token, gov, gov, "", "", {"from": gov})
+    with brownie.reverts():
+        vault.withdrawAll({"from": gov})
+
+
+def test_withdraw_all(token, gov, Vault):
+    vault = Vault.deploy(token, gov, gov, "", "", {"from": gov})
+    token.approve(vault, 2 ** 256 - 1, {"from": gov})
+    vault.deposit(token.balanceOf(gov), {"from": gov})
+
+    vault.withdrawAll({"from": gov})
+    assert vault.totalAssets() == 0
+
+
 def test_multiple_withdrawals(token, gov, Vault, TestStrategy):
     # Need a fresh vault to do this math right
     vault = Vault.deploy(token, gov, gov, "", "", {"from": gov})

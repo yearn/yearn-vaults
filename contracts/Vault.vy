@@ -379,10 +379,10 @@ def maxAvailableShares() -> uint256:
     return shares
 
 
-@external
-def withdraw(_shares: uint256):
+@internal
+def _withdraw(sender: address, _shares: uint256):
     # Limit to only the shares they own
-    assert _shares <= self.balanceOf[msg.sender]
+    assert _shares <= self.balanceOf[sender]
     shares: uint256 = _shares  # May reduce this number below
 
     # NOTE: Measuring this based on the total outstanding debt that this contract
@@ -448,11 +448,21 @@ def withdraw(_shares: uint256):
 
     # Burn shares (full value of what is being withdrawn)
     self.totalSupply -= shares
-    self.balanceOf[msg.sender] -= shares
-    log Transfer(msg.sender, ZERO_ADDRESS, shares)
+    self.balanceOf[sender] -= shares
+    log Transfer(sender, ZERO_ADDRESS, shares)
 
     # Withdraw remaining balance (minus fee)
-    self.token.transfer(msg.sender, value)
+    self.token.transfer(sender, value)
+
+
+@external
+def withdrawAll():
+    self._withdraw(msg.sender, self.balanceOf[msg.sender])
+
+
+@external
+def withdraw(_shares: uint256):
+    self._withdraw(msg.sender, _shares)
 
 
 @view
