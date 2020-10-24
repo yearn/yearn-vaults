@@ -382,7 +382,7 @@ def maxAvailableShares() -> uint256:
 
 
 @internal
-def _withdrawTo(_sender: address, _recipient: address, _shares: uint256) -> uint256:
+def _withdrawFrom(_sender: address, _recipient: address, _shares: uint256) -> uint256:
     # Limit to only the shares they own
     assert _shares <= self.balanceOf[_sender]
     shares: uint256 = _shares  # May reduce this number below
@@ -461,12 +461,12 @@ def _withdrawTo(_sender: address, _recipient: address, _shares: uint256) -> uint
 
 @external
 def withdraw(_shares: uint256, _recipient: address = msg.sender) -> uint256:
-    return self._withdrawTo(msg.sender, _recipient, _shares)
+    return self._withdrawFrom(msg.sender, _recipient, _shares)
 
 
 @external
 def withdrawAll(_recipient: address = msg.sender) -> uint256:
-    return self._withdrawTo(msg.sender, _recipient, self.balanceOf[msg.sender])
+    return self._withdrawFrom(msg.sender, _recipient, self.balanceOf[msg.sender])
 
 
 @view
