@@ -22,11 +22,22 @@ def test_deposit_with_wrong_amount(vault, token, gov):
         vault.deposit(balance, {"from": gov})
 
 
-def test_deposit_all(gov, vault, token):
+def test_deposit_all_and_withdraw_all(gov, vault, token):
     balance = token.balanceOf(gov)
     token.approve(vault, token.balanceOf(gov), {"from": gov})
     vault.depositAll({"from": gov})
+    # vault has tokens
     assert token.balanceOf(vault) == balance
+    # sender has vault shares
+    assert vault.balanceOf(gov) == balance
+
+    vault.withdrawAll({"from": gov})
+    # vault no longer has tokens
+    assert token.balanceOf(vault) == 0
+    # sender no longer has shares
+    assert vault.balanceOf(gov) == 0
+    # sender has tokens
+    assert token.balanceOf(gov) == balance
 
 
 def test_deposit_withdraw(gov, vault, token, fn_isolation):
@@ -65,6 +76,59 @@ def test_deposit_withdraw(gov, vault, token, fn_isolation):
     # Deposits are locked out
     with brownie.reverts():
         vault.deposit(token.balanceOf(gov), {"from": gov})
+
+
+def test_delegated_deposit_withdraw(accounts, token, vault, fn_isolation):
+    a, b, c, d, e = accounts[0:5]
+
+    # Store original amount of tokens so we can assert
+    # Number of tokens will be equal to number of shares since no returns are generated
+    originalTokenAmount = token.balanceOf(a)
+
+    # Make sure we have tokens to play with
+    assert originalTokenAmount > 0
+
+    # 1. Deposit from a and send shares to b
+    token.approve(vault, token.balanceOf(a), {"from": a})
+    vault.deposit(token.balanceOf(a), b, {"from": a})
+
+    # a no longer has any tokens
+    assert token.balanceOf(a) == 0
+    # a does not have any vault shares
+    assert vault.balanceOf(a) == 0
+    # b has been issued the vault shares
+    assert vault.balanceOf(b) == originalTokenAmount
+
+    # 2. Withdraw from b to c
+    vault.withdrawAll(c, {"from": b})
+
+    # b no longer has any shares
+    assert vault.balanceOf(b) == 0
+    # b did not receive the tokens
+    assert token.balanceOf(b) == 0
+    # c has the tokens
+    assert token.balanceOf(c) == originalTokenAmount
+
+    # 3. Deposit all from c and send shares to d
+    token.approve(vault, token.balanceOf(c), {"from": c})
+    vault.depositAll(d, {"from": c})
+
+    # c no longer has the tokens
+    assert token.balanceOf(c) == 0
+    # c does not have any vault shares
+    assert vault.balanceOf(c) == 0
+    # d has been issued the vault shares
+    assert vault.balanceOf(d) == originalTokenAmount
+
+    # 4. Withdraw from d to e
+    vault.withdraw(vault.balanceOf(d), e, {"from": d})
+
+    # d no longer has any shares
+    assert vault.balanceOf(d) == 0
+    # d did not receive the tokens
+    assert token.balanceOf(d) == 0
+    # e has the tokens
+    assert token.balanceOf(e) == originalTokenAmount
 
 
 def test_emergencyShutdown(gov, vault, token, fn_isolation):
