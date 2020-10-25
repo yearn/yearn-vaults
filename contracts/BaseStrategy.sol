@@ -110,7 +110,7 @@ abstract contract BaseStrategy {
 
     // Version of this contract
     function version() external pure returns (string memory) {
-        return "0.1.1";
+        return "0.1.2";
     }
 
     VaultAPI public vault;

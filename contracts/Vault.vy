@@ -1,6 +1,6 @@
 #@version 0.2.7
 
-CONTRACT_VERSION: constant(String[28]) = "0.1.1"
+CONTRACT_VERSION: constant(String[28]) = "0.1.2"
 
 # TODO: Add ETH Configuration
 # TODO: Add Delegated Configuration
@@ -104,11 +104,11 @@ def __init__(
     # TODO: Non-detailed Configuration?
     self.token = ERC20(_token)
     if _nameOverride == "":
-        self.name = concat("yearn ", DetailedERC20(_token).name())
+        self.name = concat(DetailedERC20(_token).symbol(), " yVault")
     else:
         self.name = _nameOverride
     if _symbolOverride == "":
-        self.symbol = concat("y", DetailedERC20(_token).symbol())
+        self.symbol = concat("yv", DetailedERC20(_token).symbol())
     else:
         self.symbol = _symbolOverride
     self.decimals = DetailedERC20(_token).decimals()
@@ -125,6 +125,18 @@ def __init__(
 @external
 def version() -> String[28]:
     return CONTRACT_VERSION
+
+
+@external
+def setName(_name: String[42]):
+    assert msg.sender == self.governance
+    self.name = _name
+
+
+@external
+def setSymbol(_symbol: String[20]):
+    assert msg.sender == self.governance
+    self.symbol = _symbol
 
 
 # 2-phase commit for a change in governance
