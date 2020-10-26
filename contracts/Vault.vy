@@ -315,7 +315,7 @@ def _issueSharesForAmount(_to: address, _amount: uint256) -> uint256:
 
 
 @internal
-def _deposit(_sender: address, _amount: uint256) -> uint256:
+def _depositFrom(_sender: address, _recipient: address, _amount: uint256) -> uint256:
     assert not self.emergencyShutdown  # Deposits are locked out
     assert self._totalAssets() + _amount <= self.depositLimit  # Max deposit reached
 
@@ -342,10 +342,12 @@ def _deposit(_sender: address, _amount: uint256) -> uint256:
     #       on-chain) to determine if depositing into the Vault is a "good idea"
 
     # Issue new shares (needs to be done before taking deposit to be accurate)
-    shares: uint256 = self._issueSharesForAmount(_sender, _amount)
+    # Shares are issued to recipient (may be different from _sender)
+    shares: uint256 = self._issueSharesForAmount(_recipient, _amount)
 
     # Get new collateral
     reserve: uint256 = self.token.balanceOf(self)
+    # Tokens are transferred from _sender (may be different from _recipient)
     self.token.transferFrom(_sender, self, _amount)
     # TODO: `Deflationary` configuration only
     assert self.token.balanceOf(self) - reserve == _amount  # Deflationary token check
@@ -354,13 +356,13 @@ def _deposit(_sender: address, _amount: uint256) -> uint256:
 
 
 @external
-def depositAll() -> uint256:
-    return self._deposit(msg.sender, self.token.balanceOf(msg.sender))
+def depositAll(_recipient: address = msg.sender) -> uint256:
+    return self._depositFrom(msg.sender, _recipient, self.token.balanceOf(msg.sender))
 
 
 @external
-def deposit(_amount: uint256) -> uint256:
-    return self._deposit(msg.sender, _amount)
+def deposit(_amount: uint256, _recipient: address = msg.sender) -> uint256:
+    return self._depositFrom(msg.sender, _recipient, _amount)
 
 
 @view
@@ -391,10 +393,10 @@ def maxAvailableShares() -> uint256:
     return shares
 
 
-@external
-def withdraw(_shares: uint256):
+@internal
+def _withdrawFrom(_sender: address, _recipient: address, _shares: uint256) -> uint256:
     # Limit to only the shares they own
-    assert _shares <= self.balanceOf[msg.sender]
+    assert _shares <= self.balanceOf[_sender]
     shares: uint256 = _shares  # May reduce this number below
 
     # NOTE: Measuring this based on the total outstanding debt that this contract
@@ -460,11 +462,23 @@ def withdraw(_shares: uint256):
 
     # Burn shares (full value of what is being withdrawn)
     self.totalSupply -= shares
-    self.balanceOf[msg.sender] -= shares
-    log Transfer(msg.sender, ZERO_ADDRESS, shares)
+    self.balanceOf[_sender] -= shares
+    log Transfer(_sender, ZERO_ADDRESS, shares)
 
-    # Withdraw remaining balance (minus fee)
-    self.token.transfer(msg.sender, value)
+    # Withdraw remaining balance to _recipient (may be different to _sender) (minus fee)
+    self.token.transfer(_recipient, value)
+
+    return value
+
+
+@external
+def withdraw(_shares: uint256, _recipient: address = msg.sender) -> uint256:
+    return self._withdrawFrom(msg.sender, _recipient, _shares)
+
+
+@external
+def withdrawAll(_recipient: address = msg.sender) -> uint256:
+    return self._withdrawFrom(msg.sender, _recipient, self.balanceOf[msg.sender])
 
 
 @view
