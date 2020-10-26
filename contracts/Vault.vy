@@ -315,9 +315,8 @@ def _issueSharesForAmount(_to: address, _amount: uint256) -> uint256:
 
 
 @external
-def deposit(_recipient: address = msg.sender, _amount: uint256 = MAX_UINT256) -> uint256:
+def deposit(_amount: uint256 = MAX_UINT256, _recipient: address = msg.sender) -> uint256:
     assert not self.emergencyShutdown  # Deposits are locked out
-    assert self._totalAssets() + _amount <= self.depositLimit  # Max deposit reached
 
     amount: uint256 = _amount
 
@@ -327,6 +326,9 @@ def deposit(_recipient: address = msg.sender, _amount: uint256 = MAX_UINT256) ->
 
     # Ensure we are depositing something
     assert amount > 0
+
+    # Ensure deposit limit is respected
+    assert self._totalAssets() + amount <= self.depositLimit
 
     # NOTE: Measuring this based on the total outstanding debt that this contract
     #       has ("expected value") instead of the total balance sheet it has
@@ -390,7 +392,7 @@ def maxAvailableShares() -> uint256:
 
 
 @external
-def withdraw(_recipient: address = msg.sender, _shares: uint256 = MAX_UINT256) -> uint256:
+def withdraw(_shares: uint256 = MAX_UINT256, _recipient: address = msg.sender) -> uint256:
     shares: uint256 = _shares  # May reduce this number below
 
     # If _shares not specified, transfer full share balance
