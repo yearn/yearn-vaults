@@ -70,7 +70,7 @@ def pleb(accounts, andre, token, vault):
     # Unlimited Approvals
     token.approve(vault, 2 ** 256 - 1, {"from": a})
     # Deposit half their stack
-    vault.deposit(bal // 2, {"from": a})
+    vault.deposit(a, bal // 2, {"from": a})
     yield a
 
 
@@ -84,7 +84,7 @@ def chad(accounts, andre, token, vault):
     # Unlimited Approvals
     token.approve(vault, 2 ** 256 - 1, {"from": a})
     # Deposit half their stack
-    vault.deposit(bal // 2, {"from": a})
+    vault.deposit(a, bal // 2, {"from": a})
     yield a
 
 
@@ -98,7 +98,7 @@ def greyhat(accounts, andre, token, vault):
     # Unlimited Approvals
     token.approve(vault, 2 ** 256 - 1, {"from": a})
     # Deposit half their stack
-    vault.deposit(bal // 2, {"from": a})
+    vault.deposit(a, bal // 2, {"from": a})
     yield a
 
 
@@ -112,5 +112,5 @@ def whale(accounts, andre, token, vault):
     # Unlimited Approvals
     token.approve(vault, 2 ** 256 - 1, {"from": a})
     # Deposit half their stack
-    vault.deposit(bal // 2, {"from": a})
+    vault.deposit(a, bal // 2, {"from": a})
     yield a

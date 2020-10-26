@@ -26,7 +26,7 @@ def vault(gov, guardian, token, rewards, Vault):
     vault = guardian.deploy(Vault, token, gov, rewards, "", "")
     # Make it so vault has some AUM to start
     token.approve(vault, token.balanceOf(gov) // 2, {"from": gov})
-    vault.deposit(token.balanceOf(gov) // 2, {"from": gov})
+    vault.deposit(gov, token.balanceOf(gov) // 2, {"from": gov})
     assert token.balanceOf(vault) == token.balanceOf(gov)
     assert vault.totalDebt() == 0  # No connected strategies yet
     yield vault

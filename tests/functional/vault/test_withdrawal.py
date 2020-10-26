@@ -18,7 +18,7 @@ def test_multiple_withdrawals(token, gov, Vault, TestStrategy):
     ]
 
     token.approve(vault, 2 ** 256 - 1, {"from": gov})
-    vault.deposit(token.balanceOf(gov), {"from": gov})
+    vault.deposit({"from": gov})
 
     assert token.balanceOf(gov) == 0
     assert token.balanceOf(vault) == starting_balance
@@ -35,7 +35,7 @@ def test_multiple_withdrawals(token, gov, Vault, TestStrategy):
 
     # Withdraw only from Vault
     before = token.balanceOf(vault)
-    vault.withdraw(vault.balanceOf(gov) // 2 + 1, {"from": gov})
+    vault.withdraw(gov, vault.balanceOf(gov) // 2 + 1, {"from": gov})
     assert token.balanceOf(vault) == 0
     assert token.balanceOf(gov) == before
     for s in strategies:
@@ -46,7 +46,7 @@ def test_multiple_withdrawals(token, gov, Vault, TestStrategy):
         )
 
     # We've drained all the debt
-    vault.withdraw(vault.balanceOf(gov), {"from": gov})
+    vault.withdraw(gov, vault.balanceOf(gov), {"from": gov})
     for s in strategies:
         assert vault.balanceSheetOfStrategy(s) == 0
         assert token.balanceOf(s) == 0
@@ -69,8 +69,8 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
     # rando and gov deposits tokens to the vault
     token.approve(vault, 2 ** 256 - 1, {"from": gov})
     token.approve(vault, 2 ** 256 - 1, {"from": rando})
-    vault.deposit(1000, {"from": rando})
-    vault.deposit(4000, {"from": gov})
+    vault.deposit(rando, 1000, {"from": rando})
+    vault.deposit(gov, 4000, {"from": gov})
 
     assert token.balanceOf(rando) == 0
     assert vault.balanceOf(rando) > 0
@@ -82,7 +82,7 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
         chain.mine(25)
         [s.harvest({"from": gov}) for s in strategies]
         with brownie.reverts():
-            vault.withdraw(5000, {"from": rando})
+            vault.withdraw(rando, 5000, {"from": rando})
 
 
 def test_progressive_withdrawal(token, gov, Vault, guardian, rewards, TestStrategy):
@@ -92,7 +92,7 @@ def test_progressive_withdrawal(token, gov, Vault, guardian, rewards, TestStrate
     [vault.addStrategy(s, 1000, 10, 50, {"from": gov}) for s in strategies]
 
     token.approve(vault, 2 ** 256 - 1, {"from": gov})
-    vault.deposit(1000, {"from": gov})
+    vault.deposit(gov, 1000, {"from": gov})
     token.approve(gov, 2 ** 256 - 1, {"from": gov})
     token.transferFrom(
         gov, guardian, token.balanceOf(gov), {"from": gov}
@@ -107,7 +107,9 @@ def test_progressive_withdrawal(token, gov, Vault, guardian, rewards, TestStrate
     # First withdraw everything possible without fees
     free_balance = token.balanceOf(vault)
     vault.withdraw(
-        free_balance * vault.pricePerShare() // 10 ** vault.decimals(), {"from": gov}
+        gov,
+        free_balance * vault.pricePerShare() // 10 ** vault.decimals(),
+        {"from": gov},
     )
     assert token.balanceOf(gov) == free_balance
     assert vault.balanceOf(gov) > 0
@@ -116,7 +118,9 @@ def test_progressive_withdrawal(token, gov, Vault, guardian, rewards, TestStrate
     balance_strat1 = token.balanceOf(strategies[0])
     assert balance_strat1 > 0
     vault.withdraw(
-        balance_strat1 * vault.pricePerShare() // 10 ** vault.decimals(), {"from": gov}
+        gov,
+        balance_strat1 * vault.pricePerShare() // 10 ** vault.decimals(),
+        {"from": gov},
     )
     assert token.balanceOf(gov) == free_balance + balance_strat1
     assert vault.balanceOf(gov) > 0
@@ -126,7 +130,9 @@ def test_progressive_withdrawal(token, gov, Vault, guardian, rewards, TestStrate
     balance_strat2 = token.balanceOf(strategies[1])
     assert balance_strat2 > 0
     vault.withdraw(
-        balance_strat2 * vault.pricePerShare() // 10 ** vault.decimals(), {"from": gov}
+        gov,
+        balance_strat2 * vault.pricePerShare() // 10 ** vault.decimals(),
+        {"from": gov},
     )
     assert token.balanceOf(gov) == free_balance + balance_strat1 + balance_strat2
     assert vault.balanceOf(gov) == 0
@@ -142,7 +148,7 @@ def test_withdrawal_with_empty_queue(
     vault.addStrategy(strategy, 1000, 10, 50, {"from": gov})
 
     token.approve(vault, 2 ** 256 - 1, {"from": gov})
-    vault.deposit(1000, {"from": gov})
+    vault.deposit(gov, 1000, {"from": gov})
 
     # Remove all tokens from gov to make asserts easier
     token.approve(gov, 2 ** 256 - 1, {"from": gov})
@@ -159,7 +165,7 @@ def test_withdrawal_with_empty_queue(
         vault.balanceOf(gov) == 1000 * vault.pricePerShare() // 10 ** vault.decimals()
     )
     vault.withdraw(
-        1000 * vault.pricePerShare() // 10 ** vault.decimals(), {"from": gov}
+        gov, 1000 * vault.pricePerShare() // 10 ** vault.decimals(), {"from": gov}
     )
 
     # This means withdrawal will not revert even when we didn't get the total amount back
@@ -168,6 +174,7 @@ def test_withdrawal_with_empty_queue(
 
     # Calling it a second time with strategy_balance should be a no-op
     vault.withdraw(
+        gov,
         strategy_balance * vault.pricePerShare() // 10 ** vault.decimals(),
         {"from": gov},
     )
@@ -177,6 +184,7 @@ def test_withdrawal_with_empty_queue(
     vault.addStrategyToQueue(strategy, {"from": gov})
 
     vault.withdraw(
+        gov,
         strategy_balance * vault.pricePerShare() // 10 ** vault.decimals(),
         {"from": gov},
     )

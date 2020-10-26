@@ -13,14 +13,14 @@ class NormalOperation:
 
         # Deposit 50% of what they have left
         amt = self.token.balanceOf(self.user) // 2
-        self.vault.deposit(amt, {"from": self.user})
+        self.vault.deposit(self.user, amt, {"from": self.user})
 
     def rule_withdraw(self):
         print("  Vault.withdraw()")
 
         # Withdraw 50% of what they have in the Vault
         amt = self.vault.balanceOf(self.user) // 2
-        self.vault.withdraw(amt, {"from": self.user})
+        self.vault.withdraw(self.user, amt, {"from": self.user})
 
     def rule_harvest(self):
         print("  Strategy.harvest()")

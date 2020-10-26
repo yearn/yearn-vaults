@@ -12,26 +12,26 @@ def test_deposit_with_zero_funds(vault, token, rando):
     assert token.balanceOf(rando) == 0
     token.approve(vault, 2 ** 256 - 1, {"from": rando})
     with brownie.reverts():
-        vault.depositAll({"from": rando})
+        vault.deposit({"from": rando})
 
 
 def test_deposit_with_wrong_amount(vault, token, gov):
     balance = token.balanceOf(gov) + 1
     token.approve(vault, balance, {"from": gov})
     with brownie.reverts():
-        vault.deposit(balance, {"from": gov})
+        vault.deposit(gov, balance, {"from": gov})
 
 
 def test_deposit_all_and_withdraw_all(gov, vault, token):
     balance = token.balanceOf(gov)
     token.approve(vault, token.balanceOf(gov), {"from": gov})
-    vault.depositAll({"from": gov})
+    vault.deposit({"from": gov})
     # vault has tokens
     assert token.balanceOf(vault) == balance
     # sender has vault shares
     assert vault.balanceOf(gov) == balance
 
-    vault.withdrawAll({"from": gov})
+    vault.withdraw({"from": gov})
     # vault no longer has tokens
     assert token.balanceOf(vault) == 0
     # sender no longer has shares
@@ -43,20 +43,20 @@ def test_deposit_all_and_withdraw_all(gov, vault, token):
 def test_deposit_withdraw(gov, vault, token, fn_isolation):
     balance = token.balanceOf(gov)
     token.approve(vault, balance, {"from": gov})
-    vault.deposit(balance // 2, {"from": gov})
+    vault.deposit(gov, balance // 2, {"from": gov})
 
     assert token.balanceOf(vault) == balance // 2
     assert vault.totalDebt() == 0
     assert vault.pricePerShare() == 10 ** token.decimals()  # 1:1 price
 
     # Do it twice to test behavior when it has shares
-    vault.deposit(token.balanceOf(gov), {"from": gov})
+    vault.deposit(gov, token.balanceOf(gov), {"from": gov})
 
     assert vault.totalSupply() == token.balanceOf(vault) == balance
     assert vault.totalDebt() == 0
     assert vault.pricePerShare() == 10 ** token.decimals()  # 1:1 price
 
-    vault.withdraw(vault.balanceOf(gov) // 2, {"from": gov})
+    vault.withdraw(gov, vault.balanceOf(gov) // 2, {"from": gov})
 
     assert token.balanceOf(vault) == balance // 2
     assert vault.totalDebt() == 0
@@ -64,9 +64,9 @@ def test_deposit_withdraw(gov, vault, token, fn_isolation):
 
     # Can't withdraw more shares than we have
     with brownie.reverts():
-        vault.withdraw(2 * vault.balanceOf(gov), {"from": gov})
+        vault.withdraw(gov, 2 * vault.balanceOf(gov), {"from": gov})
 
-    vault.withdraw(vault.balanceOf(gov), {"from": gov})
+    vault.withdraw({"from": gov})
     assert vault.totalSupply() == token.balanceOf(vault) == 0
     assert vault.totalDebt() == 0
     assert token.balanceOf(gov) == balance
@@ -75,7 +75,7 @@ def test_deposit_withdraw(gov, vault, token, fn_isolation):
 
     # Deposits are locked out
     with brownie.reverts():
-        vault.deposit(token.balanceOf(gov), {"from": gov})
+        vault.deposit({"from": gov})
 
 
 def test_delegated_deposit_withdraw(accounts, token, vault, fn_isolation):
@@ -90,7 +90,7 @@ def test_delegated_deposit_withdraw(accounts, token, vault, fn_isolation):
 
     # 1. Deposit from a and send shares to b
     token.approve(vault, token.balanceOf(a), {"from": a})
-    vault.deposit(token.balanceOf(a), b, {"from": a})
+    vault.deposit(b, {"from": a})
 
     # a no longer has any tokens
     assert token.balanceOf(a) == 0
@@ -100,7 +100,7 @@ def test_delegated_deposit_withdraw(accounts, token, vault, fn_isolation):
     assert vault.balanceOf(b) == originalTokenAmount
 
     # 2. Withdraw from b to c
-    vault.withdrawAll(c, {"from": b})
+    vault.withdraw(c, {"from": b})
 
     # b no longer has any shares
     assert vault.balanceOf(b) == 0
@@ -111,7 +111,7 @@ def test_delegated_deposit_withdraw(accounts, token, vault, fn_isolation):
 
     # 3. Deposit all from c and send shares to d
     token.approve(vault, token.balanceOf(c), {"from": c})
-    vault.depositAll(d, {"from": c})
+    vault.deposit(d, {"from": c})
 
     # c no longer has the tokens
     assert token.balanceOf(c) == 0
@@ -121,7 +121,7 @@ def test_delegated_deposit_withdraw(accounts, token, vault, fn_isolation):
     assert vault.balanceOf(d) == originalTokenAmount
 
     # 4. Withdraw from d to e
-    vault.withdraw(vault.balanceOf(d), e, {"from": d})
+    vault.withdraw(e, {"from": d})
 
     # d no longer has any shares
     assert vault.balanceOf(d) == 0
@@ -134,7 +134,7 @@ def test_delegated_deposit_withdraw(accounts, token, vault, fn_isolation):
 def test_emergencyShutdown(gov, vault, token, fn_isolation):
     balance = token.balanceOf(gov)
     token.approve(vault, balance, {"from": gov})
-    vault.deposit(balance // 2, {"from": gov})
+    vault.deposit(gov, balance // 2, {"from": gov})
 
     assert token.balanceOf(vault) == balance // 2
     assert vault.totalDebt() == 0
@@ -144,10 +144,10 @@ def test_emergencyShutdown(gov, vault, token, fn_isolation):
 
     # Deposits are locked out
     with brownie.reverts():
-        vault.deposit(token.balanceOf(gov), {"from": gov})
+        vault.deposit({"from": gov})
 
     # But withdrawals are fine
-    vault.withdraw(vault.balanceOf(gov), {"from": gov})
+    vault.withdraw(gov, vault.balanceOf(gov), {"from": gov})
     assert token.balanceOf(vault) == 0
     assert token.balanceOf(gov) == balance
 
@@ -155,7 +155,7 @@ def test_emergencyShutdown(gov, vault, token, fn_isolation):
 def test_transfer(accounts, token, vault, fn_isolation):
     a, b = accounts[0:2]
     token.approve(vault, token.balanceOf(a), {"from": a})
-    vault.deposit(token.balanceOf(a), {"from": a})
+    vault.deposit({"from": a})
 
     assert vault.balanceOf(a) == token.balanceOf(vault)
     assert vault.balanceOf(b) == 0
@@ -181,7 +181,7 @@ def test_transfer(accounts, token, vault, fn_isolation):
 def test_transferFrom(accounts, token, vault, fn_isolation):
     a, b, c = accounts[0:3]
     token.approve(vault, token.balanceOf(a), {"from": a})
-    vault.deposit(token.balanceOf(a), {"from": a})
+    vault.deposit({"from": a})
 
     # Unapproved can't send
     with brownie.reverts():
