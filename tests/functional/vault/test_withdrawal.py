@@ -107,8 +107,7 @@ def test_progressive_withdrawal(token, gov, Vault, guardian, rewards, TestStrate
     # First withdraw everything possible without fees
     free_balance = token.balanceOf(vault)
     vault.withdraw(
-        free_balance * vault.pricePerShare() // 10 ** vault.decimals(),
-        {"from": gov},
+        free_balance * vault.pricePerShare() // 10 ** vault.decimals(), {"from": gov}
     )
     assert token.balanceOf(gov) == free_balance
     assert vault.balanceOf(gov) > 0
@@ -117,8 +116,7 @@ def test_progressive_withdrawal(token, gov, Vault, guardian, rewards, TestStrate
     balance_strat1 = token.balanceOf(strategies[0])
     assert balance_strat1 > 0
     vault.withdraw(
-        balance_strat1 * vault.pricePerShare() // 10 ** vault.decimals(),
-        {"from": gov},
+        balance_strat1 * vault.pricePerShare() // 10 ** vault.decimals(), {"from": gov}
     )
     assert token.balanceOf(gov) == free_balance + balance_strat1
     assert vault.balanceOf(gov) > 0
@@ -128,8 +126,7 @@ def test_progressive_withdrawal(token, gov, Vault, guardian, rewards, TestStrate
     balance_strat2 = token.balanceOf(strategies[1])
     assert balance_strat2 > 0
     vault.withdraw(
-        balance_strat2 * vault.pricePerShare() // 10 ** vault.decimals(),
-        {"from": gov},
+        balance_strat2 * vault.pricePerShare() // 10 ** vault.decimals(), {"from": gov}
     )
     assert token.balanceOf(gov) == free_balance + balance_strat1 + balance_strat2
     assert vault.balanceOf(gov) == 0
