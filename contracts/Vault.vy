@@ -1,6 +1,6 @@
 #@version 0.2.7
 
-CONTRACT_VERSION: constant(String[28]) = "0.1.2"
+API_VERSION: constant(String[28]) = "0.1.2"
 
 # TODO: Add ETH Configuration
 # TODO: Add Delegated Configuration
@@ -123,8 +123,8 @@ def __init__(
 
 @pure
 @external
-def version() -> String[28]:
-    return CONTRACT_VERSION
+def apiVersion() -> String[28]:
+    return API_VERSION
 
 
 @external
