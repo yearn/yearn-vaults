@@ -320,7 +320,7 @@ abstract contract BaseStrategy {
     // Override this to add all tokens this contract manages on a *persistant* basis
     // (e.g. not just for swapping back to want ephemerally)
     // NOTE: Must inclide `want` token
-    function protectedTokens() internal view returns (address[] memory) {
+    function protectedTokens() internal virtual view returns (address[] memory) {
         address[] memory protected = new address[](1);
         protected[0] = address(want);
         return protected;
