@@ -16,6 +16,8 @@ struct StrategyParams {
 }
 
 interface VaultAPI {
+    function apiVersion() external view returns (string memory);
+
     function token() external view returns (address);
 
     function strategies(address _strategy) external view returns (StrategyParams memory);
@@ -84,6 +86,10 @@ interface VaultAPI {
  * This interface is here for the keeper bot to use
  */
 interface StrategyAPI {
+    function apiVersion() external pure returns (string memory);
+
+    function name() external pure returns (string memory);
+
     function vault() external view returns (address);
 
     function keeper() external view returns (address);
@@ -108,8 +114,8 @@ interface StrategyAPI {
 abstract contract BaseStrategy {
     using SafeMath for uint256;
 
-    // Version of this contract
-    function version() external pure returns (string memory) {
+    // Version of this contract's StrategyAPI (must match Vault)
+    function apiVersion() public pure returns (string memory) {
         return "0.1.2";
     }
 

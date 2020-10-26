@@ -22,7 +22,7 @@ def test_vault_deployment(guardian, gov, rewards, token, Vault):
     assert vault.name() == token.symbol() + " yVault"
     assert vault.symbol() == "yv" + token.symbol()
     assert vault.decimals() == token.decimals()
-    assert vault.version() == PACKAGE_VERSION
+    assert vault.apiVersion() == PACKAGE_VERSION
 
     assert vault.debtLimit() == 0
     assert vault.depositLimit() == 2 ** 256 - 1
