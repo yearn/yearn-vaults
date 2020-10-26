@@ -119,6 +119,11 @@ abstract contract BaseStrategy {
         return "0.1.2";
     }
 
+    // Name of this contract's Strategy (Must override!)
+    // NOTE: You can use this field to manage the "version" of this strategy
+    //       e.g. `StrategySomethingOrOtherV1`. It's up to you!
+    function name() external virtual pure returns (string memory);
+
     VaultAPI public vault;
     address public strategist;
     address public keeper;

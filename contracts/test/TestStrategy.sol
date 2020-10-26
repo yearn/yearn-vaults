@@ -12,6 +12,10 @@ import {BaseStrategy, StrategyParams} from "../BaseStrategy.sol";
 contract TestStrategy is BaseStrategy {
     constructor(address _vault) public BaseStrategy(_vault) {}
 
+    function name() external override pure returns (string memory) {
+        return "TestStrategy";
+    }
+
     // When exiting the position, wait this many times to give everything back
     uint256 countdownTimer = 3;
 
