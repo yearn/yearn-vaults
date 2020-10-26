@@ -20,7 +20,7 @@ To run the project you need:
     [here](https://eth-brownie.readthedocs.io/en/stable/install.html).
 -   Local env variables for [Etherscan API](https://etherscan.io/apis) and
     [Infura](https://infura.io/) (`ETHERSCAN_TOKEN`, `WEB3_INFURA_PROJECT_ID`).
--   Local Ganache environment installed with `npm install -g ganache-cli@6.12`.
+-   Local Ganache environment installed with `npm install -g ganache-cli@6.11`.
 
 ### Installation
 
@@ -73,7 +73,7 @@ Any command `in code blocks` is meant to be executed from a Mac/Linux terminal o
     * Windows: [x64 installer](https://nodejs.org/dist/latest-v10.x/node-v10.22.1-x64.msi)
     * Other [10.x downloads](https://nodejs.org/dist/latest-v10.x)
 6. Install [Ganache](https://github.com/trufflesuite/ganache-cli)
-    * `npm install -g ganache-cli@6.12`
+    * `npm install -g ganache-cli@6.11`
 7. [Install Yarn](https://classic.yarnpkg.com/en/docs/install)
 8. [Install Black](https://pypi.org/project/black/)
     * `python3 -m pip install black`
