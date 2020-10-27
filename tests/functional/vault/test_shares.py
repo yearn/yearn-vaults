@@ -187,12 +187,6 @@ def test_transferFrom(accounts, token, vault, fn_isolation):
     with brownie.reverts():
         vault.transferFrom(a, b, vault.balanceOf(a) // 2, {"from": c})
 
-    # Show that approval ordering protection works
-    vault.approve(c, vault.balanceOf(a), {"from": a})  # oopsies, wrong value
-    with brownie.reverts():
-        vault.approve(c, vault.balanceOf(a) // 2, {"from": a})
-    vault.approve(c, 0, {"from": a})
-
     vault.approve(c, vault.balanceOf(a) // 2, {"from": a})
     assert vault.allowance(a, c) == vault.balanceOf(a) // 2
 
