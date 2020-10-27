@@ -87,4 +87,4 @@ NOTE: It is up to the design of the Treasury to unwrap and further account for t
 
 NOTE: The Treasury system could leverage the Vault design, with strategies that just market sell the rewards for YFI.
 
-1. The Treasury should incentivize proper management of the Vault by Governance, optimizing for stability of returns over long periods of time, minimizing risk, and encouraging more deposits.
+1. The Treasury should incentivize proper management of the Vault by Governance, optimizing for stability of returns over long periods of time, minimizing risk, and encouraging growth of deposits.
