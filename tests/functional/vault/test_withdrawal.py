@@ -18,7 +18,7 @@ def test_multiple_withdrawals(token, gov, Vault, TestStrategy):
     ]
 
     token.approve(vault, 2 ** 256 - 1, {"from": gov})
-    vault.deposit(token.balanceOf(gov), {"from": gov})
+    vault.deposit({"from": gov})
 
     assert token.balanceOf(gov) == 0
     assert token.balanceOf(vault) == starting_balance

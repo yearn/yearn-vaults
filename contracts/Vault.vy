@@ -314,13 +314,21 @@ def _issueSharesForAmount(_to: address, _amount: uint256) -> uint256:
     return shares
 
 
-@internal
-def _depositFrom(_sender: address, _recipient: address, _amount: uint256) -> uint256:
+@external
+def deposit(_amount: uint256 = MAX_UINT256, _recipient: address = msg.sender) -> uint256:
     assert not self.emergencyShutdown  # Deposits are locked out
-    assert self._totalAssets() + _amount <= self.depositLimit  # Max deposit reached
+
+    amount: uint256 = _amount
+
+    # If _amount not specified, transfer the full token balance
+    if amount == MAX_UINT256:
+        amount = self.token.balanceOf(msg.sender)
 
     # Ensure we are depositing something
-    assert _amount > 0
+    assert amount > 0
+
+    # Ensure deposit limit is respected
+    assert self._totalAssets() + amount <= self.depositLimit
 
     # NOTE: Measuring this based on the total outstanding debt that this contract
     #       has ("expected value") instead of the total balance sheet it has
@@ -342,27 +350,17 @@ def _depositFrom(_sender: address, _recipient: address, _amount: uint256) -> uin
     #       on-chain) to determine if depositing into the Vault is a "good idea"
 
     # Issue new shares (needs to be done before taking deposit to be accurate)
-    # Shares are issued to recipient (may be different from _sender)
-    shares: uint256 = self._issueSharesForAmount(_recipient, _amount)
+    # Shares are issued to recipient (may be different from msg.sender)
+    shares: uint256 = self._issueSharesForAmount(_recipient, amount)
 
     # Get new collateral
     reserve: uint256 = self.token.balanceOf(self)
-    # Tokens are transferred from _sender (may be different from _recipient)
-    self.token.transferFrom(_sender, self, _amount)
+    # Tokens are transferred from msg.sender (may be different from _recipient)
+    self.token.transferFrom(msg.sender, self, amount)
     # TODO: `Deflationary` configuration only
-    assert self.token.balanceOf(self) - reserve == _amount  # Deflationary token check
+    assert self.token.balanceOf(self) - reserve == amount  # Deflationary token check
 
     return shares  # Just in case someone wants them
-
-
-@external
-def depositAll(_recipient: address = msg.sender) -> uint256:
-    return self._depositFrom(msg.sender, _recipient, self.token.balanceOf(msg.sender))
-
-
-@external
-def deposit(_amount: uint256, _recipient: address = msg.sender) -> uint256:
-    return self._depositFrom(msg.sender, _recipient, _amount)
 
 
 @view
@@ -393,11 +391,16 @@ def maxAvailableShares() -> uint256:
     return shares
 
 
-@internal
-def _withdrawFrom(_sender: address, _recipient: address, _shares: uint256) -> uint256:
-    # Limit to only the shares they own
-    assert _shares <= self.balanceOf[_sender]
+@external
+def withdraw(_shares: uint256 = MAX_UINT256, _recipient: address = msg.sender) -> uint256:
     shares: uint256 = _shares  # May reduce this number below
+
+    # If _shares not specified, transfer full share balance
+    if shares == MAX_UINT256:
+        shares = self.balanceOf[msg.sender]
+
+    # Limit to only the shares they own
+    assert shares <= self.balanceOf[msg.sender]
 
     # NOTE: Measuring this based on the total outstanding debt that this contract
     #       has ("expected value") instead of the total balance sheet it has
@@ -462,23 +465,13 @@ def _withdrawFrom(_sender: address, _recipient: address, _shares: uint256) -> ui
 
     # Burn shares (full value of what is being withdrawn)
     self.totalSupply -= shares
-    self.balanceOf[_sender] -= shares
-    log Transfer(_sender, ZERO_ADDRESS, shares)
+    self.balanceOf[msg.sender] -= shares
+    log Transfer(msg.sender, ZERO_ADDRESS, shares)
 
-    # Withdraw remaining balance to _recipient (may be different to _sender) (minus fee)
+    # Withdraw remaining balance to _recipient (may be different to msg.sender) (minus fee)
     self.token.transfer(_recipient, value)
 
     return value
-
-
-@external
-def withdraw(_shares: uint256, _recipient: address = msg.sender) -> uint256:
-    return self._withdrawFrom(msg.sender, _recipient, _shares)
-
-
-@external
-def withdrawAll(_recipient: address = msg.sender) -> uint256:
-    return self._withdrawFrom(msg.sender, _recipient, self.balanceOf[msg.sender])
 
 
 @view
