@@ -10,7 +10,7 @@ struct StrategyParams {
     uint256 activation;
     uint256 debtLimit;
     uint256 rateLimit;
-    uint256 lastSync;
+    uint256 lastReport;
     uint256 totalDebt;
     uint256 totalReturns;
 }
