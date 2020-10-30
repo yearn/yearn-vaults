@@ -87,4 +87,8 @@ contract TestStrategy is BaseStrategy {
     function prepareMigration(address _newStrategy) internal override {
         want.transfer(_newStrategy, want.balanceOf(address(this)));
     }
+
+    function protectedTokens() internal override view returns (address[] memory) {
+        return new address[](0);
+    }
 }
