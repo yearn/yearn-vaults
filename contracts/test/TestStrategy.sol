@@ -49,10 +49,6 @@ contract TestStrategy is BaseStrategy {
         return (100 * gasCost < credit.add(profit));
     }
 
-    function expectedReturn() public override view returns (uint256) {
-        return vault.expectedReturn();
-    }
-
     function estimatedTotalAssets() public override view returns (uint256) {
         return want.balanceOf(address(this));
     }

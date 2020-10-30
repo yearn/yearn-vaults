@@ -20,7 +20,6 @@ def test_strategy_deployment(strategist, vault, TestStrategy):
     assert strategy.reserve() == 0
     assert not strategy.emergencyExit()
 
-    assert strategy.expectedReturn() == 0
     # Should not trigger until it is approved
     assert not strategy.harvestTrigger(0)
     assert not strategy.tendTrigger(0)

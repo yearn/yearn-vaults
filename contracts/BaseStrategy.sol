@@ -175,13 +175,6 @@ abstract contract BaseStrategy {
     }
 
     /*
-     * Provide an accurate expected value for the return this strategy
-     * would provide to the Vault the next time `report()` is called
-     * (since the last time it was called)
-     */
-    function expectedReturn() public virtual view returns (uint256);
-
-    /*
      * Provide an accurate estimate for the total amount of assets (principle + return)
      * that this strategy is currently managing, denominated in terms of `want` tokens.
      * This total should be "realizable" e.g. the total value that could *actually* be
