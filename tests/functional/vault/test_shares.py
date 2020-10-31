@@ -190,6 +190,12 @@ def test_transferFrom(accounts, token, vault, fn_isolation):
     vault.approve(c, vault.balanceOf(a) // 2, {"from": a})
     assert vault.allowance(a, c) == vault.balanceOf(a) // 2
 
+    vault.increaseAllowance(c, vault.balanceOf(a) // 2, {"from": a})
+    assert vault.allowance(a, c) == vault.balanceOf(a)
+
+    vault.decreaseAllowance(c, vault.balanceOf(a) // 2, {"from": a})
+    assert vault.allowance(a, c) == vault.balanceOf(a) // 2
+
     # Can't send more than what is approved
     with brownie.reverts():
         vault.transferFrom(a, b, vault.balanceOf(a), {"from": c})
