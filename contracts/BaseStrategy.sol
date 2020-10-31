@@ -133,18 +133,17 @@ abstract contract BaseStrategy {
     // So indexers can keep track of this
     event Harvested(uint256 profit);
 
-    // Adjust this to keep some of the position in reserve in the strategy,
+    // Adjust this using `setReserve(...)` to keep some of the position in reserve in the strategy,
     // to accomodate larger variations needed to sustain the strategy's core positon(s)
-    uint256 public reserve = 0;
+    uint256 private reserve = 0;
 
-    // This gets adjusted every time the Strategy reports to the Vault,
-    // and should be used during adjustment of the strategy's positions to "deleverage"
-    // in order to pay back the amount the next time it reports.
-    //
-    // NOTE: Do not edit this variable, for safe usage (only read from it)
-    // NOTE: Strategy should not expect to increase it's working capital until this value
-    //       is zero.
-    uint256 public outstanding = 0;
+    function getReserve() internal view returns (uint256) {
+        return reserve;
+    }
+
+    function setReserve(uint256 _reserve) internal {
+        if (_reserve != reserve) reserve = _reserve;
+    }
 
     bool public emergencyExit;
 
@@ -157,12 +156,12 @@ abstract contract BaseStrategy {
     }
 
     function setStrategist(address _strategist) external {
-        require(msg.sender == strategist || msg.sender == governance(), "!governance");
+        require(msg.sender == strategist || msg.sender == governance(), "!authorized");
         strategist = _strategist;
     }
 
     function setKeeper(address _keeper) external {
-        require(msg.sender == strategist || msg.sender == governance(), "!governance");
+        require(msg.sender == strategist || msg.sender == governance(), "!authorized");
         keeper = _keeper;
     }
 
@@ -187,10 +186,10 @@ abstract contract BaseStrategy {
      *       conditions (e.g. this function is possible to influence through flashloan
      *       attacks, oracle manipulations, or other DeFi attack mechanisms).
      *
-     * NOTE: It is up to governance to use this function in order to correctly order
-     *       this strategy relative to its peers in order to minimize losses for the
-     *       Vault based on sudden withdrawals. This value should be higher than the
-     *       total debt of the strategy and higher than it's expected value to be "safe".
+     * NOTE: It is up to governance to use this function to correctly order this strategy
+     *       relative to its peers in the withdrawal queue to minimize losses for the Vault
+     *       based on sudden withdrawals. This value should be higher than the total debt of
+     *       the strategy and higher than it's expected value to be "safe".
      */
     function estimatedTotalAssets() public virtual view returns (uint256);
 
@@ -204,7 +203,7 @@ abstract contract BaseStrategy {
      * strategy and reduce it's overall position if lower than expected returns
      * are sustained for long periods of time.
      */
-    function prepareReturn() internal virtual;
+    function prepareReturn(uint256 _debtOustanding) internal virtual returns (uint256 _profit);
 
     /*
      * Perform any adjustments to the core position(s) of this strategy given
@@ -213,7 +212,7 @@ abstract contract BaseStrategy {
      * was made is available for reinvestment. Also note that this number could
      * be 0, and you should handle that scenario accordingly.
      */
-    function adjustPosition() internal virtual;
+    function adjustPosition(uint256 _debtOutstanding) internal virtual;
 
     /*
      * Make as much capital as possible "free" for the Vault to take. Some slippage
@@ -243,9 +242,12 @@ abstract contract BaseStrategy {
     }
 
     function tend() external {
-        if (keeper != address(0)) require(msg.sender == keeper || msg.sender == strategist || msg.sender == governance());
-        // NOTE: Don't take profits with this call, but adjust for better gains
-        adjustPosition();
+        if (keeper != address(0)) {
+            require(msg.sender == keeper || msg.sender == strategist || msg.sender == governance(), "!authorized");
+        }
+
+        // Don't take profits with this call, but adjust for better gains
+        adjustPosition(vault.debtOutstanding());
     }
 
     /*
@@ -285,37 +287,44 @@ abstract contract BaseStrategy {
     }
 
     function harvest() external {
-        if (keeper != address(0)) require(msg.sender == keeper || msg.sender == strategist || msg.sender == governance());
+        if (keeper != address(0)) {
+            require(msg.sender == keeper || msg.sender == strategist || msg.sender == governance(), "!authorized");
+        }
 
+        uint256 profit = 0;
         if (emergencyExit) {
             exitPosition(); // Free up as much capital as possible
             // NOTE: Don't take performance fee in this scenario
         } else {
-            prepareReturn(); // Free up returns for Vault to pull
+            profit = prepareReturn(vault.debtOutstanding()); // Free up returns for Vault to pull
         }
 
         if (reserve > want.balanceOf(address(this))) reserve = want.balanceOf(address(this));
 
         // Allow Vault to take up to the "harvested" balance of this contract, which is
         // the amount it has earned since the last time it reported to the Vault
-        uint256 wantEarned = want.balanceOf(address(this)).sub(reserve);
-        outstanding = vault.report(wantEarned);
+        uint256 outstanding = vault.report(want.balanceOf(address(this)).sub(reserve));
 
-        adjustPosition(); // Check if free returns are left, and re-invest them
+        // Check if free returns are left, and re-invest them
+        adjustPosition(outstanding);
 
         emit Harvested(profit);
     }
 
     /*
      * Liquidate as many assets as possible to `want`, irregardless of slippage,
-     * up to `_amount`. Any excess should be re-invested here as well.
+     * up to `_amountNeeded`. Any excess should be re-invested here as well.
      */
-    function liquidatePosition(uint256 _amount) internal virtual;
+    function liquidatePosition(uint256 _amountNeeded) internal virtual returns (uint256 _amountFreed);
 
-    function withdraw(uint256 _amount) external {
+    function withdraw(uint256 _amountNeeded) external {
         require(msg.sender == address(vault), "!vault");
-        liquidatePosition(_amount); // Liquidates as much as possible to `want`, up to `_amount`
-        want.transfer(msg.sender, want.balanceOf(address(this)).sub(reserve));
+        // Liquidate as much as possible to `want`, up to `_amount`
+        uint256 amountFreed = liquidatePosition(_amountNeeded);
+        // Send it directly back (NOTE: Using `msg.sender` saves some gas here)
+        want.transfer(msg.sender, amountFreed);
+        // Adjust reserve to what we have after the freed amount is sent to the Vault
+        reserve = want.balanceOf(address(this));
     }
 
     /*
@@ -328,6 +337,7 @@ abstract contract BaseStrategy {
         require(msg.sender == address(vault) || msg.sender == governance());
         require(BaseStrategy(_newStrategy).vault() == vault);
         prepareMigration(_newStrategy);
+        want.transfer(_newStrategy, want.balanceOf(address(this)));
     }
 
     function setEmergencyExit() external {
@@ -336,7 +346,6 @@ abstract contract BaseStrategy {
         exitPosition();
         vault.revokeStrategy();
         if (reserve > want.balanceOf(address(this))) reserve = want.balanceOf(address(this));
-        outstanding = vault.report(want.balanceOf(address(this)).sub(reserve));
     }
 
     // Override this to add all tokens/tokenized positions this contract manages

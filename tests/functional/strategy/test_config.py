@@ -17,7 +17,6 @@ def test_strategy_deployment(strategist, vault, TestStrategy):
     assert strategy.apiVersion() == PACKAGE_VERSION
     assert strategy.name() == "TestStrategy"
 
-    assert strategy.reserve() == 0
     assert not strategy.emergencyExit()
 
     # Should not trigger until it is approved
