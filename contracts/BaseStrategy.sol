@@ -133,6 +133,10 @@ abstract contract BaseStrategy {
     // So indexers can keep track of this
     event Harvested(uint256 profit);
 
+    // The minimum multiple that `callCost` must be above the credit/profit to be "justifiable"
+    // NOTE: Override this value with your own, or set dynamically below
+    uint256 public profitFactor = 100;
+
     // Adjust this using `setReserve(...)` to keep some of the position in reserve in the strategy,
     // to accomodate larger variations needed to sustain the strategy's core positon(s)
     uint256 private reserve = 0;
@@ -163,6 +167,11 @@ abstract contract BaseStrategy {
     function setKeeper(address _keeper) external {
         require(msg.sender == strategist || msg.sender == governance(), "!authorized");
         keeper = _keeper;
+    }
+
+    function setProfitFactor(uint256 _profitFactor) external {
+        require(msg.sender == strategist || msg.sender == governance(), "!authorized");
+        profitFactor = _profitFactor;
     }
 
     /*
@@ -283,7 +292,7 @@ abstract contract BaseStrategy {
 
         // Otherwise, only trigger if it "makes sense" economically (gas cost is <N% of value moved)
         uint256 credit = vault.creditAvailable();
-        return (100 * callCost < credit.add(profit));
+        return (profitFactor * callCost < credit.add(profit));
     }
 
     function harvest() external {
