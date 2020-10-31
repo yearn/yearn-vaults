@@ -94,11 +94,11 @@ interface StrategyAPI {
 
     function keeper() external view returns (address);
 
-    function tendTrigger(uint256 gasCost) external view returns (bool);
+    function tendTrigger(uint256 callCost) external view returns (bool);
 
     function tend() external;
 
-    function harvestTrigger(uint256 gasCost) external view returns (bool);
+    function harvestTrigger(uint256 callCost) external view returns (bool);
 
     function harvest() external;
 
@@ -232,10 +232,15 @@ abstract contract BaseStrategy {
      * would be negatively affected if `tend()` is not called shortly, then this can return `true`
      * even if the keeper might be "at a loss" (keepers are always reimbursed by yEarn)
      *
+     * NOTE: `callCost` must be priced in terms of `want`
+     *
      * NOTE: this call and `harvestTrigger` should never return `true` at the same time.
-     * NOTE: if `tend()` is never intended to be called, it should always return `false`
      */
-    function tendTrigger(uint256 gasCost) public virtual view returns (bool);
+    function tendTrigger(uint256 callCost) public virtual view returns (bool) {
+        // We usually don't need tend, but if there are positions that need active maintainence,
+        // overriding this function is how you would signal for that
+        return false;
+    }
 
     function tend() external {
         if (keeper != address(0)) require(msg.sender == keeper || msg.sender == strategist || msg.sender == governance());
@@ -251,9 +256,33 @@ abstract contract BaseStrategy {
      * would be negatively affected if `harvest()` is not called shortly, then this can return `true`
      * even if the keeper might be "at a loss" (keepers are always reimbursed by yEarn)
      *
+     * NOTE: `callCost` must be priced in terms of `want`
+     *
      * NOTE: this call and `tendTrigger` should never return `true` at the same time.
      */
-    function harvestTrigger(uint256 gasCost) public virtual view returns (bool);
+    function harvestTrigger(uint256 callCost) public view returns (bool) {
+        StrategyParams memory params = vault.strategies(address(this));
+
+        // Should not trigger if strategy is not activated
+        if (params.activation == 0) return false;
+
+        // If some amount is owed, pay it back
+        // NOTE: Since debt is adjusted in step-wise fashion, it is appropiate to always trigger here,
+        //       because the resulting change should be large (might not always be the case)
+        uint256 outstanding = vault.debtOutstanding();
+        if (outstanding > 0) return true;
+
+        // Check for profits and losses
+        uint256 total = estimatedTotalAssets();
+        if (total < params.totalDebt) return true; // We have a loss to report!
+
+        uint256 profit = 0;
+        if (total > params.totalDebt) profit = total.sub(params.totalDebt); // We've earned a profit!
+
+        // Otherwise, only trigger if it "makes sense" economically (gas cost is <N% of value moved)
+        uint256 credit = vault.creditAvailable();
+        return (100 * callCost < credit.add(profit));
+    }
 
     function harvest() external {
         if (keeper != address(0)) require(msg.sender == keeper || msg.sender == strategist || msg.sender == governance());
