@@ -240,6 +240,36 @@ def approve(_spender : address, _value : uint256) -> bool:
     return True
 
 
+@external
+def increaseAllowance(_spender : address, _value : uint256) -> bool:
+    """
+    @dev Increase the allowance of the passed address to spend the total amount of tokens
+         on behalf of msg.sender. This method mitigates the risk that someone may use both
+         the old and the new allowance by unfortunate transaction ordering.
+         See https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+    @param _spender The address which will spend the funds.
+    @param _value The amount of tokens to increase the allowance by.
+    """
+    self.allowance[msg.sender][_spender] += _value
+    log Approval(msg.sender, _spender, self.allowance[msg.sender][_spender])
+    return True
+
+
+@external
+def decreaseAllowance(_spender : address, _value : uint256) -> bool:
+    """
+    @dev Decrease the allowance of the passed address to spend the total amount of tokens
+         on behalf of msg.sender. This method mitigates the risk that someone may use both
+         the old and the new allowance by unfortunate transaction ordering.
+         See https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+    @param _spender The address which will spend the funds.
+    @param _value The amount of tokens to decrease the allowance by.
+    """
+    self.allowance[msg.sender][_spender] -= _value
+    log Approval(msg.sender, _spender, self.allowance[msg.sender][_spender])
+    return True
+
+
 @view
 @internal
 def _totalAssets() -> uint256:
