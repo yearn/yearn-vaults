@@ -372,6 +372,16 @@ abstract contract BaseStrategy {
     // Override this to add all tokens/tokenized positions this contract manages
     // on a *persistant* basis (e.g. not just for swapping back to want ephemerally)
     // NOTE: Do *not* include `want`, already included in `sweep` below
+    //
+    // Example:
+    //
+    //    function protectedTokens() internal override view returns (address[] memory) {
+    //      address[] memory protected = new address[](3);
+    //      protected[0] = tokenA;
+    //      protected[1] = tokenB;
+    //      protected[2] = tokenC;
+    //      return protected;
+    //    }
     function protectedTokens() internal virtual view returns (address[] memory);
 
     function sweep(address _token) external {
