@@ -362,7 +362,7 @@ abstract contract BaseStrategy {
     }
 
     function setEmergencyExit() external {
-        require(msg.sender == strategist || msg.sender == governance());
+        require(msg.sender == strategist || msg.sender == governance(), "!authorized");
         emergencyExit = true;
         exitPosition();
         vault.revokeStrategy();
