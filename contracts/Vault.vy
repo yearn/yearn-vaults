@@ -1,6 +1,6 @@
 #@version 0.2.7
 
-API_VERSION: constant(String[28]) = "0.1.2"
+API_VERSION: constant(String[28]) = "0.1.3"
 
 # TODO: Add ETH Configuration
 # TODO: Add Delegated Configuration
