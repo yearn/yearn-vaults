@@ -133,6 +133,10 @@ abstract contract BaseStrategy {
     // So indexers can keep track of this
     event Harvested(uint256 profit);
 
+    // The maximum number of blocks between harvest calls
+    // NOTE: Override this value with your own, or set dynamically below
+    uint256 public maxReportDelay = 6300; // ~ once a day
+
     // The minimum multiple that `callCost` must be above the credit/profit to be "justifiable"
     // NOTE: Override this value with your own, or set dynamically below
     uint256 public profitFactor = 100;
@@ -167,6 +171,11 @@ abstract contract BaseStrategy {
     function setKeeper(address _keeper) external {
         require(msg.sender == strategist || msg.sender == governance(), "!authorized");
         keeper = _keeper;
+    }
+
+    function setMaxReportDelay(uint256 _delay) external {
+        require(msg.sender == strategist || msg.sender == governance(), "!authorized");
+        maxReportDelay = _delay;
     }
 
     function setProfitFactor(uint256 _profitFactor) external {
@@ -276,6 +285,9 @@ abstract contract BaseStrategy {
 
         // Should not trigger if strategy is not activated
         if (params.activation == 0) return false;
+
+        // Should trigger if hadn't been called in a while
+        if (block.number.sub(params.lastReport) >= maxReportDelay) return true;
 
         // If some amount is owed, pay it back
         // NOTE: Since debt is adjusted in step-wise fashion, it is appropiate to always trigger here,
