@@ -51,17 +51,12 @@ def test_vault_name_symbol_override(guardian, gov, rewards, token, Vault):
         ("performanceFee", "setPerformanceFee", 1000),
         ("managementFee", "setManagementFee", 1000),
         ("depositLimit", "setDepositLimit", 1000),
-        ("guardian", "setGuardian", None),
     ],
 )
-def test_vault_setParams(
-    guardian, gov, rewards, token, rando, getter, setter, val, Vault
-):
+def test_vault_setParams(gov, vault, rando, getter, setter, val):
     if not val:
         # Can't access fixtures, so use None to mean any random address
         val = rando
-
-    vault = guardian.deploy(Vault, token, gov, rewards, "", "")
 
     # Only governance can set this param
     with brownie.reverts():
@@ -71,8 +66,7 @@ def test_vault_setParams(
     assert getattr(vault, getter)() == val
 
 
-def test_vault_setGovernance(guardian, gov, rewards, token, rando, Vault):
-    vault = guardian.deploy(Vault, token, gov, rewards, "", "")
+def test_vault_setGovernance(gov, vault, rando):
     newGov = rando
     # No one can set governance but governance
     with brownie.reverts():
