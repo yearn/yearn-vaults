@@ -46,6 +46,8 @@ def test_strategy_setEmergencyExit(strategy, gov, strategist, rando, chain):
     [
         ("strategist", "setStrategist", None),
         ("keeper", "setKeeper", None),
+        ("maxReportDelay", "setMaxReportDelay", 1000),
+        ("profitFactor", "setProfitFactor", 1000),
     ],
 )
 def test_strategy_setParams(gov, strategist, strategy, rando, getter, setter, val):
