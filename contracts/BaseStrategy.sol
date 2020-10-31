@@ -131,7 +131,7 @@ abstract contract BaseStrategy {
     IERC20 public want;
 
     // So indexers can keep track of this
-    event Harvested(uint256 wantEarned, uint256 lifetimeEarned);
+    event Harvested(uint256 profit);
 
     // Adjust this to keep some of the position in reserve in the strategy,
     // to accomodate larger variations needed to sustain the strategy's core positon(s)
@@ -274,7 +274,7 @@ abstract contract BaseStrategy {
 
         adjustPosition(); // Check if free returns are left, and re-invest them
 
-        emit Harvested(wantEarned, vault.strategies(address(this)).totalReturns);
+        emit Harvested(profit);
     }
 
     /*
