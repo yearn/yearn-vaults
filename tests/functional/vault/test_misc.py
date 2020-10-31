@@ -17,12 +17,16 @@ def test_sweep(gov, vault, rando, token, other_token):
     with brownie.reverts():
         vault.sweep(token, {"from": gov})
 
-    # But any other random token works (and any random person can do this)
+    # But any other random token works
     assert other_token.address != vault.token()
     assert other_token.balanceOf(vault) > 0
     assert other_token.balanceOf(gov) == 0
+    # Not any random person can do this
+    with brownie.reverts():
+        vault.sweep(other_token, {"from": rando})
+
     before = other_token.balanceOf(vault)
-    vault.sweep(other_token, {"from": rando})
+    vault.sweep(other_token, {"from": gov})
     assert other_token.balanceOf(vault) == 0
     assert other_token.balanceOf(gov) == before
     assert other_token.balanceOf(rando) == 0

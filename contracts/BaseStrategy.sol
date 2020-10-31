@@ -385,6 +385,7 @@ abstract contract BaseStrategy {
     function protectedTokens() internal virtual view returns (address[] memory);
 
     function sweep(address _token) external {
+        require(msg.sender == governance(), "!authorized");
         require(_token != address(want), "!want");
 
         address[] memory _protectedTokens = protectedTokens();

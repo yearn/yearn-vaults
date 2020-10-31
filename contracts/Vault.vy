@@ -844,6 +844,7 @@ def erc20_safe_transfer(_token: address, _to: address, _value: uint256):
 
 @external
 def sweep(_token: address):
+    assert msg.sender == self.governance
     # Can't be used to steal what this Vault is protecting
     assert _token != self.token.address
     self.erc20_safe_transfer(_token, self.governance, ERC20(_token).balanceOf(self))
