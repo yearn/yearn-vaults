@@ -14,7 +14,7 @@ interface DetailedERC20:
     def decimals() -> uint256: view
 
 interface Strategy:
-    def strategist() -> address: view
+    def distributeRewards(_shares: uint256): nonpayable
     def estimatedTotalAssets() -> uint256: view
     def withdraw(_amount: uint256): nonpayable
     def migrate(_newStrategy: address): nonpayable
@@ -754,7 +754,8 @@ def report(_return: uint256) -> uint256:
     # Send the rewards out as new shares in this Vault
     if strategist_fee > 0:
         strategist_reward: uint256 = (strategist_fee * reward) / total_fee
-        self._transfer(self, Strategy(msg.sender).strategist(), strategist_reward)
+        self._transfer(self, msg.sender, strategist_reward)
+        Strategy(msg.sender).distributeRewards(strategist_reward)
     # NOTE: Governance earns any dust leftover from flooring math above
     self._transfer(self, self.rewards, self.balanceOf[self])
 

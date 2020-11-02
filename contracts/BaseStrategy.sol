@@ -15,7 +15,7 @@ struct StrategyParams {
     uint256 totalReturns;
 }
 
-interface VaultAPI {
+interface VaultAPI is IERC20 {
     function apiVersion() external view returns (string memory);
 
     function token() external view returns (address);
@@ -240,6 +240,15 @@ abstract contract BaseStrategy {
      * instead of `prepareReturn()`
      */
     function exitPosition() internal virtual;
+
+    /*
+     * Vault calls this function after shares are created during `Vault.report()`.
+     * You can customize this function to any share distribution mechanism you want.
+     */
+    function distributeRewards(uint256 _shares) external virtual {
+        // Send 100% of newly-minted shares to the strategist.
+        vault.transfer(strategist, _shares);
+    }
 
     /*
      * Provide a signal to the keeper that `tend()` should be called. The keeper will provide
