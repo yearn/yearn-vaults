@@ -102,7 +102,7 @@ interface StrategyAPI {
 
     function harvest() external;
 
-    event Harvested(uint256 wantEarned, uint256 lifetimeEarned);
+    event Harvested(uint256 profit);
 }
 
 /*
