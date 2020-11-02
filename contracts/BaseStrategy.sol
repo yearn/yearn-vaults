@@ -102,7 +102,7 @@ interface StrategyAPI {
 
     function harvest() external;
 
-    event Harvested(uint256 wantEarned, uint256 lifetimeEarned);
+    event Harvested(uint256 profit);
 }
 
 /*
@@ -140,6 +140,9 @@ abstract contract BaseStrategy {
     // The minimum multiple that `callCost` must be above the credit/profit to be "justifiable"
     // NOTE: Override this value with your own, or set dynamically below
     uint256 public profitFactor = 100;
+
+    // Use this to adjust the threshold at which running a debt causes a harvest trigger
+    uint256 public debtThreshold = 0;
 
     // Adjust this using `setReserve(...)` to keep some of the position in reserve in the strategy,
     // to accomodate larger variations needed to sustain the strategy's core positon(s)
@@ -181,6 +184,11 @@ abstract contract BaseStrategy {
     function setProfitFactor(uint256 _profitFactor) external {
         require(msg.sender == strategist || msg.sender == governance(), "!authorized");
         profitFactor = _profitFactor;
+    }
+
+    function setDebtThreshold(uint256 _debtThreshold) external {
+        require(msg.sender == strategist || msg.sender == governance(), "!authorized");
+        debtThreshold = _debtThreshold;
     }
 
     /*
@@ -307,7 +315,7 @@ abstract contract BaseStrategy {
         // Check for profits and losses
         uint256 total = estimatedTotalAssets();
         // Trigger if we have a loss to report
-        if (total < params.totalDebt) return params.totalDebt.sub(total).mul(profitFactor) > callCost;
+        if (total.add(debtThreshold) < params.totalDebt) return true;
 
         uint256 profit = 0;
         if (total > params.totalDebt) profit = total.sub(params.totalDebt); // We've earned a profit!
