@@ -8,18 +8,16 @@ def test_sandwich_attack(TestStrategy, web3, token, gov, vault, strategist, rand
     attacker = rando
     balance = token.balanceOf(honest_lp) / 2
 
-    # seed attacker their funds. Same amount as deposited in vault
+    # seed attacker their funds
     token.transfer(attacker, balance, {"from": honest_lp})
-    vault.withdraw(vault.balanceOf(honest_lp) / 2, {"from": honest_lp})
 
-    # we don't use the one in conf because we want no rate limit
+    # we don't use the one in conftest because we want no rate limit
     strategy = strategist.deploy(TestStrategy, vault)
-    vault.addStrategy(
-        strategy, token.totalSupply(), token.totalSupply(), 50, {"from": gov}
-    )
+    vault.addStrategy(strategy, 2 ** 256 - 1, 2 ** 256 - 1, 50, {"from": gov})
 
     strategy.harvest({"from": strategist})
-    profit_to_be_returned = token.balanceOf(honest_lp) / 1000
+    # strategy is returning 0.02%. Equivalent to 35.6% a year at 5 harvests a day
+    profit_to_be_returned = token.balanceOf(strategy) / 5000
     token.transfer(strategy, profit_to_be_returned, {"from": honest_lp})
 
     # now for the attack
@@ -39,4 +37,5 @@ def test_sandwich_attack(TestStrategy, web3, token, gov, vault, strategist, rand
 
     profit = token.balanceOf(attacker) - attack_amount
     profit_percent = profit / attack_amount
-    assert profit_percent < 0.0001
+    # 5 rebases a day = 1780 a year. 0.004% profit a rebase is 7.12% a year return
+    assert profit_percent < 0.00004
