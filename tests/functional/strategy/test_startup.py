@@ -5,7 +5,6 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
     # Never reported yet
     # NOTE: done for coverage
     vault.expectedReturn(strategy) == 0
-    assert strategy.outstanding() == strategy.reserve() == 0
     assert vault.balanceSheetOfStrategy(strategy) == 0
     assert not strategy.harvestTrigger(0)
     chain.mine(50)
@@ -22,11 +21,9 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
     # Check balance is increasing
     assert token.balanceOf(strategy) > 0
     last_balance = token.balanceOf(strategy)
-    assert strategy.reserve() == last_balance
 
     # Check accounting is maintained everywhere
     assert vault.totalDebt() == vault.strategies(strategy)[5]  # totalDebt
-    assert strategy.outstanding() == 0
     assert vault.balanceSheetOfStrategy(strategy) == vault.totalDebt()
     assert (
         vault.totalBalanceSheet(withdrawal_queue)
@@ -44,11 +41,9 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
     # Check balance is increasing
     assert token.balanceOf(strategy) > last_balance
     last_balance = token.balanceOf(strategy)
-    assert strategy.reserve() == last_balance
 
     # Check accounting is maintained everywhere
     assert vault.totalDebt() == vault.strategies(strategy)[5]  # totalDebt
-    assert strategy.outstanding() == 0
     assert vault.balanceSheetOfStrategy(strategy) == vault.totalDebt()
     assert (
         vault.totalBalanceSheet(withdrawal_queue)
@@ -72,11 +67,9 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
         # Check balance is increasing
         assert token.balanceOf(strategy) > last_balance
         last_balance = token.balanceOf(strategy)
-        assert strategy.reserve() == last_balance
 
         # Check accounting is maintained everywhere
         assert vault.totalDebt() == vault.strategies(strategy)[5]  # totalDebt
-        assert strategy.outstanding() == 0
         assert vault.balanceSheetOfStrategy(strategy) == vault.totalDebt()
         assert (
             vault.totalBalanceSheet(withdrawal_queue)

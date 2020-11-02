@@ -24,67 +24,51 @@ contract TestStrategy is BaseStrategy {
         want.transfer(msg.sender, amount);
     }
 
-    function tendTrigger(uint256 gasCost) public override view returns (bool) {
-        // In our example, we don't ever need tend, but if there are positions
-        // that need active maintainence, this is how you would signal for that
-        // NOTE: Must be mutually exclusive of `harvestTrigger`
-        //       (both can be false, but both should not be true)
-        return false;
-    }
-
-    function harvestTrigger(uint256 gasCost) public override view returns (bool) {
-        StrategyParams memory params = vault.strategies(address(this));
-
-        // Should not trigger if strategy is not activated
-        if (params.activation == 0) return false;
-
-        // If some amount is owed, pay it back
-        if (outstanding > 0 || vault.debtOutstanding() > 0) return true;
-
-        // Only trigger if it "makes sense" economically (<1% of value moved)
-        uint256 credit = vault.creditAvailable();
-        uint256 profit = 0;
-        if (want.balanceOf(address(this)) > reserve) profit = want.balanceOf(address(this)).sub(reserve);
-        // NOTE: Assume a 1:1 price here, for testing purposes
-        return (100 * gasCost < credit.add(profit));
-    }
-
-    function expectedReturn() public override view returns (uint256) {
-        return vault.expectedReturn();
-    }
-
     function estimatedTotalAssets() public override view returns (uint256) {
+        // For mock, this is just everything we have
         return want.balanceOf(address(this));
     }
 
-    function prepareReturn() internal override {
+    function prepareReturn(uint256 _debtOutstanding) internal override returns (uint256 _profit) {
         // During testing, send this contract some tokens to simulate "Rewards"
+        uint256 reserve = getReserve();
+        uint256 total = want.balanceOf(address(this));
+        if (total > reserve.add(_debtOutstanding)) _profit = total.sub(reserve).sub(_debtOutstanding);
     }
 
-    function adjustPosition() internal override {
+    function adjustPosition(uint256 _debtOutstanding) internal override {
         // Whatever we have "free", consider it "invested" now
-        if (outstanding <= want.balanceOf(address(this))) {
-            reserve = want.balanceOf(address(this)).sub(outstanding);
+        uint256 total = want.balanceOf(address(this));
+        if (total > _debtOutstanding) {
+            setReserve(total.sub(_debtOutstanding));
         } else {
-            reserve = 0;
+            setReserve(0);
         }
     }
 
-    function liquidatePosition(uint256 _amount) internal override {
-        if (_amount > reserve) {
-            reserve = 0;
+    function liquidatePosition(uint256 _amountNeeded) internal override returns (uint256 _amountFreed) {
+        uint256 reserve = getReserve();
+        if (_amountNeeded >= reserve) {
+            // Give back the entire reserves
+            _amountFreed = reserve;
         } else {
-            reserve = reserve.sub(_amount);
+            // Give back a portion of the reserves
+            _amountFreed = _amountNeeded;
         }
+        setReserve(reserve.sub(_amountFreed));
     }
 
     function exitPosition() internal override {
-        // Dump 25% each time this is called, the first 3 times
-        reserve = want.balanceOf(address(this)).mul(countdownTimer).div(4);
-        countdownTimer.sub(1); // NOTE: This should never be called after it hits 0
+        // Dump 1/N of original position each time this is called
+        setReserve(want.balanceOf(address(this)).mul(countdownTimer.sub(1)).div(countdownTimer));
+        countdownTimer = countdownTimer.sub(1); // NOTE: This should never be called after it hits 0
     }
 
     function prepareMigration(address _newStrategy) internal override {
-        want.transfer(_newStrategy, want.balanceOf(address(this)));
+        // Nothing needed here because no additional tokens/tokenized positions for mock
+    }
+
+    function protectedTokens() internal override view returns (address[] memory) {
+        return new address[](0); // No additional tokens/tokenized positions for mock
     }
 }

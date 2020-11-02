@@ -30,7 +30,6 @@ def test_emergency_shutdown(token, gov, vault, strategy, keeper, chain):
     # All the debt is out of the system now
     assert vault.totalDebt() == 0
     assert vault.strategies(strategy)[5] == 0
-    assert strategy.outstanding() == 0
 
     # Do it once more, for good luck (and also coverage)
     token.transfer(strategy, token.balanceOf(gov), {"from": gov})
@@ -77,7 +76,6 @@ def test_emergency_exit(token, gov, vault, strategy, keeper, chain):
     # All the debt left is out of the system now
     assert vault.totalDebt() == stolen_funds
     assert vault.strategies(strategy)[5] == stolen_funds
-    assert strategy.outstanding() == stolen_funds
 
     # Vault returned something overall though
     strategyReturn = vault.strategies(strategy)[6]

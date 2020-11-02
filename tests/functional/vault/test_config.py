@@ -32,7 +32,7 @@ def test_vault_deployment(guardian, gov, rewards, token, Vault):
     assert vault.totalAssets() == 0
 
 
-def test_vault_deployment_with_overrides(guardian, gov, rewards, token, Vault):
+def test_vault_name_symbol_override(guardian, gov, rewards, token, Vault):
     # Deploy the Vault with name/symbol overrides
     vault = guardian.deploy(Vault, token, gov, rewards, "crvY yVault", "yvcrvY")
     # Assert that the overrides worked
@@ -43,23 +43,20 @@ def test_vault_deployment_with_overrides(guardian, gov, rewards, token, Vault):
 @pytest.mark.parametrize(
     "getter,setter,val",
     [
+        ("name", "setName", "NewName yVault"),
+        ("symbol", "setSymbol", "yvNEW"),
         ("emergencyShutdown", "setEmergencyShutdown", True),
         ("guardian", "setGuardian", None),
         ("rewards", "setRewards", None),
         ("performanceFee", "setPerformanceFee", 1000),
         ("managementFee", "setManagementFee", 1000),
         ("depositLimit", "setDepositLimit", 1000),
-        ("guardian", "setGuardian", None),
     ],
 )
-def test_vault_setParams(
-    guardian, gov, rewards, token, rando, getter, setter, val, Vault
-):
+def test_vault_setParams(gov, vault, rando, getter, setter, val):
     if not val:
         # Can't access fixtures, so use None to mean any random address
         val = rando
-
-    vault = guardian.deploy(Vault, token, gov, rewards, "", "")
 
     # Only governance can set this param
     with brownie.reverts():
@@ -69,8 +66,7 @@ def test_vault_setParams(
     assert getattr(vault, getter)() == val
 
 
-def test_vault_setGovernance(guardian, gov, rewards, token, rando, Vault):
-    vault = guardian.deploy(Vault, token, gov, rewards, "", "")
+def test_vault_setGovernance(gov, vault, rando):
     newGov = rando
     # No one can set governance but governance
     with brownie.reverts():
@@ -90,25 +86,3 @@ def test_vault_setGovernance(guardian, gov, rewards, token, rando, Vault):
     # Only new governance can accept a change of governance
     with brownie.reverts():
         vault.acceptGovernance({"from": gov})
-
-
-def test_vault_setName(guardian, gov, rewards, token, rando, Vault):
-    vault = guardian.deploy(Vault, token, gov, rewards, "", "")
-
-    # No one can set name but governance
-    with brownie.reverts():
-        vault.setName("NewName yVault", {"from": rando})
-
-    vault.setName("NewName yVault", {"from": gov})
-    assert vault.name() == "NewName yVault"
-
-
-def test_vault_setSymbol(guardian, gov, rewards, token, rando, Vault):
-    vault = guardian.deploy(Vault, token, gov, rewards, "", "")
-
-    # No one can set symbol but governance
-    with brownie.reverts():
-        vault.setSymbol("yvNEW", {"from": rando})
-
-    vault.setSymbol("yvNEW", {"from": gov})
-    assert vault.symbol() == "yvNEW"
