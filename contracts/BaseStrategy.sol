@@ -306,7 +306,8 @@ abstract contract BaseStrategy {
 
         // Check for profits and losses
         uint256 total = estimatedTotalAssets();
-        if (total < params.totalDebt) return true; // We have a loss to report!
+        // Trigger if we have a loss to report
+        if (total < params.totalDebt) return params.totalDebt.sub(total).mul(profitFactor) > callCost;
 
         uint256 profit = 0;
         if (total > params.totalDebt) profit = total.sub(params.totalDebt); // We've earned a profit!
