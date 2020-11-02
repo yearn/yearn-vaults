@@ -289,7 +289,7 @@ abstract contract BaseStrategy {
      *
      * NOTE: this call and `tendTrigger` should never return `true` at the same time.
      */
-    function harvestTrigger(uint256 callCost) public view returns (bool) {
+    function harvestTrigger(uint256 callCost) public virtual view returns (bool) {
         StrategyParams memory params = vault.strategies(address(this));
 
         // Should not trigger if strategy is not activated
