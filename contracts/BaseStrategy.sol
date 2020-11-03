@@ -229,7 +229,7 @@ abstract contract BaseStrategy {
      * strategy and reduce it's overall position if lower than expected returns
      * are sustained for long periods of time.
      */
-    function prepareReturn(uint256 _debtOustanding) internal virtual returns (uint256 _profit);
+    function prepareReturn(uint256 _debtOutstanding) internal virtual returns (uint256 _profit);
 
     /*
      * Perform any adjustments to the core position(s) of this strategy given
