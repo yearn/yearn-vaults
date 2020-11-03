@@ -34,8 +34,6 @@
 
     For further details, please refer to the specification:
     https://github.com/iearn-finance/yearn-vaults/blob/master/SPECIFICATION.md
-@dev
-    
 """
 
 API_VERSION: constant(String[28]) = "0.1.3"
