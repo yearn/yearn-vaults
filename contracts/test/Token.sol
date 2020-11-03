@@ -7,4 +7,9 @@ contract Token is ERC20 {
     constructor() public ERC20("yearn.finance test token", "TEST") {
         _mint(msg.sender, 30000 * 10**18);
     }
+
+    // Public mint function. Do not use in production.
+    function mint(uint256 amount) public {
+        _mint(msg.sender, amount);
+    }
 }
