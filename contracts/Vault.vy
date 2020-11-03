@@ -25,9 +25,11 @@
 
     There is an "Emergency Shutdown" mode. When the Vault is put into emergency
     shutdown, assets will be recalled from the Strategies as quickly as is
-    practical, minimizing loss. Deposits are halted, new Strategies may not be
-    added, and each Strategy exits with the minimum possible damage to
-    position. Users may continue to withdraw without restriction.
+    practical (given on-chain conditions), minimizing loss. Deposits are
+    halted, new Strategies may not be added, and each Strategy exits with the
+    minimum possible damage to position, while opening up deposits to be 
+    withdrawn by users. There are no restrictions on withdrawals above what is
+    expected under Normal Operation.
 
     For further details, please refer to the specification:
     https://github.com/iearn-finance/yearn-vaults/blob/master/SPECIFICATION.md
@@ -314,17 +316,14 @@ def setEmergencyShutdown(_active: bool):
         Activates or deactivates Vault mode where all Strategies go into full
         withdrawal.
 
-        During Emergency Shutdown mode of the Vault, the intention is for the
-        Vault to recall the debt as quickly as reasonable (given on-chain
-        conditions) with minimal losses, and open up deposits to be withdrawn
-        by Users as easily as possible. There is no restrictions on
-        withdrawals above what is expected under Normal Operation.
+        During Emergency Shutdown:
+        1. No Users may deposit into the Vault (but may withdrawal as usual.)
+        2. Governance may not add new Strategies.
+        3. Each Strategy must pay back their debt as quickly as reasonable to
+            minimally affect their position.
+        4. Only Governance may undo Emergency Shutdown.
 
-        1. During Emergency Shutdown, no Users may deposit into the Vault
-        2. During Emergency Shutdown, Governance cannot add new Strategies
-        3. During Emergency Shutdown, each Strategy must pay back their debt as
-            quickly as reasonable to minimally affect their position
-        4. Only Governance can undo Emergency Shutdown
+        See contract level note for further details.
 
         This may only be called by governance or the guardian.
     @param _active 
@@ -721,10 +720,8 @@ def withdraw(_shares: uint256 = MAX_UINT256, _recipient: address = msg.sender) -
         Withdraws the calling account's tokens from this Vault, redeeming
         amount `_shares` for an appropriate amount of tokens.
 
-        Note that funds will be withdrawn from the least impactful Strategy
-        (the Strategy that will impact Vault gains the least by having funds
-        removed), then the next least impactful, and so on, until all `_shares`
-        have been redeemed for tokens.
+        See note on `setWithdrawalQueue` for further details of withdrawal
+        ordering and behavior.
     @dev
         Measuring the value of shares is based on the total outstanding debt
         that this contract has ("expected value") instead of the total balance
