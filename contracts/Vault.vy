@@ -257,8 +257,7 @@ def setRewards(_rewards: address):
 def setDepositLimit(_limit: uint256):
     """
     @notice
-        Changes the maximum amount of tokens that can be deposited in this
-        Vault.
+        Changes the maximum amount of tokens that can be deposited in this Vault.
 
         Note, this is not how much may be deposited by a single depositor,
         but the maximum amount that may be deposited across all depositors.
@@ -342,7 +341,7 @@ def setWithdrawalQueue(_queue: address[MAXIMUM_STRATEGIES]):
         by `_queue`.
 
         There can be fewer strategies than the maximum, as well as fewer than
-        the total number of strategies active with the Vault. `withdrawalQueue`
+        the total number of strategies active in the vault. `withdrawalQueue`
         will be updated in a gas-efficient manner, assuming the input is well-
         ordered with 0x0 only at the end.
 
@@ -589,7 +588,7 @@ def deposit(_amount: uint256 = MAX_UINT256, _recipient: address = msg.sender) ->
         Strategies assume. If that number were to be lower than the "expected
         value" at some future point, depositing shares via this method could
         entitle the depositor to *less* than the deposited value once the
-    "realized value" is updated from further reports by the Strategies
+        "realized value" is updated from further reports by the Strategies
         to the Vaults.
 
         Care should be taken by integrators to account for this discrepancy,
