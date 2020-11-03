@@ -26,6 +26,9 @@ def test_sweep(gov, vault, rando, token, other_token):
         vault.sweep(other_token, {"from": rando})
 
     before = other_token.balanceOf(vault)
+    vault.sweep(other_token, 1, {"from": gov})
+    assert other_token.balanceOf(vault) == before - 1
+    assert other_token.balanceOf(gov) == 1
     vault.sweep(other_token, {"from": gov})
     assert other_token.balanceOf(vault) == 0
     assert other_token.balanceOf(gov) == before
@@ -77,6 +80,7 @@ def test_reject_ether(gov, vault):
         ("revokeStrategy", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
         ("report", [1]),
         ("sweep", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
+        ("sweep", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1]),
     ]:
         with brownie.reverts("Cannot send ether to nonpayable function"):
             # NOTE: gov can do anything
