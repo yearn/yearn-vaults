@@ -44,7 +44,7 @@ def test_normal_operation(
         strategy,
         token.balanceOf(vault),  # Go up to 100% of Vault AUM
         token.balanceOf(vault),  # 100% of Vault AUM per block (no rate limit)
-        50,  # 0.5% performance fee for Strategist
+        1000,  # 10% performance fee for Strategist
         {"from": gov},
     )
     strategy.harvest({"from": keeper})

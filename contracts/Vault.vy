@@ -140,7 +140,7 @@ def __init__(
     @notice
         Initializes the Vault, this is called only once, when the contract is
         deployed.
-        The performance fee is set to 4.5% of yield, per Strategy.
+        The performance fee is set to 10% of yield, per Strategy.
         The management fee is set to 2%, per year.
         There is no initial deposit limit.
     @dev
@@ -169,7 +169,7 @@ def __init__(
     self.governance = _governance
     self.rewards = _rewards
     self.guardian = msg.sender
-    self.performanceFee = 450  # 4.5% of yield (per Strategy)
+    self.performanceFee = 1000  # 10% of yield (per Strategy)
     self.managementFee = 200  # 2% per year
     self.depositLimit = MAX_UINT256  # Start unlimited
     self.lastReport = block.number

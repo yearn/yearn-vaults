@@ -18,13 +18,13 @@ def test_addStrategy(web3, gov, vault, strategy, rando):
 
     # Only governance can add a strategy
     with brownie.reverts():
-        vault.addStrategy(strategy, 1000, 10, 50, {"from": rando})
+        vault.addStrategy(strategy, 1000, 10, 1000, {"from": rando})
 
     assert vault.strategies(strategy) == [0, 0, 0, 0, 0, 0, 0]
 
-    vault.addStrategy(strategy, 1000, 10, 50, {"from": gov})
+    vault.addStrategy(strategy, 1000, 10, 1000, {"from": gov})
     assert vault.strategies(strategy) == [
-        50,
+        1000,
         web3.eth.blockNumber,
         1000,
         10,
@@ -36,7 +36,7 @@ def test_addStrategy(web3, gov, vault, strategy, rando):
 
     # Can't add a strategy twice
     with brownie.reverts():
-        vault.addStrategy(strategy, 1000, 10, 50, {"from": gov})
+        vault.addStrategy(strategy, 1000, 10, 1000, {"from": gov})
 
 
 def test_updateStrategy(web3, gov, vault, strategy, rando):
@@ -48,7 +48,7 @@ def test_updateStrategy(web3, gov, vault, strategy, rando):
     with brownie.reverts():
         vault.updateStrategyPerformanceFee(strategy, 75, {"from": gov})
 
-    vault.addStrategy(strategy, 1000, 10, 50, {"from": gov})
+    vault.addStrategy(strategy, 1000, 10, 1000, {"from": gov})
     activation_block = web3.eth.blockNumber  # Deployed right before test started
 
     # Not just anyone can update a strategy
@@ -61,7 +61,7 @@ def test_updateStrategy(web3, gov, vault, strategy, rando):
 
     vault.updateStrategyDebtLimit(strategy, 1500, {"from": gov})
     assert vault.strategies(strategy) == [
-        50,
+        1000,
         activation_block,
         1500,  # This changed
         10,
@@ -72,7 +72,7 @@ def test_updateStrategy(web3, gov, vault, strategy, rando):
 
     vault.updateStrategyRateLimit(strategy, 15, {"from": gov})
     assert vault.strategies(strategy) == [
-        50,
+        1000,
         activation_block,
         1500,
         15,  # This changed
@@ -94,7 +94,7 @@ def test_updateStrategy(web3, gov, vault, strategy, rando):
 
 
 def test_migrateStrategy(gov, vault, strategy, rando, TestStrategy):
-    vault.addStrategy(strategy, 1000, 10, 50, {"from": gov})
+    vault.addStrategy(strategy, 1000, 10, 1000, {"from": gov})
 
     # Not just anyone can migrate
     with brownie.reverts():
@@ -118,13 +118,13 @@ def test_migrateStrategy(gov, vault, strategy, rando, TestStrategy):
 
     # Can't migrate to an already approved strategy
     approved_strategy = gov.deploy(TestStrategy, vault)
-    vault.addStrategy(approved_strategy, 1000, 10, 50, {"from": gov})
+    vault.addStrategy(approved_strategy, 1000, 10, 1000, {"from": gov})
     with brownie.reverts():
         vault.migrateStrategy(strategy, approved_strategy, {"from": gov})
 
 
 def test_revokeStrategy(web3, gov, vault, strategy, rando):
-    vault.addStrategy(strategy, 1000, 10, 50, {"from": gov})
+    vault.addStrategy(strategy, 1000, 10, 1000, {"from": gov})
     activation_block = web3.eth.blockNumber  # Deployed right before test started
 
     # Not just anyone can revoke a strategy
@@ -133,7 +133,7 @@ def test_revokeStrategy(web3, gov, vault, strategy, rando):
 
     vault.revokeStrategy(strategy, {"from": gov})
     assert vault.strategies(strategy) == [
-        50,
+        1000,
         activation_block,
         0,  # This changed
         10,
@@ -153,7 +153,7 @@ def test_revokeStrategy(web3, gov, vault, strategy, rando):
 def test_ordering(gov, vault, TestStrategy, rando):
     # Show that a lot of strategies get properly ordered
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(19)]
-    [vault.addStrategy(s, 1000, 10, 50, {"from": gov}) for s in strategies]
+    [vault.addStrategy(s, 1000, 10, 1000, {"from": gov}) for s in strategies]
 
     for idx, strategy in enumerate(strategies):
         assert vault.withdrawalQueue(idx) == strategy
@@ -178,7 +178,7 @@ def test_ordering(gov, vault, TestStrategy, rando):
 
     # Show that adding a new one properly orders
     strategy = gov.deploy(TestStrategy, vault)
-    vault.addStrategy(strategy, 1000, 10, 50, {"from": gov})
+    vault.addStrategy(strategy, 1000, 10, 1000, {"from": gov})
     strategies.append(strategy)
 
     for idx, strategy in enumerate(strategies):
@@ -186,7 +186,9 @@ def test_ordering(gov, vault, TestStrategy, rando):
 
     # NOTE: limited to only a certain amount of strategies
     with brownie.reverts():
-        vault.addStrategy(gov.deploy(TestStrategy, vault), 1000, 10, 50, {"from": gov})
+        vault.addStrategy(
+            gov.deploy(TestStrategy, vault), 1000, 10, 1000, {"from": gov}
+        )
 
     # Show that removing from the middle properly orders
     strategy = strategies.pop(1)
@@ -206,5 +208,5 @@ def test_reporting(vault, strategy, gov, rando):
 
     strategy.tend({"from": gov})  # Do this for converage of `Strategy.tend()`
 
-    vault.addStrategy(strategy, 1000, 10, 50, {"from": gov})
+    vault.addStrategy(strategy, 1000, 10, 1000, {"from": gov})
     vault.expectedReturn(strategy)  # Do this for coverage of `Vault._expectedReturn()`

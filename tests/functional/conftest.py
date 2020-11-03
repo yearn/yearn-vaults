@@ -50,7 +50,7 @@ def strategy(gov, strategist, keeper, token, vault, TestStrategy):
         strategy,
         token.totalSupply() // 5,  # Debt limit of 20% of token supply (40% of Vault)
         token.totalSupply() // 1000,  # Rate limt of 0.1% of token supply per block
-        50,  # 0.5% performance fee for Strategist
+        1000,  # 10% performance fee for Strategist
         {"from": gov},
     )
     yield strategy
