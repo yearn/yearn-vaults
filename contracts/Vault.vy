@@ -181,7 +181,7 @@ def apiVersion() -> String[28]:
     """
     @notice
         Used to track the deployed version of this contract. In practice you
-        can use this version number to compare with yEarn's GitHub and
+        can use this version number to compare with Yearn's GitHub and
         determine which version of the source matches this deployed contract.
     @return API_VERSION which holds the current version of this contract.
     """
@@ -190,12 +190,26 @@ def apiVersion() -> String[28]:
 
 @external
 def setName(_name: String[42]):
+    """
+    @notice 
+        Used to change the value of `name`.
+        
+        This may only be called by governance.
+    @param _name The new name to use.
+    """
     assert msg.sender == self.governance
     self.name = _name
 
 
 @external
 def setSymbol(_symbol: String[20]):
+    """
+    @notice 
+        Used to change the value of `symbol`.
+        
+        This may only be called by governance.
+    @param _symbol The new symbol to use.
+    """
     assert msg.sender == self.governance
     self.symbol = _symbol
 
