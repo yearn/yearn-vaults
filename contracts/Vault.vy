@@ -1,6 +1,6 @@
 #@version 0.2.7
 """
-@title Yearn's v2 Vault
+@title Yearn Token Vault
 @license GNU AGPLv3
 @author yearn.finance
 @notice
