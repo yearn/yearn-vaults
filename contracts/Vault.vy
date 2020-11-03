@@ -27,7 +27,7 @@
     shutdown, assets will be recalled from the Strategies as quickly as is
     practical (given on-chain conditions), minimizing loss. Deposits are
     halted, new Strategies may not be added, and each Strategy exits with the
-    minimum possible damage to position, while opening up deposits to be 
+    minimum possible damage to position, while opening up deposits to be
     withdrawn by users. There are no restrictions on withdrawals above what is
     expected under Normal Operation.
 
@@ -137,13 +137,13 @@ def __init__(
     _symbolOverride: String[32]
 ):
     """
-    @notice 
+    @notice
         Initializes the Vault, this is called only once, when the contract is
         deployed.
         The performance fee is set to 4.5% of yield, per Strategy.
         The management fee is set to 2%, per year.
         There is no initial deposit limit.
-    @dev 
+    @dev
         If `_nameOverride` is not specified, the name will be 'yearn'
         combined with the name of _token.
 
@@ -179,7 +179,7 @@ def __init__(
 @external
 def apiVersion() -> String[28]:
     """
-    @notice 
+    @notice
         Used to track the deployed version of this contract. In practice you
         can use this version number to compare with yEarn's GitHub and
         determine which version of the source matches this deployed contract.
@@ -204,10 +204,10 @@ def setSymbol(_symbol: String[20]):
 @external
 def setGovernance(_governance: address):
     """
-    @notice 
+    @notice
         Nominate a new address to use as governance.
 
-        The change does not go into effect immediately. This function sets a 
+        The change does not go into effect immediately. This function sets a
         pending change, and the governance address is not updated until
         the proposed governance address has accepted the responsibility.
 
@@ -220,10 +220,10 @@ def setGovernance(_governance: address):
 
 @external
 def acceptGovernance():
-     """
-    @notice 
+    """
+    @notice
         Once a new governance address has been proposed using setGovernance(),
-        this function may be called by the proposed address to accept the 
+        this function may be called by the proposed address to accept the
         responsibility of taking over governance for this contract.
 
         This may only be called by the proposed governance address.
@@ -255,7 +255,7 @@ def setRewards(_rewards: address):
 
 @external
 def setDepositLimit(_limit: uint256):
-     """
+    """
     @notice
         Changes the maximum amount of tokens a single address may have
         deposited in this Vault.
@@ -326,7 +326,7 @@ def setEmergencyShutdown(_active: bool):
         See contract level note for further details.
 
         This may only be called by governance or the guardian.
-    @param _active 
+    @param _active
         If true, the Vault goes into Emergency Shutdown. If false, the Vault
         goes back into Normal Operation.
     """
@@ -351,11 +351,11 @@ def setWithdrawalQueue(_queue: address[MAXIMUM_STRATEGIES]):
         This is order sensitive, specify the addresses in the order in which
         funds should be withdrawn (so `_queue`[0] is the first Strategy withdrawn
         from, `_queue`[1] is the second, etc.)
-        
+
         This means that the least impactful Strategy (the Strategy that will have
         its core positions impacted the least by having funds removed) should be
         at `_queue`[0], then the next least impactful at `_queue`[1], and so on.
-    @param _queue 
+    @param _queue
         The array of addresses to use as the new withdrawal queue. This is
         order sensitive.
     """
@@ -400,7 +400,7 @@ def transfer(_to: address, _value: uint256) -> bool:
 
 @external
 def transferFrom(_from : address, _to : address, _value : uint256) -> bool:
-     """
+    """
     @notice
         Transfers `_value` shares from `_from` to `_to`. This operation will
         always return true, unless the user is attempting to transfer shares
@@ -409,7 +409,7 @@ def transferFrom(_from : address, _to : address, _value : uint256) -> bool:
         Unless the caller has given this contract unlimited approval,
         transfering shares will decrement the caller's `allowance` by `_value`.
     @param _from The address shares are being transfered from.
-    @param _to 
+    @param _to
         The address shares are being transfered to. Must not be this contract's
         address, must not be 0x0.
     @param _value The quantity of shares to transfer.
@@ -503,7 +503,7 @@ def balanceSheetOfStrategy(_strategy: address) -> uint256:
         Provide an accurate estimate for the total amount of assets
         (principle + return) that `_strategy` is currently managing,
         denominated in terms of `_token`.
-        
+
         This total is the total realizable value that could *actually* be
         obtained from this Strategy if it were to divest it's entire position
         based on current on-chain conditions.
@@ -529,7 +529,7 @@ def totalBalanceSheet(_strategies: address[2 * MAXIMUM_STRATEGIES]) -> uint256:
             if a condition exists where the Vault is experiencing a dangerous
             'balance sheet' attack, leading Vault shares to be worth less than
             what their price on paper is (based on their debt)
-    @param _strategies 
+    @param _strategies
         A list of strategies managed by this Vault, which will be included in
         the balance sheet calculation.
     @return The total balance sheet of this Vault.
@@ -576,20 +576,20 @@ def deposit(_amount: uint256 = MAX_UINT256, _recipient: address = msg.sender) ->
         Vault is in Emergency Shutdown, deposits will not be accepted and this
         call will fail.
     @dev
-        Measuring quantity of shares to issues is based on the total 
-        outstanding debt that this contract has ("expected value") instead 
-        of the total balance sheet it has ("estimated value") has important 
-        security considerations, and is done intentionally. If this value were 
+        Measuring quantity of shares to issues is based on the total
+        outstanding debt that this contract has ("expected value") instead
+        of the total balance sheet it has ("estimated value") has important
+        security considerations, and is done intentionally. If this value were
         measured against external systems, it could be purposely manipulated by
-        an attacker to withdraw more assets than they otherwise should be able 
+        an attacker to withdraw more assets than they otherwise should be able
         to claim by redeeming their shares.
-        
+
         On deposit, this means that shares are issued against the total amount
         that the deposited capital can be given in service of the debt that
         Strategies assume. If that number were to be lower than the "expected
-        value" at some future point, depositing shares via this method could 
-        entitle the depositor to *less* than the deposited value once the 
-        "realized value" is updated from further reportings by the Strategies
+        value" at some future point, depositing shares via this method could
+        entitle the depositor to *less* than the deposited value once the
+    "realized value" is updated from further reportings by the Strategies
         to the Vaults.
 
         Care should be taken by integrators to account for this discrepency,
@@ -672,7 +672,7 @@ def maxAvailableShares() -> uint256:
 @external
 def withdraw(_shares: uint256 = MAX_UINT256, _recipient: address = msg.sender) -> uint256:
     """
-    @notice 
+    @notice
         Withdraws the calling account's tokens from this Vault, redeeming
         amount `_shares` for an appropriate amount of tokens.
 
@@ -686,7 +686,7 @@ def withdraw(_shares: uint256 = MAX_UINT256, _recipient: address = msg.sender) -
         systems, it could be purposely manipulated by an attacker to withdraw
         more assets than they otherwise should be able to claim by redeeming
         their shares.
-        
+
         On withdrawal, this means that shares are redeemed against the total
         amount that the deposited capital had "realized" since the point it
         was deposited, up until the point it was withdrawn. If that number
@@ -694,14 +694,14 @@ def withdraw(_shares: uint256 = MAX_UINT256, _recipient: address = msg.sender) -
         withdrawing shares via this method could entitle the depositor to
         *more* than the expected value once the "realized value" is updated
         from further reportings by the Strategies to the Vaults.
-        
+
         Under exceptional scenarios, this could cause earlier withdrawals to
         earn "more" of the underlying assets than Users might otherwise be
         entitled to, if the Vault's estimated value were otherwise measured
         through external means, accounting for whatever exceptional scenarios
         exist for the Vault (that aren't covered by the Vault's own design.)
     @param _shares How many shares to redeem for tokens, defaults to all.
-    @param _recipient 
+    @param _recipient
         The address to issue the shares in this Vault to. Defaults to the
         caller's address.
     @return The quantity of tokens redeemable for `_shares`.
@@ -780,7 +780,7 @@ def pricePerShare() -> uint256:
 
 @internal
 def _organizeWithdrawalQueue():
-    # Reorganize `withdrawalQueue` based on premise that if there is an 
+    # Reorganize `withdrawalQueue` based on premise that if there is an
     # empty value between two actual values, then the empty value should be
     # replaced by the later value.
     # NOTE: Relative ordering of non-zero values is maintained.
@@ -811,7 +811,7 @@ def addStrategy(
         `setWithdrawalQueue` to change the order.
     @param _strategy The address of the Strategy to add.
     @param _debtLimit The quantity of assets `_strategy` can manage.
-    @param _rateLimit 
+    @param _rateLimit
         How many assets per block this Vault may deposit to or withdraw from
         `_strategy`.
     @param _performanceFee
@@ -843,7 +843,7 @@ def updateStrategyDebtLimit(
     _debtLimit: uint256,
 ):
     """
-    @notice 
+    @notice
         Change the quantity of assets `_strategy` may manage.
 
         This may only be called by governance.
@@ -906,7 +906,7 @@ def migrateStrategy(_oldVersion: address, _newVersion: address):
     @dev
         Strategy must successfully migrate all capital and positions to new
         Strategy, or else this will upset the balance of the Vault.
-        
+
         The new Strategy should be "empty" e.g. have no prior commitments to
         this Vault, otherwise it could have issues.
     @param _oldVersion The existing Strategy to migrate from.
@@ -1129,7 +1129,7 @@ def report(_return: uint256) -> uint256:
         whether to take some back or give it more. Note that the most it can
         take is `_return`, and the most it can give is all of the remaining
         reserves. Anything outside of those bounds is abnormal behavior.
-        
+
         All approved strategies must have increased diligience around
         calling this function, as abnormal behavior could become catastrophic.
     @param _return
@@ -1262,7 +1262,7 @@ def erc20_safe_transfer(_token: address, _to: address, _value: uint256):
 
 @external
 def sweep(_token: address):
-   """
+    """
     @notice
         Removes tokens from this Vault that are not the type of token managed
         by this Vault. This may be used in case of accidentally sending the
