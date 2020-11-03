@@ -257,8 +257,8 @@ def setRewards(_rewards: address):
 def setDepositLimit(_limit: uint256):
     """
     @notice
-        Changes the maximum amount of tokens a single address may have
-        deposited in this Vault.
+        Changes the maximum amount of tokens that can be deposited in this
+        Vault.
 
         Note, this is not how much may be deposited by a single depositor,
         but the maximum amount that may be deposited across all depositors.
