@@ -108,9 +108,9 @@ MAXIMUM_STRATEGIES: constant(uint256) = 20
 # Ordering that `withdraw` uses to determine which strategies to pull funds from
 # NOTE: Does *NOT* have to match the ordering of all the current strategies that
 #       exist, but it is recommended that it does or else withdrawal depth is
-#       limited to only those inside the the queue.
+#       limited to only those inside the queue.
 # NOTE: Ordering is determined by governance, and should be balanced according
-#       to risk, slippage, and/or volitility. Can also be ordered to increase the
+#       to risk, slippage, and/or volatility. Can also be ordered to increase the
 #       withdrawal speed of a particular Strategy.
 # NOTE: The first time a ZERO_ADDRESS is encountered, it stops withdrawing
 withdrawalQueue: public(address[MAXIMUM_STRATEGIES])
@@ -149,7 +149,7 @@ def __init__(
 
         If `_symbolOverride` is not specified, the symbol will be 'y'
         combined with the symbol of _token.
-    @param _token The token that may deposited into this Vault.
+    @param _token The token that may be deposited into this Vault.
     @param _governance The address authorized for governance interactions.
     @param _rewards The address to distribute rewards to.
     @param _nameOverride Specify a custom Vault name. Leave empty for default choice.
@@ -317,7 +317,7 @@ def setEmergencyShutdown(_active: bool):
         withdrawal.
 
         During Emergency Shutdown:
-        1. No Users may deposit into the Vault (but may withdrawal as usual.)
+        1. No Users may deposit into the Vault (but may withdraw as usual.)
         2. Governance may not add new Strategies.
         3. Each Strategy must pay back their debt as quickly as reasonable to
             minimally affect their position.
@@ -387,7 +387,7 @@ def transfer(_to: address, _value: uint256) -> bool:
         will always return true, unless the user is attempting to transfer
         shares to this contract's address, or to 0x0.
     @param _to
-        The address shares are being transfered to. Must not be this contract's
+        The address shares are being transferred to. Must not be this contract's
         address, must not be 0x0.
     @param _value The quantity of shares to transfer.
     @return
@@ -408,9 +408,9 @@ def transferFrom(_from : address, _to : address, _value : uint256) -> bool:
 
         Unless the caller has given this contract unlimited approval,
         transfering shares will decrement the caller's `allowance` by `_value`.
-    @param _from The address shares are being transfered from.
+    @param _from The address shares are being transferred from.
     @param _to
-        The address shares are being transfered to. Must not be this contract's
+        The address shares are being transferred to. Must not be this contract's
         address, must not be 0x0.
     @param _value The quantity of shares to transfer.
     @return
@@ -505,7 +505,7 @@ def balanceSheetOfStrategy(_strategy: address) -> uint256:
         denominated in terms of `_token`.
 
         This total is the total realizable value that could *actually* be
-        obtained from this Strategy if it were to divest it's entire position
+        obtained from this Strategy if it were to divest its entire position
         based on current on-chain conditions.
     @param _strategy The Strategy to estimate the realizable assets of.
     @return An estimate of the total realizable assets in `_strategy`.
@@ -589,10 +589,10 @@ def deposit(_amount: uint256 = MAX_UINT256, _recipient: address = msg.sender) ->
         Strategies assume. If that number were to be lower than the "expected
         value" at some future point, depositing shares via this method could
         entitle the depositor to *less* than the deposited value once the
-    "realized value" is updated from further reportings by the Strategies
+    "realized value" is updated from further reports by the Strategies
         to the Vaults.
 
-        Care should be taken by integrators to account for this discrepency,
+        Care should be taken by integrators to account for this discrepancy,
         by using the view-only methods of this contract (both off-chain and
         on-chain) to determine if depositing into the Vault is a "good idea".
     @param _amount The quantity of tokens to deposit, defaults to all.
@@ -693,7 +693,7 @@ def withdraw(_shares: uint256 = MAX_UINT256, _recipient: address = msg.sender) -
         were to be higher than the "expected value" at some future point,
         withdrawing shares via this method could entitle the depositor to
         *more* than the expected value once the "realized value" is updated
-        from further reportings by the Strategies to the Vaults.
+        from further reports by the Strategies to the Vaults.
 
         Under exceptional scenarios, this could cause earlier withdrawals to
         earn "more" of the underlying assets than Users might otherwise be
@@ -734,7 +734,7 @@ def withdraw(_shares: uint256 = MAX_UINT256, _recipient: address = msg.sender) -
             # NOTE: Don't withdraw more than the debt so that Strategy can still
             #       continue to work based on the profits it has
             # NOTE: This means that user will lose out on any profits that each
-            #       Strategy in the queue would return on next harvest, benefitting others
+            #       Strategy in the queue would return on next harvest, benefiting others
             amountNeeded = min(amountNeeded, self.strategies[strategy].totalDebt)
             if amountNeeded == 0:
                 continue  # Nothing to withdraw from this Strategy, try the next one
@@ -1130,7 +1130,7 @@ def report(_return: uint256) -> uint256:
         take is `_return`, and the most it can give is all of the remaining
         reserves. Anything outside of those bounds is abnormal behavior.
 
-        All approved strategies must have increased diligience around
+        All approved strategies must have increased diligence around
         calling this function, as abnormal behavior could become catastrophic.
     @param _return
         Amount Strategy has made on it's investment since its last report,
