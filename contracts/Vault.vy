@@ -4,12 +4,10 @@
 @license GNU AGPLv3
 @author yearn.finance
 @notice
-    Yearn's v2 Vault. A number of improvements have been made over the v1
-    implementation. 
-    
-    v2 Vaults are not limited to a single Strategy, they can
-    have as many Strategies as can be designed (however the withdrawal queue is
-    currently capped at 20 until Vyper supports dynamic arrays.)
+    Yearn Token Vault. Holds an underlying token, and allows users to interact
+    with the Yearn ecosystem through Strategies connected to the Vault.
+    Vaults are not limited to a single Strategy, they can have as many Strategies
+    as can be designed (however the withdrawal queue is capped at 20.)
 
     Deposited funds are moved into the most impactful strategy that has not
     already reached its limit for assets under management, regardless of which
@@ -23,10 +21,9 @@
     withdrawal queue's order must be properly set and managed by the community
     (through governance).
 
-    v2 Vault Strategies are parameterized to pursue the highest risk-adjusted
-    yield.
+    Vault Strategies are parameterized to pursue the highest risk-adjusted yield.
 
-    There is now an "Emergency Exit" mode. When the Vault is put into emergency
+    There is an "Emergency Shutdown" mode. When the Vault is put into emergency
     shutdown, assets will be recalled from the Strategies as quickly as is
     practical, minimizing loss. Deposits are halted, new Strategies may not be
     added, and each Strategy exits with the minimum possible damage to
@@ -153,8 +150,8 @@ def __init__(
     @param _token The token that may deposited into this Vault.
     @param _governance The address authorized for governance interactions.
     @param _rewards The address to distribute rewards to.
-    @param _nameOverride Optional, specify a custom Vault name.
-    @param _symbolOverride Optional, specify a custom Vault symbol name.
+    @param _nameOverride Specify a custom Vault name. Leave empty for default choice.
+    @param _symbolOverride Specify a custom Vault symbol name. Leave empty for default choice.
     """
     # TODO: Non-detailed Configuration?
     self.token = ERC20(_token)
@@ -244,8 +241,8 @@ def setRewards(_rewards: address):
         will cease flowing to the old address and begin flowing
         to this address once the change is in effect.
 
-        This will not change any transactions in progress, only
-        new transactions made after this change goes into effect.
+        This will not change any Strategy reports in progress, only
+        new reports made after this change goes into effect.
 
         This may only be called by governance.
     @param _rewards The address to use for collecting rewards.
@@ -261,8 +258,8 @@ def setDepositLimit(_limit: uint256):
         Changes the maximum amount of tokens a single address may have
         deposited in this Vault.
 
-        Note, this is not how much may be deposited in a single transaction,
-        but the maximum amount that may be deposited across all transactions.
+        Note, this is not how much may be deposited by a single depositor,
+        but the maximum amount that may be deposited across all depositors.
 
         This may only be called by governance.
     @param _limit The new deposit limit to use.
@@ -345,23 +342,19 @@ def setWithdrawalQueue(_queue: address[MAXIMUM_STRATEGIES]):
         Updates the withdrawalQueue to match the addresses and order specified
         by `_queue`.
 
-        The current limit of MAXIMUM_STRATEGIES is due to a lack of Vyper
-        support for dynamics arrays. MAXIMUM_STRATEGIES is set to a large,
-        reasonable number, 20.
-
-        There can be fewer strategies than the maximum, `withdrawalQueue`
-        will be updated until it matches the addresses specified in `_queue`,
-        then the remaining addresses in `withdrawalQueue` will be
-        set to 0x0.
+        There can be fewer strategies than the maximum, as well as fewer than
+        the total number of strategies active with the Vault. `withdrawalQueue`
+        will be updated in a gas-efficient manner, assuming the input is well-
+        ordered with 0x0 only at the end.
 
         This may only be called by governance.
     @dev
-        This is order sensitive, specificy the addresses in the order in which
+        This is order sensitive, specify the addresses in the order in which
         funds should be withdrawn (so `_queue`[0] is the first Strategy withdrawn
         from, `_queue`[1] is the second, etc.)
         
-        This means that the least impactful Strategy (the Strategy that will
-        impact Vault gains the least by having funds removed) should be
+        This means that the least impactful Strategy (the Strategy that will have
+        its core positions impacted the least by having funds removed) should be
         at `_queue`[0], then the next least impactful at `_queue`[1], and so on.
     @param _queue 
         The array of addresses to use as the new withdrawal queue. This is
@@ -552,8 +545,8 @@ def totalBalanceSheet(_strategies: address[2 * MAXIMUM_STRATEGIES]) -> uint256:
     """
     @notice
         Measure the total balance sheet of this Vault, using the list of
-        strategies given above. (2x the expected maximum is used for safety's
-        sake.)
+        strategies given above.
+        (2x the expected maximum is used to ensure completeness.)
         NOTE: The safety of this function depends *entirely* on the list of
             strategies given as the function argument. Care should be taken to
             choose this list to ensure that the estimate is accurate. No
@@ -825,7 +818,7 @@ def withdraw(_shares: uint256 = MAX_UINT256, _recipient: address = msg.sender) -
 @external
 def pricePerShare() -> uint256:
     """
-    @notice Determines the price for a single Vault share.
+    @notice Gives the price for a single Vault share.
     @dev See dev note on `withdraw`.
     @return The value of a single share.
     """
@@ -1088,7 +1081,7 @@ def debtOutstanding(_strategy: address = msg.sender) -> uint256:
     @notice
         Determines if `_strategy` is past its debt limit and if any tokens
         should be withdrawn to the Vault.
-    @param _strategy The Strategy to check.
+    @param _strategy The Strategy to check. Defaults to the caller.
     @return The quantity of tokens to withdraw.
     """
     return self._debtOutstanding(_strategy)
@@ -1153,7 +1146,7 @@ def creditAvailable(_strategy: address = msg.sender) -> uint256:
         (if any) the Strategy may draw on.
 
         In the rare case the Vault is in emergency shutdown this will return 0.
-    @param _strategy The Strategy to check.
+    @param _strategy The Strategy to check. Defaults to caller.
     @return The quantity of tokens available for the Strategy to draw on.
     """
     return self._creditAvailable(_strategy)
@@ -1191,9 +1184,9 @@ def expectedReturn(_strategy: address = msg.sender) -> uint256:
         Provide an accurate expected value for the return this `_strategy`
         would provide to the Vault the next time `report()` is called
         (since the last time it was called).
-    @param _strategy The Strategy to determine the expected return for.
+    @param _strategy The Strategy to determine the expected return for. Defaults to caller.
     @return
-        The anticipated amount `_strategy` will have made on its investment
+        The anticipated amount `_strategy` should make on its investment
         since its last report.
     """
     return self._expectedReturn(_strategy)
