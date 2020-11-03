@@ -370,16 +370,8 @@ def setWithdrawalQueue(_queue: address[MAXIMUM_STRATEGIES]):
 
 @internal
 def _transfer(_from: address, _to: address, _value: uint256):
-    """
-    @notice
-        Transfers `_value` shares from `_from` to `_to`. This call will fail
-        if the _to address is this contract's address, or if `_to` is 0x0.
-    @param _from The address shares are being transfered from.
-    @param _to 
-        The address shares are being transfered to. Must not be this contract's
-        address, must not be 0x0.
-    @param _value The quantity of shares to transfer.
-    """
+    # See note on `transfer()`.
+
     # Protect people from accidentally sending their shares to bad places
     assert not (_to in [self, ZERO_ADDRESS])
     self.balanceOf[_from] -= _value
@@ -479,13 +471,7 @@ def decreaseAllowance(_spender : address, _value : uint256) -> bool:
 @view
 @internal
 def _totalAssets() -> uint256:
-    """
-    @notice
-        Returns the total quantity of all assets under control of this
-        Vault, whether they're loaned out to a Strategy, or currently held in
-        the Vault.
-    @return The total assets under control of this Vault.
-    """
+    # See note on `totalAssets()`.
     return self.token.balanceOf(self) + self.totalDebt
 
 
@@ -505,18 +491,7 @@ def totalAssets() -> uint256:
 @view
 @internal
 def _balanceSheetOfStrategy(_strategy: address) -> uint256:
-    """
-    @notice
-        Provide an accurate estimate for the total amount of assets
-        (principle + return) that `_strategy` is currently managing,
-        denominated in terms of `_token`.
-        
-        This total is the total realizable value that could *actually* be
-        obtained from this Strategy if it were to divest it's entire position
-        based on current on-chain conditions.
-    @param _strategy The Strategy to estimate the realizable assets of.
-    @return An estimate of the total realizable assets in `_strategy`.
-    """
+    # See note on `balanceSheetOfStrategy()`.
     return Strategy(_strategy).estimatedTotalAssets()
 
 
@@ -571,16 +546,10 @@ def totalBalanceSheet(_strategies: address[2 * MAXIMUM_STRATEGIES]) -> uint256:
 
 @internal
 def _issueSharesForAmount(_to: address, _amount: uint256) -> uint256:
-    """
-    @notice Issues `_amount` Vault shares to `_to`.
-    @dev
-        Shares must be issued prior to taking on new collateral, or
-        calculation will be wrong. This means that only *trusted* tokens
-        (with no capability for exploitive behavior) can be used.
-    @param _to The address shares will be issued to.
-    @param _amount The quantity of shares to issue.
-    @return The issued Vault shares.
-    """
+    # Issues `_amount` Vault shares to `_to`.
+    # Shares must be issued prior to taking on new collateral, or
+    # calculation will be wrong. This means that only *trusted* tokens
+    # (with no capability for exploitive behavior) can be used.
     shares: uint256 = 0
     # HACK: Saves 2 SLOADs (~4000 gas)
     totalSupply: uint256 = self.totalSupply
@@ -664,28 +633,15 @@ def deposit(_amount: uint256 = MAX_UINT256, _recipient: address = msg.sender) ->
 @view
 @internal
 def _shareValue(_shares: uint256) -> uint256:
-    """
-    @notice Determines the current value of `_shares`.
-    @dev See dev note on `withdraw`.
-    @param _shares A quantity of shares to determine the value of.
-    @return The value of `_shares`.
-    """
+    # Determines the current value of `_shares`.
     return (_shares * (self._totalAssets())) / self.totalSupply
 
 
 @view
 @internal
 def _sharesForAmount(_amount: uint256) -> uint256:
-    """
-    @notice 
-        Determines how many shares `_amount` of token would receive. If this
-        Vault is currently not managing any assets, the answer will be 0.
-    @dev See dev note on `deposit`.
-    @param _amount How many tokens to calculate the share value of.
-    @return 
-        The quantity of shares that would be received by depositing `_amount`
-        tokens.
-    """
+    # Determines how many shares `_amount` of token would receive.
+    # See dev note on `deposit`.
     if self._totalAssets() > 0:
         return (_amount * self.totalSupply) / self._totalAssets()
     else:
@@ -824,13 +780,10 @@ def pricePerShare() -> uint256:
 
 @internal
 def _organizeWithdrawalQueue():
-    """
-    @notice
-        Reorganize `withdrawalQueue` based on premise that if there is an 
-        empty value between two actual values, then the empty value should be
-        replaced by the later value.
-        NOTE: Relative ordering of non-zero values is maintained.
-    """
+    # Reorganize `withdrawalQueue` based on premise that if there is an 
+    # empty value between two actual values, then the empty value should be
+    # replaced by the later value.
+    # NOTE: Relative ordering of non-zero values is maintained.
     offset: uint256 = 0
     for idx in range(MAXIMUM_STRATEGIES):
         strategy: address = self.withdrawalQueue[idx]
@@ -1053,13 +1006,7 @@ def removeStrategyFromQueue(_strategy: address):
 @view
 @internal
 def _debtOutstanding(_strategy: address) -> uint256:
-    """
-    @notice
-        Determines if `_strategy` is past its debt limit and if any tokens
-        should be withdrawn to the Vault.
-    @param _strategy The Strategy to check.
-    @return The quantity of tokens to withdraw.
-    """
+    # See note on `debtOutstanding()`.
     strategy_debtLimit: uint256 = self.strategies[_strategy].debtLimit
     strategy_totalDebt: uint256 = self.strategies[_strategy].totalDebt
 
@@ -1087,19 +1034,7 @@ def debtOutstanding(_strategy: address = msg.sender) -> uint256:
 @view
 @internal
 def _creditAvailable(_strategy: address) -> uint256:
-    """
-    @notice
-        Amount of tokens in Vault a Strategy has access to as a credit line.
-
-        This will check the Strategy's debt limit, as well as the tokens
-        available in the Vault, and determine the maximum amount of tokens
-        (if any) the Strategy may draw on.
-
-        In the rare case the Vault is in emergency shutdown this will always
-        return 0.
-    @param _strategy The Strategy to check.
-    @return The quantity of tokens available for the Strategy to draw on.
-    """
+    # See note on `creditAvailable()`.
     if self.emergencyShutdown:
         return 0
 
@@ -1152,16 +1087,7 @@ def creditAvailable(_strategy: address = msg.sender) -> uint256:
 @view
 @internal
 def _expectedReturn(_strategy: address) -> uint256:
-    """
-    @notice
-        Provide an accurate expected value for the return this `_strategy`
-        would provide to the Vault the next time `report()` is called
-        (since the last time it was called).
-    @param _strategy The Strategy to determine the expected return for.
-    @return
-        The anticipated amount `_strategy` will have made on its investment
-        since its last report.
-    """
+    # See note on `expectedReturn()`.
     strategy_lastReport: uint256 = self.strategies[_strategy].lastReport
     strategy_totalReturns: uint256 = self.strategies[_strategy].totalReturns
     strategy_activation: uint256 = self.strategies[_strategy].activation
@@ -1319,15 +1245,7 @@ def report(_return: uint256) -> uint256:
 
 @internal
 def erc20_safe_transfer(_token: address, _to: address, _value: uint256):
-    """
-    @notice
-        Sends `_value` `_token` from this Vault to `_to`. Used only to send
-        tokens that are not the type managed by this Vault.
-
-    @param _token The token to transfer out of this vault.
-    @param _to Which address to send the tokens to.
-    @param _value How many tokens to send.
-    """
+    # Used only to send tokens that are not the type managed by this Vault.
     # HACK: Used to handle non-compliant tokens like USDT
     _response: Bytes[32] = raw_call(
         _token,
