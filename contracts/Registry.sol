@@ -29,6 +29,9 @@ contract Registry {
     address pendingGovernance;
 
     EnumerableSet.AddressSet private vaults;
+    mapping(address => address) public latestVaultForToken;
+
+    event VaultUpgrade(address indexed token, address indexed oldVault, address newVault);
 
     constructor(address _governance) public {
         require(_governance != address(0), "Missing Governance");
@@ -57,6 +60,14 @@ contract Registry {
         require(!vaults.contains(_vault), "Vault already exists");
         // Adds unique _vault to vaults array
         vaults.add(_vault);
+
+        // Keep track of latest Vault (newest is considered best)
+        // NOTE: A vault should only be added to the registry when it's considered
+        //       "production" ready, signaling it as the one people should upgrade to
+        address token = VaultAPI(_vault).token();
+        address oldVault = latestVaultForToken[token];
+        latestVaultForToken[token] = _vault;
+        emit VaultUpgrade(token, oldVault, _vault);
     }
 
     function removeVault(address _vault) public onlyGovernance {
@@ -64,6 +75,16 @@ contract Registry {
         require(vaults.contains(_vault), "Vault not in set");
         // Remove _vault to vaults array
         vaults.remove(_vault);
+
+        // Keep track of latest Vault (see if completely removed)
+        // NOTE: If this removal action is trigger resetting to 0x0, this token is
+        //       now considered "unsupported" by Yearn
+        address token = VaultAPI(_vault).token();
+        address currentVault = latestVaultForToken[token];
+        if (currentVault == _vault) {
+            latestVaultForToken[token] = address(0x0);
+            emit VaultUpgrade(token, _vault, address(0x0));
+        }
     }
 
     function getVaultData(address _vault) internal view returns (VaultData memory) {
