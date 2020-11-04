@@ -1,11 +1,11 @@
-# yEarn Vault Contracts
+# Yearn Vault Contracts
 
 Please read and be familiar with the [Specification](SPECIFICATION.md).
 
 This repository is the set of smart contracts that are used for the Yearn Vaults.
 It contains the requirements, code, deployment scripts, and tests necessary for the
 core protocol, including a inheritable template strategy for use with Solidity-based
-strategies that interact with yEarn Vaults. These contracts are used to create a simple
+strategies that interact with Yearn Vaults. These contracts are used to create a simple
 way to generate high risk-adjusted returns for depositors of various assets via best-
 in-class lending protocols, liquidity pools, and community-made yield farming strategies
 on Ethereum.
@@ -179,7 +179,7 @@ For security concerns, please visit [Bug Bounty](https://github.com/iearn-financ
 
 ### Documentation
 
-You can read more about yEarn finance on our documentation [webpage](https://docs.yearn.finance).
+You can read more about Yearn Finance on our documentation [webpage](https://docs.yearn.finance).
 
 ### Discussion
 

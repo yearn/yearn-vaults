@@ -27,7 +27,7 @@ def main():
     dev = accounts.load("dev")
     print(f"You are using: 'dev' [{dev.address}]")
     token = Token.at(get_address("ERC20 Token: "))
-    gov = get_address("yEarn Governance: ")
+    gov = get_address("Yearn Governance: ")
     rewards = get_address("Rewards contract: ")
     name = input(f"Set description ['yearn {token.name()}']: ") or ""
     symbol = input(f"Set symbol ['y{token.symbol()}']: ") or ""
