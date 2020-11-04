@@ -264,7 +264,7 @@ abstract contract BaseStrategy {
      * use that estimate to make a determination if calling it is "worth it" for the keeper.
      * This is not the only consideration into issuing this trigger, for example if the position
      * would be negatively affected if `tend()` is not called shortly, then this can return `true`
-     * even if the keeper might be "at a loss" (keepers are always reimbursed by yEarn)
+     * even if the keeper might be "at a loss" (keepers are always reimbursed by Yearn)
      *
      * NOTE: `callCost` must be priced in terms of `want`
      *
@@ -291,7 +291,7 @@ abstract contract BaseStrategy {
      * use that estimate to make a determination if calling it is "worth it" for the keeper.
      * This is not the only consideration into issuing this trigger, for example if the position
      * would be negatively affected if `harvest()` is not called shortly, then this can return `true`
-     * even if the keeper might be "at a loss" (keepers are always reimbursed by yEarn)
+     * even if the keeper might be "at a loss" (keepers are always reimbursed by Yearn)
      *
      * NOTE: `callCost` must be priced in terms of `want`
      *

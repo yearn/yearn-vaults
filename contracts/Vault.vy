@@ -181,7 +181,7 @@ def apiVersion() -> String[28]:
     """
     @notice
         Used to track the deployed version of this contract. In practice you
-        can use this version number to compare with yEarn's GitHub and
+        can use this version number to compare with Yearn's GitHub and
         determine which version of the source matches this deployed contract.
     @return API_VERSION which holds the current version of this contract.
     """
