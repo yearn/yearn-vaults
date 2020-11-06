@@ -580,6 +580,7 @@ def _issueSharesForAmount(_to: address, _amount: uint256) -> uint256:
     totalSupply: uint256 = self.totalSupply
     if totalSupply > 0:
         # Mint amount of shares based on what the Vault is managing overall
+        # NOTE: if sqrt(token.totalSupply()) > 1e39, this could potentially revert
         shares = _amount * totalSupply / self._totalAssets()
     else:
         # No existing shares, so mint 1:1
@@ -663,6 +664,7 @@ def deposit(_amount: uint256 = MAX_UINT256, _recipient: address = msg.sender) ->
 @internal
 def _shareValue(_shares: uint256) -> uint256:
     # Determines the current value of `_shares`.
+        # NOTE: if sqrt(Vault.totalAssets()) >>> 1e39, this could potentially revert
     return (_shares * (self._totalAssets())) / self.totalSupply
 
 
@@ -672,6 +674,7 @@ def _sharesForAmount(_amount: uint256) -> uint256:
     # Determines how many shares `_amount` of token would receive.
     # See dev note on `deposit`.
     if self._totalAssets() > 0:
+        # NOTE: if sqrt(token.totalSupply()) > 1e39, this could potentially revert
         return (_amount * self.totalSupply) / self._totalAssets()
     else:
         return 0
@@ -1126,6 +1129,8 @@ def _expectedReturn(_strategy: address) -> uint256:
 
     blockDelta: uint256 = block.number - strategy_lastReport
     if blockDelta > 0:
+        # NOTE: Unlikely to throw unless strategy accumalates >1e68 returns
+        # NOTE: Will not throw for DIV/0 because activation <= lastReport
         return (strategy_totalReturns * blockDelta) / (
             block.number - strategy_activation
         )
@@ -1180,6 +1185,7 @@ def report(_return: uint256) -> uint256:
 
     # Issue new shares to cover fees
     # NOTE: In effect, this reduces overall share price by the combined fee
+    # NOTE: may throw if Vault.totalAssets() > 1e68, or not called for more than a year
     governance_fee: uint256 = (
         (self._totalAssets() * (block.number - self.lastReport) * self.managementFee)
         / FEE_MAX
@@ -1191,9 +1197,11 @@ def report(_return: uint256) -> uint256:
     # NOTE: Applies if Strategy is not shutting down, or it is but all debt paid off
     # NOTE: No fee is taken when a Strategy is unwinding it's position, until all debt is paid
     if _return > debt:
+        # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
         strategist_fee = (
             (_return - debt) * self.strategies[msg.sender].performanceFee
         ) / FEE_MAX
+        # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
         governance_fee += (_return - debt) * self.performanceFee / FEE_MAX
 
     # NOTE: This must be called prior to taking new collateral,
@@ -1204,7 +1212,8 @@ def report(_return: uint256) -> uint256:
     reward: uint256 = self._issueSharesForAmount(self, total_fee)
 
     # Send the rewards out as new shares in this Vault
-    if strategist_fee > 0:
+    if strategist_fee > 0:  # NOTE: Guard against DIV/0 fault
+        # NOTE: Unlikely to throw unless sqrt(reward) >>> 1e39
         strategist_reward: uint256 = (strategist_fee * reward) / total_fee
         self._transfer(self, msg.sender, strategist_reward)
         Strategy(msg.sender).distributeRewards(strategist_reward)
