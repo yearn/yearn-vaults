@@ -43,17 +43,19 @@ def test_strategy_setEmergencyExit(strategy, gov, strategist, rando, chain):
 
 
 @pytest.mark.parametrize(
-    "getter,setter,val",
+    "getter,setter,caller,val",
     [
-        ("strategist", "setStrategist", None),
-        ("rewards", "setRewards", None),
-        ("keeper", "setKeeper", None),
-        ("minReportDelay", "setMinReportDelay", 1000),
-        ("profitFactor", "setProfitFactor", 1000),
-        ("debtThreshold", "setDebtThreshold", 1000),
+        ("strategist", "setStrategist", "gov", None),
+        ("rewards", "setRewards", "strategist", None),
+        ("keeper", "setKeeper", "strategist", None),
+        ("minReportDelay", "setMinReportDelay", "strategist", 1000),
+        ("profitFactor", "setProfitFactor", "strategist", 1000),
+        ("debtThreshold", "setDebtThreshold", "strategist", 1000),
     ],
 )
-def test_strategy_setParams(gov, strategist, strategy, rando, getter, setter, val):
+def test_strategy_setParams(
+    gov, strategist, strategy, rando, getter, setter, caller, val
+):
     if not val:
         # Can't access fixtures, so use None to mean any random address
         val = rando
@@ -64,13 +66,10 @@ def test_strategy_setParams(gov, strategist, strategy, rando, getter, setter, va
     with brownie.reverts():
         getattr(strategy, setter)(val, {"from": rando})
 
-    getattr(strategy, setter)(val, {"from": strategist})
+    caller = {"gov": gov, "strategist": strategist}[caller]
+
+    getattr(strategy, setter)(val, {"from": caller})
     assert getattr(strategy, getter)() == val
 
-    if getter == "strategist":
-        # Strategist can't change themselves once they update
-        with brownie.reverts():
-            strategy.setStrategist(strategist, {"from": strategist})
-
-    getattr(strategy, setter)(prev_val, {"from": gov})
+    getattr(strategy, setter)(prev_val, {"from": caller})
     assert getattr(strategy, getter)() == prev_val
