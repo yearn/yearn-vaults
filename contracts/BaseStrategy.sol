@@ -179,7 +179,7 @@ abstract contract BaseStrategy {
     }
 
     function setRewards(address _rewards) external {
-        require(msg.sender == strategist || msg.sender == governance(), "!authorized");
+        require(msg.sender == strategist, "!authorized");
         rewards = _rewards;
     }
 
