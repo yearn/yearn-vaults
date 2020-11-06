@@ -2,7 +2,7 @@ import pytest
 import brownie
 
 
-def test_harvest_tend_authority(gov, keeper, strategist, strategy, rando, fn_isolation):
+def test_harvest_tend_authority(gov, keeper, strategist, strategy, rando):
     # Only keeper, strategist, or gov can call tend
     strategy.tend({"from": keeper})
     strategy.tend({"from": strategist})
@@ -25,7 +25,7 @@ def test_harvest_tend_authority(gov, keeper, strategist, strategy, rando, fn_iso
     strategy.harvest({"from": rando})
 
 
-def test_harvest_tend_trigger(chain, gov, vault, token, TestStrategy, fn_isolation):
+def test_harvest_tend_trigger(chain, gov, vault, token, TestStrategy):
     strategy = gov.deploy(TestStrategy, vault)
     # Trigger doesn't work until strategy is added
     assert not strategy.harvestTrigger(0)
@@ -65,7 +65,7 @@ def other_token(gov, Token):
     yield gov.deploy(Token)
 
 
-def test_sweep(gov, strategy, rando, token, other_token, fn_isolation):
+def test_sweep(gov, strategy, rando, token, other_token):
     token.transfer(strategy, token.balanceOf(gov), {"from": gov})
     other_token.transfer(strategy, other_token.balanceOf(gov), {"from": gov})
 
@@ -90,7 +90,7 @@ def test_sweep(gov, strategy, rando, token, other_token, fn_isolation):
     assert other_token.balanceOf(rando) == 0
 
 
-def test_reject_ether(gov, strategy, fn_isolation):
+def test_reject_ether(gov, strategy):
     # These functions should reject any calls with value
     for func, args in [
         ("setStrategist", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
