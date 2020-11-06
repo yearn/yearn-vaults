@@ -1,4 +1,4 @@
-#@version 0.2.7
+# @version 0.2.7
 """
 @title Yearn Token Vault
 @license GNU AGPLv3
@@ -43,10 +43,12 @@ from vyper.interfaces import ERC20
 
 implements: ERC20
 
+
 interface DetailedERC20:
     def name() -> String[42]: view
     def symbol() -> String[20]: view
     def decimals() -> uint256: view
+
 
 interface Strategy:
     def distributeRewards(_shares: uint256): nonpayable
@@ -54,10 +56,12 @@ interface Strategy:
     def withdraw(_amount: uint256): nonpayable
     def migrate(_newStrategy: address): nonpayable
 
+
 event Transfer:
     sender: indexed(address)
     receiver: indexed(address)
     value: uint256
+
 
 event Approval:
     owner: indexed(address)
@@ -78,6 +82,7 @@ governance: public(address)
 guardian: public(address)
 pendingGovernance: address
 
+
 struct StrategyParams:
     performanceFee: uint256  # Strategist's fee (basis points)
     activation: uint256  # Activation block.number
@@ -87,11 +92,13 @@ struct StrategyParams:
     totalDebt: uint256  # Total outstanding debt that Strategy has
     totalReturns: uint256  # Total returns that Strategy has realized for Vault
 
+
 event StrategyAdded:
     strategy: indexed(address)
     debtLimit: uint256  # Maximum borrow amount
     rateLimit: uint256  # Increase/decrease per block
     performanceFee: uint256  # Strategist's fee (basis points)
+
 
 event StrategyReported:
     strategy: indexed(address)
@@ -100,6 +107,7 @@ event StrategyReported:
     totalReturn: uint256
     totalDebt: uint256
     debtLimit: uint256
+
 
 # NOTE: Track the total for overhead targeting purposes
 strategies: public(HashMap[address, StrategyParams])
@@ -123,10 +131,13 @@ totalDebt: public(uint256)  # Amount of tokens that all strategies have borrowed
 lastReport: public(uint256)  # Number of blocks since last report
 
 rewards: public(address)  # Rewards contract where Governance fees are sent to
-managementFee: public(uint256)  # Governance Fee for management of Vault (given to `rewards`)
-performanceFee: public(uint256)  # Governance Fee for performance of Vault (given to `rewards`)
+# Governance Fee for management of Vault (given to `rewards`)
+managementFee: public(uint256)
+# Governance Fee for performance of Vault (given to `rewards`)
+performanceFee: public(uint256)
 FEE_MAX: constant(uint256) = 10_000  # 100%, or 10k basis points
 BLOCKS_PER_YEAR: constant(uint256) = 2_300_000
+
 
 @external
 def __init__(
@@ -134,7 +145,7 @@ def __init__(
     _governance: address,
     _rewards: address,
     _nameOverride: String[64],
-    _symbolOverride: String[32]
+    _symbolOverride: String[32],
 ):
     """
     @notice
@@ -191,9 +202,9 @@ def apiVersion() -> String[28]:
 @external
 def setName(_name: String[42]):
     """
-    @notice 
+    @notice
         Used to change the value of `name`.
-        
+
         This may only be called by governance.
     @param _name The new name to use.
     """
@@ -204,9 +215,9 @@ def setName(_name: String[42]):
 @external
 def setSymbol(_symbol: String[20]):
     """
-    @notice 
+    @notice
         Used to change the value of `symbol`.
-        
+
         This may only be called by governance.
     @param _symbol The new symbol to use.
     """
@@ -412,7 +423,7 @@ def transfer(_to: address, _value: uint256) -> bool:
 
 
 @external
-def transferFrom(_from : address, _to : address, _value : uint256) -> bool:
+def transferFrom(_from: address, _to: address, _value: uint256) -> bool:
     """
     @notice
         Transfers `_value` shares from `_from` to `_to`. This operation will
@@ -430,14 +441,15 @@ def transferFrom(_from : address, _to : address, _value : uint256) -> bool:
         True if transfer is sent to an address other than this contract's or
         0x0, otherwise the transaction will fail.
     """
-    if self.allowance[_from][msg.sender] < MAX_UINT256:  # Unlimited approval (saves an SSTORE)
-       self.allowance[_from][msg.sender] -= _value
+    # Unlimited approval (saves an SSTORE)
+    if (self.allowance[_from][msg.sender] < MAX_UINT256):
+        self.allowance[_from][msg.sender] -= _value
     self._transfer(_from, _to, _value)
     return True
 
 
 @external
-def approve(_spender : address, _value : uint256) -> bool:
+def approve(_spender: address, _value: uint256) -> bool:
     """
     @dev Approve the passed address to spend the specified amount of tokens on behalf of
          `msg.sender`. Beware that changing an allowance with this method brings the risk
@@ -452,7 +464,7 @@ def approve(_spender : address, _value : uint256) -> bool:
 
 
 @external
-def increaseAllowance(_spender : address, _value : uint256) -> bool:
+def increaseAllowance(_spender: address, _value: uint256) -> bool:
     """
     @dev Increase the allowance of the passed address to spend the total amount of tokens
          on behalf of msg.sender. This method mitigates the risk that someone may use both
@@ -467,7 +479,7 @@ def increaseAllowance(_spender : address, _value : uint256) -> bool:
 
 
 @external
-def decreaseAllowance(_spender : address, _value : uint256) -> bool:
+def decreaseAllowance(_spender: address, _value: uint256) -> bool:
     """
     @dev Decrease the allowance of the passed address to spend the total amount of tokens
          on behalf of msg.sender. This method mitigates the risk that someone may use both
@@ -803,7 +815,7 @@ def _organizeWithdrawalQueue():
         if strategy == ZERO_ADDRESS:
             offset += 1  # how many values we need to shift, always `<= idx`
         elif offset > 0:
-            self.withdrawalQueue[idx-offset] = strategy
+            self.withdrawalQueue[idx - offset] = strategy
             self.withdrawalQueue[idx] = ZERO_ADDRESS
 
 
@@ -845,8 +857,8 @@ def addStrategy(
     log StrategyAdded(_strategy, _debtLimit, _rateLimit, _performanceFee)
 
     # queue is full
-    assert self.withdrawalQueue[MAXIMUM_STRATEGIES-1] == ZERO_ADDRESS
-    self.withdrawalQueue[MAXIMUM_STRATEGIES-1] = _strategy
+    assert self.withdrawalQueue[MAXIMUM_STRATEGIES - 1] == ZERO_ADDRESS
+    self.withdrawalQueue[MAXIMUM_STRATEGIES - 1] = _strategy
     self._organizeWithdrawalQueue()
 
 
@@ -983,15 +995,18 @@ def addStrategyToQueue(_strategy: address):
     """
     assert msg.sender == self.governance
     # Must be a current Strategy
-    assert self.strategies[_strategy].activation > 0 and self.strategies[_strategy].totalDebt > 0
+    assert (
+        self.strategies[_strategy].activation > 0
+        and self.strategies[_strategy].totalDebt > 0
+    )
     # Check if queue is full
-    assert self.withdrawalQueue[MAXIMUM_STRATEGIES-1] == ZERO_ADDRESS
+    assert self.withdrawalQueue[MAXIMUM_STRATEGIES - 1] == ZERO_ADDRESS
     # Can't already be in the queue
     for strategy in self.withdrawalQueue:
         if strategy == ZERO_ADDRESS:
             break
         assert strategy != _strategy
-    self.withdrawalQueue[MAXIMUM_STRATEGIES-1] = _strategy
+    self.withdrawalQueue[MAXIMUM_STRATEGIES - 1] = _strategy
     self._organizeWithdrawalQueue()
 
 
@@ -1105,9 +1120,11 @@ def _expectedReturn(_strategy: address) -> uint256:
     strategy_totalReturns: uint256 = self.strategies[_strategy].totalReturns
     strategy_activation: uint256 = self.strategies[_strategy].activation
 
-    blockDelta: uint256 = (block.number - strategy_lastReport)
+    blockDelta: uint256 = block.number - strategy_lastReport
     if blockDelta > 0:
-        return (strategy_totalReturns * blockDelta) / (block.number - strategy_activation)
+        return (strategy_totalReturns * blockDelta) / (
+            block.number - strategy_activation
+        )
     else:
         return 0  # Covers the scenario when block.number == strategy_activation
 
@@ -1160,14 +1177,16 @@ def report(_return: uint256) -> uint256:
     # Issue new shares to cover fees
     # NOTE: In effect, this reduces overall share price by the combined fee
     governance_fee: uint256 = (
-        self._totalAssets() * (block.number - self.lastReport) * self.managementFee
-    ) / FEE_MAX / BLOCKS_PER_YEAR
+        (self._totalAssets() * (block.number - self.lastReport) * self.managementFee)
+        / FEE_MAX
+        / BLOCKS_PER_YEAR
+    )
     self.lastReport = block.number
     strategist_fee: uint256 = 0  # Only applies in certain conditions
 
     # NOTE: Applies if Strategy is not shutting down, or it is but all debt paid off
     # NOTE: No fee is taken when a Strategy is unwinding it's position, until all debt is paid
-    if  _return > debt:
+    if _return > debt:
         strategist_fee = (
             (_return - debt) * self.strategies[msg.sender].performanceFee
         ) / FEE_MAX
@@ -1265,9 +1284,9 @@ def erc20_safe_transfer(_token: address, _to: address, _value: uint256):
         concat(
             method_id("transfer(address,uint256)"),
             convert(_to, bytes32),
-            convert(_value, bytes32)
+            convert(_value, bytes32),
         ),
-        max_outsize=32
+        max_outsize=32,
     )
     if len(_response) > 0:
         assert convert(_response, bool), "Transfer failed!"
