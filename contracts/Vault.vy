@@ -630,9 +630,13 @@ def deposit(_amount: uint256 = MAX_UINT256, _recipient: address = msg.sender) ->
 
     amount: uint256 = _amount
 
-    # If _amount not specified, transfer the full token balance
+    # If _amount not specified, transfer the full token balance,
+    # up to deposit limit
     if amount == MAX_UINT256:
-        amount = self.token.balanceOf(msg.sender)
+        amount = min(
+            self.depositLimit - self._totalAssets(),
+            self.token.balanceOf(msg.sender),
+        )
 
     # Ensure we are depositing something
     assert amount > 0

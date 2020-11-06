@@ -25,6 +25,17 @@ def test_deposit_with_wrong_amount(vault, token, gov):
 def test_deposit_all_and_withdraw_all(gov, vault, token):
     balance = token.balanceOf(gov)
     token.approve(vault, token.balanceOf(gov), {"from": gov})
+
+    # Take up the rest of the deposit limit only
+    vault.setDepositLimit(token.balanceOf(gov) // 2, {"from": gov})
+    vault.deposit({"from": gov})
+    # vault has tokens
+    assert token.balanceOf(vault) == balance // 2
+    # sender has vault shares
+    assert vault.balanceOf(gov) == balance // 2
+
+    # When deposit limit is lifted, deposit everything
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     vault.deposit({"from": gov})
     # vault has tokens
     assert token.balanceOf(vault) == balance
