@@ -13,6 +13,7 @@ def test_strategy_deployment(strategist, vault, TestStrategy):
     strategy = strategist.deploy(TestStrategy, vault)
     # Addresses
     assert strategy.strategist() == strategist
+    assert strategy.rewards() == strategist
     assert strategy.keeper() == strategist
     assert strategy.want() == vault.token()
     assert strategy.apiVersion() == PACKAGE_VERSION
@@ -45,6 +46,7 @@ def test_strategy_setEmergencyExit(strategy, gov, strategist, rando, chain):
     "getter,setter,val",
     [
         ("strategist", "setStrategist", None),
+        ("rewards", "setRewards", None),
         ("keeper", "setKeeper", None),
         ("minReportDelay", "setMinReportDelay", 1000),
         ("profitFactor", "setProfitFactor", 1000),
