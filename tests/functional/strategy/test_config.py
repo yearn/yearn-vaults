@@ -73,3 +73,15 @@ def test_strategy_setParams(
 
     getattr(strategy, setter)(prev_val, {"from": caller})
     assert getattr(strategy, getter)() == prev_val
+
+
+def test_strategist_update(gov, strategist, strategy, rando):
+    assert strategy.strategist() == strategist
+    strategy.setStrategist(rando, {"from": strategist})
+    assert strategy.strategist() == rando
+    # Strategist can't change themselves once they update
+    with brownie.reverts():
+        strategy.setStrategist(strategist, {"from": strategist})
+    # But governance can
+    strategy.setStrategist(strategist, {"from": gov})
+    assert strategy.strategist() == strategist
