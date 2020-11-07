@@ -1,3 +1,5 @@
+import math
+
 import pytest
 
 
@@ -79,10 +81,31 @@ def keeper(accounts):
 
 
 @pytest.fixture
-def strategy(gov, strategist, keeper, vault, TestStrategy):
-    strategy = strategist.deploy(TestStrategy, vault)
-    strategy.setKeeper(keeper)
-    yield strategy
+def new_strategy(chain, gov, strategist, keeper, vault, TestStrategy):
+    def new_strategy(
+        debt_ratio=0.0, rate_limit=2 ** 256 - 1, perf_fee=1000, seed_debt=False
+    ):
+        assert 0.0 <= debt_ratio <= 1.0
+        assert 0 <= rate_limit <= 2 ** 256 - 1
+        assert 0 <= perf_fee <= 10_000 - vault.performanceFee()
+        strategy = strategist.deploy(TestStrategy, vault)
+        strategy.setKeeper(keeper)
+        vault.addStrategy(
+            strategy, int(10_000 * debt_ratio), rate_limit, perf_fee, {"from": gov}
+        )
+        if seed_debt:
+            mgmt_fee = vault.managementFee()
+            vault.setManagementFee(0, {"from": gov})
+            blocks_to_wait = math.ceil(
+                vault.strategies(strategy)[2] / vault.strategies(strategy)[3]
+            )
+            assert blocks_to_wait < 50, "Set the rate limit lower!"
+            chain.mine(blocks_to_wait)  # Should be at least 1
+            strategy.harvest({"from": keeper})  # Seed strategy up with debt
+            vault.setManagementFee(mgmt_fee, {"from": gov})
+        return strategy
+
+    return new_strategy
 
 
 @pytest.fixture

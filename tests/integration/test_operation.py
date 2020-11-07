@@ -38,16 +38,8 @@ class NormalOperation:
 
 
 def test_normal_operation(
-    web3, chain, gov, strategy, vault, token, chad, andre, keeper, state_machine
+    web3, new_strategy, vault, token, chad, andre, keeper, state_machine
 ):
-    vault.addStrategy(
-        strategy,
-        10_000,  # 100% of Vault AUM
-        2 ** 256 - 1,  # no rate limit
-        1000,  # 10% performance fee for Strategist
-        {"from": gov},
-    )
-    chain.sleep(1)
-    strategy.harvest({"from": keeper})
+    strategy = new_strategy(debt_ratio=1.0, seed_debt=True)
     assert token.balanceOf(vault) == 0
     state_machine(NormalOperation, web3, token, vault, strategy, chad, andre, keeper)
