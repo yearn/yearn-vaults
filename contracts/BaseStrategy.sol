@@ -14,6 +14,8 @@ struct StrategyParams {
     uint256 totalDebt;
     uint256 totalGain;
     uint256 totalLoss;
+    uint256 apy12dEMA; // Actually fixed168x10, but no Solidity support (`x / 1e10` to use)
+    uint256 apy50dEMA; // Actually fixed168x10, but no Solidity support (`x / 1e10` to use)
 }
 
 interface VaultAPI is IERC20 {

@@ -61,6 +61,8 @@ def test_addStrategy(
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
+        "apy12dEMA": "0.0",
+        "apy50dEMA": "0.0",
     }
 
     vault.addStrategy(strategy, 100, 10, 1000, {"from": gov})
@@ -74,6 +76,8 @@ def test_addStrategy(
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
+        "apy12dEMA": "0.0",
+        "apy50dEMA": "0.0",
     }
     assert vault.withdrawalQueue(0) == strategy
 
@@ -124,6 +128,8 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
+        "apy12dEMA": "0.0",
+        "apy50dEMA": "0.0",
     }
 
     vault.updateStrategyRateLimit(strategy, 15, {"from": gov})
@@ -136,6 +142,8 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
+        "apy12dEMA": "0.0",
+        "apy50dEMA": "0.0",
     }
 
     vault.updateStrategyPerformanceFee(strategy, 75, {"from": gov})
@@ -148,6 +156,8 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
+        "apy12dEMA": "0.0",
+        "apy50dEMA": "0.0",
     }
 
 
@@ -200,6 +210,8 @@ def test_revokeStrategy(chain, gov, vault, strategy, rando):
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
+        "apy12dEMA": "0.0",
+        "apy50dEMA": "0.0",
     }
 
     assert vault.withdrawalQueue(0) == strategy
