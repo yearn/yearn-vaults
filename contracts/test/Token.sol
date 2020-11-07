@@ -7,4 +7,8 @@ contract Token is ERC20 {
     constructor() public ERC20("yearn.finance test token", "TEST") {
         _mint(msg.sender, 30000 * 10**18);
     }
+
+    function mint(address to, uint256 amt) external {
+        _mint(to, amt);
+    }
 }
