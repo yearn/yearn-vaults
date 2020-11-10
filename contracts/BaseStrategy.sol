@@ -126,6 +126,7 @@ abstract contract BaseStrategy {
 
     VaultAPI public vault;
     address public strategist;
+    address public rewards;
     address public keeper;
 
     IERC20 public want;
@@ -163,6 +164,7 @@ abstract contract BaseStrategy {
         want = IERC20(vault.token());
         want.approve(_vault, uint256(-1)); // Give Vault unlimited access (might save gas)
         strategist = msg.sender;
+        rewards = msg.sender;
         keeper = msg.sender;
     }
 
@@ -174,6 +176,11 @@ abstract contract BaseStrategy {
     function setKeeper(address _keeper) external {
         require(msg.sender == strategist || msg.sender == governance(), "!authorized");
         keeper = _keeper;
+    }
+
+    function setRewards(address _rewards) external {
+        require(msg.sender == strategist, "!authorized");
+        rewards = _rewards;
     }
 
     function setMinReportDelay(uint256 _delay) external {
@@ -254,8 +261,8 @@ abstract contract BaseStrategy {
      * You can customize this function to any share distribution mechanism you want.
      */
     function distributeRewards(uint256 _shares) external virtual {
-        // Send 100% of newly-minted shares to the strategist.
-        vault.transfer(strategist, _shares);
+        // Send 100% of newly-minted shares to the rewards address.
+        vault.transfer(rewards, _shares);
     }
 
     /*
