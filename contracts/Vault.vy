@@ -1209,7 +1209,8 @@ def report(_return: uint256) -> uint256:
         self._transfer(self, msg.sender, strategist_reward)
         Strategy(msg.sender).distributeRewards(strategist_reward)
     # NOTE: Governance earns any dust leftover from flooring math above
-    self._transfer(self, self.rewards, self.balanceOf[self])
+    if self.balanceOf[self] > 0:
+        self._transfer(self, self.rewards, self.balanceOf[self])
 
     # Compute the line of credit the Vault is able to offer the Strategy (if any)
     credit: uint256 = self._creditAvailable(msg.sender)
