@@ -652,7 +652,7 @@ def deposit(_amount: uint256 = MAX_UINT256, _recipient: address = msg.sender) ->
     # Get new collateral
     reserve: uint256 = self.token.balanceOf(self)
     # Tokens are transferred from msg.sender (may be different from _recipient)
-    self.token.transferFrom(msg.sender, self, amount)
+    assert self.token.transferFrom(msg.sender, self, amount)
     # TODO: `Deflationary` configuration only
     assert self.token.balanceOf(self) - reserve == amount  # Deflationary token check
 
@@ -791,7 +791,7 @@ def withdraw(_shares: uint256 = MAX_UINT256, _recipient: address = msg.sender) -
     log Transfer(msg.sender, ZERO_ADDRESS, shares)
 
     # Withdraw remaining balance to _recipient (may be different to msg.sender) (minus fee)
-    self.token.transfer(_recipient, value)
+    assert self.token.transfer(_recipient, value)
 
     return value
 
@@ -1220,9 +1220,9 @@ def report(_return: uint256) -> uint256:
     # NOTE: This is just used to adjust the balance of tokens between the Strategy and
     #       the Vault based on the Strategy's debt limit (as well as the Vault's).
     if _return < credit:  # credit surplus, give to Strategy
-        self.token.transfer(msg.sender, credit - _return)
+        assert self.token.transfer(msg.sender, credit - _return)
     elif _return > credit:  # credit deficit, take from Strategy
-        self.token.transferFrom(msg.sender, self, _return - credit)
+        assert self.token.transferFrom(msg.sender, self, _return - credit)
 
     # else, don't do anything because it is performing well as is
 
