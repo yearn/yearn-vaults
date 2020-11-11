@@ -92,4 +92,13 @@ jobs:
       - name: Run black
         run: black --check --include "(tests|scripts)" .
 
+    vyper:
+      runs-on: ubuntu-latest
+      steps:
+      - name: Install python dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run blackadder
+        run: blackadder --check --diff --fast --include '\.vy$' .
+
 # TODO: Add Slither Static Analyzer
