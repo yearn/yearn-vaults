@@ -59,7 +59,7 @@ def test_multiple_withdrawals(token, gov, Vault, TestStrategy):
 def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
     # Add strategies
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(5)]
-    [vault.addStrategy(s, 1000, 10, 50, {"from": gov}) for s in strategies]
+    [vault.addStrategy(s, 1000, 10, 1000, {"from": gov}) for s in strategies]
 
     # Send tokens to random user
     token.approve(gov, 2 ** 256 - 1, {"from": gov})
@@ -89,7 +89,7 @@ def test_progressive_withdrawal(token, gov, Vault, guardian, rewards, TestStrate
     vault = guardian.deploy(Vault, token, gov, rewards, "", "")
 
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(2)]
-    [vault.addStrategy(s, 1000, 10, 50, {"from": gov}) for s in strategies]
+    [vault.addStrategy(s, 1000, 10, 1000, {"from": gov}) for s in strategies]
 
     token.approve(vault, 2 ** 256 - 1, {"from": gov})
     vault.deposit(1000, {"from": gov})
@@ -139,7 +139,7 @@ def test_withdrawal_with_empty_queue(
     vault = guardian.deploy(Vault, token, gov, rewards, "", "")
 
     strategy = gov.deploy(TestStrategy, vault)
-    vault.addStrategy(strategy, 1000, 10, 50, {"from": gov})
+    vault.addStrategy(strategy, 1000, 10, 1000, {"from": gov})
 
     token.approve(vault, 2 ** 256 - 1, {"from": gov})
     vault.deposit(1000, {"from": gov})
