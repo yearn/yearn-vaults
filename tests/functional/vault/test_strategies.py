@@ -20,19 +20,28 @@ def test_addStrategy(web3, gov, vault, strategy, rando):
     with brownie.reverts():
         vault.addStrategy(strategy, 1000, 10, 1000, {"from": rando})
 
-    assert vault.strategies(strategy) == [0, 0, 0, 0, 0, 0, 0, 0]
+    assert vault.strategies(strategy).dict() == {
+        "performanceFee": 0,
+        "activation": 0,
+        "debtLimit": 0,
+        "rateLimit": 0,
+        "lastReport": 0,
+        "totalGain": 0,
+        "totalLoss": 0,
+        "totalDebt": 0,
+    }
 
     vault.addStrategy(strategy, 1000, 10, 1000, {"from": gov})
-    assert vault.strategies(strategy) == [
-        1000,
-        web3.eth.blockNumber,
-        1000,
-        10,
-        web3.eth.blockNumber,
-        0,
-        0,
-        0,
-    ]
+    assert vault.strategies(strategy).dict() == {
+        "performanceFee": 1000,
+        "activation": web3.eth.blockNumber,
+        "debtLimit": 1000,
+        "rateLimit": 10,
+        "lastReport": web3.eth.blockNumber,
+        "totalGain": 0,
+        "totalLoss": 0,
+        "totalDebt": 0,
+    }
     assert vault.withdrawalQueue(0) == strategy
 
     # Can't add a strategy twice
@@ -61,40 +70,40 @@ def test_updateStrategy(web3, gov, vault, strategy, rando):
         vault.updateStrategyPerformanceFee(strategy, 75, {"from": rando})
 
     vault.updateStrategyDebtLimit(strategy, 1500, {"from": gov})
-    assert vault.strategies(strategy) == [
-        1000,
-        activation_block,
-        1500,  # This changed
-        10,
-        activation_block,
-        0,
-        0,
-        0,
-    ]
+    assert vault.strategies(strategy).dict() == {
+        "performanceFee": 1000,
+        "activation": activation_block,
+        "debtLimit": 1500,  # This changed
+        "rateLimit": 10,
+        "lastReport": activation_block,
+        "totalGain": 0,
+        "totalLoss": 0,
+        "totalDebt": 0,
+    }
 
     vault.updateStrategyRateLimit(strategy, 15, {"from": gov})
-    assert vault.strategies(strategy) == [
-        1000,
-        activation_block,
-        1500,
-        15,  # This changed
-        activation_block,
-        0,
-        0,
-        0,
-    ]
+    assert vault.strategies(strategy).dict() == {
+        "performanceFee": 1000,
+        "activation": activation_block,
+        "debtLimit": 1500,
+        "rateLimit": 15,  # This changed
+        "lastReport": activation_block,
+        "totalGain": 0,
+        "totalLoss": 0,
+        "totalDebt": 0,
+    }
 
     vault.updateStrategyPerformanceFee(strategy, 75, {"from": gov})
-    assert vault.strategies(strategy) == [
-        75,  # This changed
-        activation_block,
-        1500,
-        15,
-        activation_block,
-        0,
-        0,
-        0,
-    ]
+    assert vault.strategies(strategy).dict() == {
+        "performanceFee": 75,  # This changed
+        "activation": activation_block,
+        "debtLimit": 1500,
+        "rateLimit": 15,
+        "lastReport": activation_block,
+        "totalGain": 0,
+        "totalLoss": 0,
+        "totalDebt": 0,
+    }
 
 
 def test_migrateStrategy(gov, vault, strategy, rando, TestStrategy):
@@ -136,16 +145,16 @@ def test_revokeStrategy(web3, gov, vault, strategy, rando):
         vault.revokeStrategy(strategy, {"from": rando})
 
     vault.revokeStrategy(strategy, {"from": gov})
-    assert vault.strategies(strategy) == [
-        1000,
-        activation_block,
-        0,  # This changed
-        10,
-        activation_block,
-        0,
-        0,
-        0,
-    ]
+    assert vault.strategies(strategy).dict() == {
+        "performanceFee": 1000,
+        "activation": activation_block,
+        "debtLimit": 0,  # This changed
+        "rateLimit": 10,
+        "lastReport": activation_block,
+        "totalGain": 0,
+        "totalLoss": 0,
+        "totalDebt": 0,
+    }
 
     assert vault.withdrawalQueue(0) == strategy
     vault.removeStrategyFromQueue(strategy, {"from": gov})

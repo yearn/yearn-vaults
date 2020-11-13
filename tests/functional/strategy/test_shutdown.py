@@ -8,7 +8,10 @@ def test_emergency_shutdown(token, gov, vault, strategy, keeper, chain):
     )
 
     # Just keep doing it until we're full up
-    while vault.strategies(strategy)[5] < vault.strategies(strategy)[2]:
+    while (
+        vault.strategies(strategy).dict()["totalDebt"]
+        < vault.strategies(strategy).dict()["debtLimit"]
+    ):
         chain.mine(10)
         add_yield()
         strategy.harvest({"from": keeper})
@@ -29,14 +32,14 @@ def test_emergency_shutdown(token, gov, vault, strategy, keeper, chain):
 
     # All the debt is out of the system now
     assert vault.totalDebt() == 0
-    assert vault.strategies(strategy)[5] == 0
+    assert vault.strategies(strategy).dict()["totalDebt"] == 0
 
     # Do it once more, for good luck (and also coverage)
     token.transfer(strategy, token.balanceOf(gov), {"from": gov})
     strategy.harvest({"from": keeper})
 
     # Vault didn't lose anything during shutdown
-    strategyReturn = vault.strategies(strategy)[6]
+    strategyReturn = vault.strategies(strategy).dict()["totalGain"]
     assert strategyReturn > 0
     assert token.balanceOf(vault) == initial_investment + strategyReturn
 
@@ -51,7 +54,10 @@ def test_emergency_exit(token, gov, vault, strategy, keeper, chain):
     )
 
     # Just keep doing it until we're full up
-    while vault.strategies(strategy)[5] < vault.strategies(strategy)[2]:
+    while (
+        vault.strategies(strategy).dict()["totalDebt"]
+        < vault.strategies(strategy).dict()["debtLimit"]
+    ):
         chain.mine(10)
         add_yield()
         strategy.harvest({"from": keeper})
@@ -75,9 +81,9 @@ def test_emergency_exit(token, gov, vault, strategy, keeper, chain):
 
     # All the debt left is out of the system now
     assert vault.totalDebt() == stolen_funds
-    assert vault.strategies(strategy)[5] == stolen_funds
+    assert vault.strategies(strategy).dict()["totalDebt"] == stolen_funds
 
     # Vault returned something overall though
-    strategyReturn = vault.strategies(strategy)[6]
+    strategyReturn = vault.strategies(strategy).dict()["totalGain"]
     assert strategyReturn > 0
     assert token.balanceOf(vault) == initial_investment + strategyReturn - stolen_funds

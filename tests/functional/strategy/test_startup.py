@@ -11,7 +11,7 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
     assert strategy.harvestTrigger(0)
 
     # Check accounting is maintained everywhere
-    assert vault.totalDebt() == 0 == vault.strategies(strategy)[5]  # totalDebt
+    assert vault.totalDebt() == 0 == vault.strategies(strategy).dict()["totalDebt"]
     withdrawal_queue = [strategy] + ["0x0000000000000000000000000000000000000000"] * 39
     assert vault.totalBalanceSheet(withdrawal_queue) == token.balanceOf(vault)
 
@@ -23,7 +23,7 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
     last_balance = token.balanceOf(strategy)
 
     # Check accounting is maintained everywhere
-    assert vault.totalDebt() == vault.strategies(strategy)[5]  # totalDebt
+    assert vault.totalDebt() == vault.strategies(strategy).dict()["totalDebt"]
     assert vault.balanceSheetOfStrategy(strategy) == vault.totalDebt()
     assert (
         vault.totalBalanceSheet(withdrawal_queue)
@@ -43,7 +43,7 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
     last_balance = token.balanceOf(strategy)
 
     # Check accounting is maintained everywhere
-    assert vault.totalDebt() == vault.strategies(strategy)[5]  # totalDebt
+    assert vault.totalDebt() == vault.strategies(strategy).dict()["totalDebt"]
     assert vault.balanceSheetOfStrategy(strategy) == vault.totalDebt()
     assert (
         vault.totalBalanceSheet(withdrawal_queue)
@@ -57,7 +57,8 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
 
     last_balance = 0
     while (
-        vault.strategies(strategy)[5] < vault.strategies(strategy)[2]
+        vault.strategies(strategy).dict()["totalDebt"]
+        < vault.strategies(strategy).dict()["debtLimit"]
     ):  # totalDebt  # debtLimit
         token.transfer(strategy, er, {"from": gov})
         strategy.harvest({"from": keeper})
@@ -69,7 +70,7 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
         last_balance = token.balanceOf(strategy)
 
         # Check accounting is maintained everywhere
-        assert vault.totalDebt() == vault.strategies(strategy)[5]  # totalDebt
+        assert vault.totalDebt() == vault.strategies(strategy).dict()["totalDebt"]
         assert vault.balanceSheetOfStrategy(strategy) == vault.totalDebt()
         assert (
             vault.totalBalanceSheet(withdrawal_queue)
