@@ -8,9 +8,7 @@ def test_good_migration(
     strategy.harvest({"from": strategist})
 
     strategy_debt = vault.strategies(strategy).dict()["totalDebt"]
-    prior_position = token.balanceOf(strategy)
-    assert strategy_debt > 0
-    assert prior_position > 0
+    assert strategy_debt == token.balanceOf(strategy)
 
     new_strategy = strategist.deploy(TestStrategy, vault)
     assert vault.strategies(new_strategy).dict()["totalDebt"] == 0
@@ -25,9 +23,14 @@ def test_good_migration(
         vault.migrateStrategy(strategy, new_strategy, {"from": guardian})
 
     vault.migrateStrategy(strategy, new_strategy, {"from": gov})
-    assert vault.strategies(strategy).dict()["totalDebt"] == 0
-    assert vault.strategies(new_strategy).dict()["totalDebt"] == strategy_debt
-    assert token.balanceOf(new_strategy) == prior_position
+    assert (
+        vault.strategies(strategy).dict()["totalDebt"] == token.balanceOf(strategy) == 0
+    )
+    assert (
+        vault.strategies(new_strategy).dict()["totalDebt"]
+        == token.balanceOf(new_strategy)
+        == strategy_debt
+    )
 
     # Also, governance can migrate directly
     new_strategy.migrate(strategy, {"from": gov})
