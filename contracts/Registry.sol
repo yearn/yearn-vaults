@@ -9,7 +9,10 @@ import "@openzeppelinV3/contracts/utils/EnumerableSet.sol";
 
 import {VaultAPI} from "./BaseStrategy.sol";
 
+enum VaultStatus {Invalid, Experimental, Endorsed, Deprecated}
+
 struct VaultData {
+    VaultStatus status;
     address vaultAddress;
     string vaultName;
     string vaultSymbol;
@@ -30,6 +33,11 @@ contract Registry {
 
     EnumerableSet.AddressSet private vaults;
     mapping(address => address) public latestVaultForToken;
+
+    // Keep track of status
+    EnumerableSet.AddressSet private experimentalVaults;
+    EnumerableSet.AddressSet private endorsedVaults;
+    EnumerableSet.AddressSet private deprecatedVaults;
 
     event VaultUpgrade(address indexed token, address indexed oldVault, address newVault);
 
@@ -54,12 +62,18 @@ contract Registry {
     }
 
     // Vault set actions
-    function addVault(address _vault) public onlyGovernance {
+    function addVault(address _vault, bool experimental) public onlyGovernance {
         require(_vault.isContract(), "Vault is not a contract");
         // Checks if vault is already on the array
         require(!vaults.contains(_vault), "Vault already exists");
         // Adds unique _vault to vaults array
         vaults.add(_vault);
+
+        if (experimental) {
+            experimentalVaults.add(_vault);
+        } else {
+            endorsedVaults.add(_vault);
+        }
 
         // Keep track of latest Vault (newest is considered best)
         // NOTE: A vault should only be added to the registry when it's considered
@@ -70,11 +84,24 @@ contract Registry {
         emit VaultUpgrade(token, oldVault, _vault);
     }
 
+    function endorseVault(address _vault) public onlyGovernance {
+        require(experimentalVaults.contains(_vault), "!experimental");
+        experimentalVaults.remove(_vault);
+        endorsedVaults.add(_vault);
+    }
+
     function removeVault(address _vault) public onlyGovernance {
         // Checks if vault is already on the array
         require(vaults.contains(_vault), "Vault not in set");
         // Remove _vault to vaults array
         vaults.remove(_vault);
+
+        if (experimentalVaults.contains(_vault)) {
+            experimentalVaults.remove(_vault);
+        } else {
+            endorsedVaults.remove(_vault);
+        }
+        deprecatedVaults.add(_vault);
 
         // Keep track of latest Vault (see if completely removed)
         // NOTE: If this removal action is trigger resetting to 0x0, this token is
@@ -88,9 +115,15 @@ contract Registry {
     }
 
     function getVaultData(address _vault) internal view returns (VaultData memory) {
+        VaultStatus status = VaultStatus.Invalid;
+        if (experimentalVaults.contains(_vault)) status = VaultStatus.Experimental;
+        if (endorsedVaults.contains(_vault)) status = VaultStatus.Endorsed;
+        if (deprecatedVaults.contains(_vault)) status = VaultStatus.Deprecated;
+
         address token = VaultAPI(_vault).token();
         return
             VaultData({
+                status: status,
                 vaultAddress: _vault,
                 vaultName: VaultAPI(_vault).name(),
                 vaultSymbol: VaultAPI(_vault).symbol(),
@@ -115,10 +148,34 @@ contract Registry {
         return vaults.length();
     }
 
-    function getVaults() external view returns (VaultData[] memory) {
+    function getActiveVaults() external view returns (VaultData[] memory) {
         VaultData[] memory vaultsArray = new VaultData[](vaults.length());
         for (uint256 i = 0; i < vaults.length(); i++) {
             vaultsArray[i] = getVaultData(vaults.at(i));
+        }
+        return vaultsArray;
+    }
+
+    function getExperimentalVaults() external view returns (VaultData[] memory) {
+        VaultData[] memory vaultsArray = new VaultData[](vaults.length());
+        for (uint256 i = 0; i < experimentalVaults.length(); i++) {
+            vaultsArray[i] = getVaultData(experimentalVaults.at(i));
+        }
+        return vaultsArray;
+    }
+
+    function getEndorsedVaults() external view returns (VaultData[] memory) {
+        VaultData[] memory vaultsArray = new VaultData[](vaults.length());
+        for (uint256 i = 0; i < endorsedVaults.length(); i++) {
+            vaultsArray[i] = getVaultData(endorsedVaults.at(i));
+        }
+        return vaultsArray;
+    }
+
+    function getDeprecatedVaults() external view returns (VaultData[] memory) {
+        VaultData[] memory vaultsArray = new VaultData[](vaults.length());
+        for (uint256 i = 0; i < deprecatedVaults.length(); i++) {
+            vaultsArray[i] = getVaultData(deprecatedVaults.at(i));
         }
         return vaultsArray;
     }
