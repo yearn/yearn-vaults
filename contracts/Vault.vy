@@ -1228,17 +1228,18 @@ def report(_gain: uint256, _loss: uint256) -> uint256:
     # NOTE: This must be done at the same time, to ensure the relative
     #       ratio of governance_fee : strategist_fee is kept intact
     total_fee: uint256 = governance_fee + strategist_fee
-    reward: uint256 = self._issueSharesForAmount(self, total_fee)
+    if total_fee > 0:
+        reward: uint256 = self._issueSharesForAmount(self, total_fee)
 
-    # Send the rewards out as new shares in this Vault
-    if strategist_fee > 0:  # NOTE: Guard against DIV/0 fault
-        # NOTE: Unlikely to throw unless sqrt(reward) >>> 1e39
-        strategist_reward: uint256 = (strategist_fee * reward) / total_fee
-        self._transfer(self, msg.sender, strategist_reward)
-        Strategy(msg.sender).distributeRewards(strategist_reward)
-    # NOTE: Governance earns any dust leftover from flooring math above
-    if self.balanceOf[self] > 0:
-        self._transfer(self, self.rewards, self.balanceOf[self])
+        # Send the rewards out as new shares in this Vault
+        if strategist_fee > 0:  # NOTE: Guard against DIV/0 fault
+            # NOTE: Unlikely to throw unless sqrt(reward) >>> 1e39
+            strategist_reward: uint256 = (strategist_fee * reward) / total_fee
+            self._transfer(self, msg.sender, strategist_reward)
+            Strategy(msg.sender).distributeRewards(strategist_reward)
+        # NOTE: Governance earns any dust leftover from flooring math above
+        if self.balanceOf[self] > 0:
+            self._transfer(self, self.rewards, self.balanceOf[self])
 
     # Compute the line of credit the Vault is able to offer the Strategy (if any)
     credit: uint256 = self._creditAvailable(msg.sender)
