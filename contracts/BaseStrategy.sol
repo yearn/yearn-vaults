@@ -12,7 +12,8 @@ struct StrategyParams {
     uint256 rateLimit;
     uint256 lastReport;
     uint256 totalDebt;
-    uint256 totalReturns;
+    uint256 totalGain;
+    uint256 totalLoss;
 }
 
 interface VaultAPI is IERC20 {
@@ -49,7 +50,7 @@ interface VaultAPI is IERC20 {
      * Therefore, this function will be called by BaseStrategy to make sure the
      * integration is correct.
      */
-    function report(uint256 _harvest) external returns (uint256);
+    function report(uint256 _gain, uint256 _loss) external returns (uint256);
 
     /*
      * This function is used in the scenario where there is a newer strategy that
@@ -236,7 +237,7 @@ abstract contract BaseStrategy {
      * strategy and reduce it's overall position if lower than expected returns
      * are sustained for long periods of time.
      */
-    function prepareReturn(uint256 _debtOutstanding) internal virtual returns (uint256 _profit);
+    function prepareReturn(uint256 _debtOutstanding) internal virtual returns (uint256 _profit, uint256 _loss);
 
     /*
      * Perform any adjustments to the core position(s) of this strategy given
@@ -254,7 +255,7 @@ abstract contract BaseStrategy {
      * while not suffering exorbitant losses. This function is used during emergency exit
      * instead of `prepareReturn()`
      */
-    function exitPosition() internal virtual;
+    function exitPosition() internal virtual returns (uint256 _loss);
 
     /*
      * Vault calls this function after shares are created during `Vault.report()`.
@@ -338,18 +339,20 @@ abstract contract BaseStrategy {
         }
 
         uint256 profit = 0;
+        uint256 loss = 0;
         if (emergencyExit) {
-            exitPosition(); // Free up as much capital as possible
+            loss = exitPosition(); // Free up as much capital as possible
             // NOTE: Don't take performance fee in this scenario
         } else {
-            profit = prepareReturn(vault.debtOutstanding()); // Free up returns for Vault to pull
+            // Free up returns for Vault to pull
+            (profit, loss) = prepareReturn(vault.debtOutstanding());
         }
 
         if (reserve > want.balanceOf(address(this))) reserve = want.balanceOf(address(this));
 
         // Allow Vault to take up to the "harvested" balance of this contract, which is
         // the amount it has earned since the last time it reported to the Vault
-        uint256 outstanding = vault.report(want.balanceOf(address(this)).sub(reserve));
+        uint256 outstanding = vault.report(want.balanceOf(address(this)).sub(reserve), loss);
 
         // Check if free returns are left, and re-invest them
         adjustPosition(outstanding);

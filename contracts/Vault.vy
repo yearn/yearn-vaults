@@ -90,7 +90,8 @@ struct StrategyParams:
     rateLimit: uint256  # Increase/decrease per block
     lastReport: uint256  # block.number of the last time a report occured
     totalDebt: uint256  # Total outstanding debt that Strategy has
-    totalReturns: uint256  # Total returns that Strategy has realized for Vault
+    totalGain: uint256  # Total returns that Strategy has realized for Vault
+    totalLoss: uint256  # Total losses that Strategy has realized for Vault
 
 
 event StrategyAdded:
@@ -102,10 +103,12 @@ event StrategyAdded:
 
 event StrategyReported:
     strategy: indexed(address)
-    returnAdded: uint256
-    debtAdded: uint256
-    totalReturn: uint256
+    gain: uint256
+    loss: uint256
+    totalGain: uint256
+    totalLoss: uint256
     totalDebt: uint256
+    debtAdded: uint256
     debtLimit: uint256
 
 
@@ -858,7 +861,8 @@ def addStrategy(
         rateLimit: _rateLimit,
         lastReport: block.number,
         totalDebt: 0,
-        totalReturns: 0,
+        totalGain: 0,
+        totalLoss: 0,
     })
     self.debtLimit += _debtLimit
     log StrategyAdded(_strategy, _debtLimit, _rateLimit, _performanceFee)
@@ -1124,14 +1128,14 @@ def creditAvailable(_strategy: address = msg.sender) -> uint256:
 def _expectedReturn(_strategy: address) -> uint256:
     # See note on `expectedReturn()`.
     strategy_lastReport: uint256 = self.strategies[_strategy].lastReport
-    strategy_totalReturns: uint256 = self.strategies[_strategy].totalReturns
+    strategy_totalGain: uint256 = self.strategies[_strategy].totalGain
     strategy_activation: uint256 = self.strategies[_strategy].activation
 
     blockDelta: uint256 = block.number - strategy_lastReport
     if blockDelta > 0:
         # NOTE: Unlikely to throw unless strategy accumalates >1e68 returns
         # NOTE: Will not throw for DIV/0 because activation <= lastReport
-        return (strategy_totalReturns * blockDelta) / (
+        return (strategy_totalGain * blockDelta) / (
             block.number - strategy_activation
         )
     else:
@@ -1155,7 +1159,7 @@ def expectedReturn(_strategy: address = msg.sender) -> uint256:
 
 
 @external
-def report(_return: uint256) -> uint256:
+def report(_gain: uint256, _loss: uint256) -> uint256:
     """
     @notice
         Reports the amount of assets the calling Strategy has free (usually in
@@ -1166,19 +1170,34 @@ def report(_return: uint256) -> uint256:
         For approved strategies, this is the most efficient behavior.
         The Strategy reports back what it has free, then Vault "decides"
         whether to take some back or give it more. Note that the most it can
-        take is `_return`, and the most it can give is all of the remaining
+        take is `_gain`, and the most it can give is all of the remaining
         reserves. Anything outside of those bounds is abnormal behavior.
 
         All approved strategies must have increased diligence around
         calling this function, as abnormal behavior could become catastrophic.
-    @param _return
-        Amount Strategy has made on it's investment since its last report,
-        and is free to be given back to Vault as earnings
+    @param _gain
+        Amount Strategy has realized as a gain on it's investment since its
+        last report, and is free to be given back to Vault as earnings
+    @param _loss
+        Amount Strategy has realized as a loss on it's investment since its
+        last report, and should be accounted for on the Vault's balance sheet
     @return Amount of debt outstanding (iff totalDebt > debtLimit).
     """
 
     # Only approved strategies can call this function
     assert self.strategies[msg.sender].activation > 0
+
+    # We have a loss to report, do it before the rest of the calculations
+    if _loss > 0:
+        loss: uint256 = min(_loss, self.strategies[msg.sender].totalDebt)
+        self.strategies[msg.sender].totalLoss += loss
+        self.strategies[msg.sender].totalDebt -= loss
+        self.totalDebt -= loss
+        # Also, make sure we reduce our trust with the strategy by the same amount
+        self.strategies[msg.sender].debtLimit -= min(
+            loss,
+            self.strategies[msg.sender].debtLimit,
+        )
 
     # Outstanding debt the Vault wants to take back from the Strategy (if any)
     debt: uint256 = self._debtOutstanding(msg.sender)
@@ -1196,13 +1215,13 @@ def report(_return: uint256) -> uint256:
 
     # NOTE: Applies if Strategy is not shutting down, or it is but all debt paid off
     # NOTE: No fee is taken when a Strategy is unwinding it's position, until all debt is paid
-    if _return > debt:
+    if _gain > debt:
         # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
         strategist_fee = (
-            (_return - debt) * self.strategies[msg.sender].performanceFee
+            (_gain - debt) * self.strategies[msg.sender].performanceFee
         ) / FEE_MAX
         # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
-        governance_fee += (_return - debt) * self.performanceFee / FEE_MAX
+        governance_fee += (_gain - debt) * self.performanceFee / FEE_MAX
 
     # NOTE: This must be called prior to taking new collateral,
     #       or the calculation will be wrong!
@@ -1228,10 +1247,10 @@ def report(_return: uint256) -> uint256:
     # the credit increase we are offering (if any)
     # NOTE: This is just used to adjust the balance of tokens between the Strategy and
     #       the Vault based on the Strategy's debt limit (as well as the Vault's).
-    if _return < credit:  # credit surplus, give to Strategy
-        assert self.token.transfer(msg.sender, credit - _return)
-    elif _return > credit:  # credit deficit, take from Strategy
-        assert self.token.transferFrom(msg.sender, self, _return - credit)
+    if _gain < credit:  # credit surplus, give to Strategy
+        assert self.token.transfer(msg.sender, credit - _gain)
+    elif _gain > credit:  # credit deficit, take from Strategy
+        assert self.token.transferFrom(msg.sender, self, _gain - credit)
 
     # else, don't do anything because it is performing well as is
 
@@ -1244,15 +1263,15 @@ def report(_return: uint256) -> uint256:
         self.totalDebt += credit
 
         # Returns are always "realized gains"
-        self.strategies[msg.sender].totalReturns += _return
+        self.strategies[msg.sender].totalGain += _gain
 
     elif debt > 0:  # We're repaying debt now, so there are no gains
-        if _return <= debt:
+        if _gain <= debt:
             # Pay down our debt with profit
             # NOTE: Cannot return more than you borrowed
-            self.strategies[msg.sender].totalDebt -= _return
-            self.totalDebt -= _return
-            debt -= _return  # Debt payment complete (to report back to Strategy)
+            self.strategies[msg.sender].totalDebt -= _gain
+            self.totalDebt -= _gain
+            debt -= _gain  # Debt payment complete (to report back to Strategy)
 
         else:
             # Finish off our debt payments here
@@ -1260,23 +1279,27 @@ def report(_return: uint256) -> uint256:
             self.strategies[msg.sender].totalDebt -= debt
 
             # Returns are always "realized gains" (after we have paid off our debt)
-            self.strategies[msg.sender].totalReturns += _return - debt
+            self.strategies[msg.sender].totalGain += _gain - debt
             debt = 0  # All debts paid off (to report back to Strategy)
 
-    elif _return > 0:  # No debt to pay, nor credit to expand with, add to profit!
-        self.strategies[msg.sender].totalReturns += _return
+    elif _gain > 0:  # No debt to pay, nor credit to expand with, add to profit!
+        self.strategies[msg.sender].totalGain += _gain
 
     # else, no credit/debt to manage, nor returns to report. Nothing really happened!
 
     # Update reporting time
     self.strategies[msg.sender].lastReport = block.number
 
+
+
     log StrategyReported(
         msg.sender,
-        _return,
-        credit,
-        self.strategies[msg.sender].totalReturns,
+        _gain,
+        _loss,
+        self.strategies[msg.sender].totalGain,
+        self.strategies[msg.sender].totalLoss,
         self.strategies[msg.sender].totalDebt,
+        credit,
         self.strategies[msg.sender].debtLimit,
     )
 

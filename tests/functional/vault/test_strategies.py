@@ -20,7 +20,7 @@ def test_addStrategy(web3, gov, vault, strategy, rando):
     with brownie.reverts():
         vault.addStrategy(strategy, 1000, 10, 50, {"from": rando})
 
-    assert vault.strategies(strategy) == [0, 0, 0, 0, 0, 0, 0]
+    assert vault.strategies(strategy) == [0, 0, 0, 0, 0, 0, 0, 0]
 
     vault.addStrategy(strategy, 1000, 10, 50, {"from": gov})
     assert vault.strategies(strategy) == [
@@ -29,6 +29,7 @@ def test_addStrategy(web3, gov, vault, strategy, rando):
         1000,
         10,
         web3.eth.blockNumber,
+        0,
         0,
         0,
     ]
@@ -68,6 +69,7 @@ def test_updateStrategy(web3, gov, vault, strategy, rando):
         activation_block,
         0,
         0,
+        0,
     ]
 
     vault.updateStrategyRateLimit(strategy, 15, {"from": gov})
@@ -79,6 +81,7 @@ def test_updateStrategy(web3, gov, vault, strategy, rando):
         activation_block,
         0,
         0,
+        0,
     ]
 
     vault.updateStrategyPerformanceFee(strategy, 75, {"from": gov})
@@ -88,6 +91,7 @@ def test_updateStrategy(web3, gov, vault, strategy, rando):
         1500,
         15,
         activation_block,
+        0,
         0,
         0,
     ]
@@ -138,6 +142,7 @@ def test_revokeStrategy(web3, gov, vault, strategy, rando):
         0,  # This changed
         10,
         activation_block,
+        0,
         0,
         0,
     ]
@@ -202,7 +207,7 @@ def test_ordering(gov, vault, TestStrategy, rando):
 def test_reporting(vault, strategy, gov, rando):
     # Not just anyone can call `Vault.report()`
     with brownie.reverts():
-        vault.report(0, {"from": rando})
+        vault.report(0, 0, {"from": rando})
 
     strategy.tend({"from": gov})  # Do this for converage of `Strategy.tend()`
 
