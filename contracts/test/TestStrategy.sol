@@ -19,7 +19,7 @@ contract TestStrategy is BaseStrategy {
     // When exiting the position, wait this many times to give everything back
     uint256 countdownTimer = 3;
 
-    // NOTE: This is a test-only function
+    // NOTE: This is a test-only function to simulate losses
     function _takeFunds(uint256 amount) public {
         want.transfer(msg.sender, amount);
     }
@@ -29,11 +29,12 @@ contract TestStrategy is BaseStrategy {
         return want.balanceOf(address(this));
     }
 
-    function prepareReturn(uint256 _debtOutstanding) internal override returns (uint256 _profit) {
+    function prepareReturn(uint256 _debtOutstanding) internal override returns (uint256 _profit, uint256 _loss) {
         // During testing, send this contract some tokens to simulate "Rewards"
         uint256 reserve = getReserve();
         uint256 total = want.balanceOf(address(this));
         if (total > reserve.add(_debtOutstanding)) _profit = total.sub(reserve).sub(_debtOutstanding);
+        if (total < reserve) _loss = reserve.sub(total);
     }
 
     function adjustPosition(uint256 _debtOutstanding) internal override {
@@ -58,7 +59,11 @@ contract TestStrategy is BaseStrategy {
         setReserve(reserve.sub(_amountFreed));
     }
 
-    function exitPosition() internal override {
+    function exitPosition() internal override returns (uint256 _loss) {
+        // Record any losses
+        uint256 reserve = getReserve();
+        uint256 total = want.balanceOf(address(this));
+        if (total < reserve) _loss = reserve.sub(total);
         // Dump 1/N of original position each time this is called
         setReserve(want.balanceOf(address(this)).mul(countdownTimer.sub(1)).div(countdownTimer));
         countdownTimer = countdownTimer.sub(1); // NOTE: This should never be called after it hits 0
