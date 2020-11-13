@@ -5,6 +5,7 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
     # Never reported yet
     # NOTE: done for coverage
     vault.expectedReturn(strategy) == 0
+    vault.availableDepositLimit() == 0
     assert vault.balanceSheetOfStrategy(strategy) == 0
     assert not strategy.harvestTrigger(0)
     chain.mine(50)
