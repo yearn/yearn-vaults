@@ -7,6 +7,30 @@ def other_token(gov, Token):
     yield gov.deploy(Token)
 
 
+def test_regular_available_deposit_limit(Vault, token, gov):
+    vault = gov.deploy(Vault, token, gov, gov, "", "")
+    token.approve(vault, 100, {"from": gov})
+    vault.setDepositLimit(100)
+
+    vault.deposit(50, {"from": gov})
+    assert vault.availableDepositLimit() == 50
+
+    vault.deposit(50, {"from": gov})
+    assert vault.availableDepositLimit() == 0
+
+
+def test_negative_available_deposit_limit(Vault, token, gov):
+    vault = gov.deploy(Vault, token, gov, gov, "", "")
+    token.approve(vault, 100, {"from": gov})
+    vault.setDepositLimit(100)
+
+    vault.deposit(100, {"from": gov})
+    assert vault.availableDepositLimit() == 0
+
+    vault.setDepositLimit(50)
+    assert vault.availableDepositLimit() == 0
+
+
 def test_sweep(gov, vault, rando, token, other_token):
     token.transfer(vault, token.balanceOf(gov), {"from": gov})
     other_token.transfer(vault, other_token.balanceOf(gov), {"from": gov})

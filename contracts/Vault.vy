@@ -1144,6 +1144,15 @@ def _expectedReturn(_strategy: address) -> uint256:
 
 @view
 @external
+def availableDepositLimit() -> uint256:
+    if self.depositLimit > self._totalAssets():
+        return self.depositLimit - self._totalAssets()
+    else:
+        return 0
+
+
+@view
+@external
 def expectedReturn(_strategy: address = msg.sender) -> uint256:
     """
     @notice
