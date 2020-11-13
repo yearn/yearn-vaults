@@ -66,7 +66,7 @@ jobs:
       run: brownie compile --size
 
     - name: Run Tests
-      run: brownie test tests/functional/ --gas --coverage
+      run: brownie test tests/functional/ --gas --coverage --revert-tb
 
   integration:
     runs-on: ubuntu-latest
@@ -123,4 +123,4 @@ jobs:
       run: pip install -r requirements-dev.txt
 
     - name: Run Tests
-      run: brownie test tests/integration/ -s
+      run: brownie test tests/integration/ -s --revert-tb
