@@ -1127,19 +1127,15 @@ def creditAvailable(_strategy: address = msg.sender) -> uint256:
 @internal
 def _expectedReturn(_strategy: address) -> uint256:
     # See note on `expectedReturn()`.
-    strategy_lastReport: uint256 = self.strategies[_strategy].lastReport
-    strategy_totalGain: uint256 = self.strategies[_strategy].totalGain
-    strategy_activation: uint256 = self.strategies[_strategy].activation
-
-    delta: uint256 = block.timestamp - strategy_lastReport
+    delta: uint256 = block.timestamp - self.strategies[_strategy].lastReport
     if delta > 0:
         # NOTE: Unlikely to throw unless strategy accumalates >1e68 returns
         # NOTE: Will not throw for DIV/0 because activation <= lastReport
-        return (strategy_totalGain * delta) / (
-            block.timestamp - strategy_activation
+        return (self.strategies[_strategy].totalGain * delta) / (
+            block.timestamp - self.strategies[_strategy].activation
         )
     else:
-        return 0  # Covers the scenario when block.timestamp == strategy_activation
+        return 0  # Covers the scenario when block.timestamp == activation
 
 
 @view
