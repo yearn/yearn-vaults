@@ -8,7 +8,7 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
     vault.availableDepositLimit() == 0
     assert vault.balanceSheetOfStrategy(strategy) == 0
     assert not strategy.harvestTrigger(0)
-    chain.mine(50)
+    chain.sleep(86400)  # wait a day
     assert strategy.harvestTrigger(0)
 
     # Check accounting is maintained everywhere
@@ -32,7 +32,7 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
     )
 
     # We have 1 data point for E[R] calc, so E[R] = 0
-    chain.mine(10)
+    chain.sleep(86400)  # wait a day
     assert vault.expectedReturn(strategy) == 0
 
     r = lambda: token.balanceOf(strategy) // 50
@@ -52,7 +52,7 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
     )
 
     # We have 2 data points now, so E[R] > 0
-    chain.mine(10)
+    chain.sleep(86400)  # wait a day
     er = vault.expectedReturn(strategy)
     assert er > 0
 
@@ -64,7 +64,7 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
         token.transfer(strategy, er, {"from": gov})
         strategy.harvest({"from": keeper})
 
-        chain.mine(10)
+        chain.sleep(86400)  # wait a day
 
         # Check balance is increasing
         assert token.balanceOf(strategy) > last_balance

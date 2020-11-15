@@ -14,7 +14,7 @@ def strategy(gov, vault, TestStrategy):
     yield gov.deploy(TestStrategy, vault)
 
 
-def test_addStrategy(web3, gov, vault, strategy, rando):
+def test_addStrategy(chain, gov, vault, strategy, rando):
 
     # Only governance can add a strategy
     with brownie.reverts():
@@ -32,12 +32,13 @@ def test_addStrategy(web3, gov, vault, strategy, rando):
     }
 
     vault.addStrategy(strategy, 1000, 10, 1000, {"from": gov})
+    activation_timestamp = chain[-1]["timestamp"]
     assert vault.strategies(strategy).dict() == {
         "performanceFee": 1000,
-        "activation": web3.eth.blockNumber,
+        "activation": activation_timestamp,
         "debtLimit": 1000,
         "rateLimit": 10,
-        "lastReport": web3.eth.blockNumber,
+        "lastReport": activation_timestamp,
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
@@ -49,7 +50,7 @@ def test_addStrategy(web3, gov, vault, strategy, rando):
         vault.addStrategy(strategy, 1000, 10, 1000, {"from": gov})
 
 
-def test_updateStrategy(web3, gov, vault, strategy, rando):
+def test_updateStrategy(chain, gov, vault, strategy, rando):
     # Can't update an unapproved strategy
     with brownie.reverts():
         vault.updateStrategyDebtLimit(strategy, 1500, {"from": gov})
@@ -59,7 +60,7 @@ def test_updateStrategy(web3, gov, vault, strategy, rando):
         vault.updateStrategyPerformanceFee(strategy, 75, {"from": gov})
 
     vault.addStrategy(strategy, 1000, 10, 1000, {"from": gov})
-    activation_block = web3.eth.blockNumber  # Deployed right before test started
+    activation_timestamp = chain[-1]["timestamp"]
 
     # Not just anyone can update a strategy
     with brownie.reverts():
@@ -72,10 +73,10 @@ def test_updateStrategy(web3, gov, vault, strategy, rando):
     vault.updateStrategyDebtLimit(strategy, 1500, {"from": gov})
     assert vault.strategies(strategy).dict() == {
         "performanceFee": 1000,
-        "activation": activation_block,
+        "activation": activation_timestamp,
         "debtLimit": 1500,  # This changed
         "rateLimit": 10,
-        "lastReport": activation_block,
+        "lastReport": activation_timestamp,
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
@@ -84,10 +85,10 @@ def test_updateStrategy(web3, gov, vault, strategy, rando):
     vault.updateStrategyRateLimit(strategy, 15, {"from": gov})
     assert vault.strategies(strategy).dict() == {
         "performanceFee": 1000,
-        "activation": activation_block,
+        "activation": activation_timestamp,
         "debtLimit": 1500,
         "rateLimit": 15,  # This changed
-        "lastReport": activation_block,
+        "lastReport": activation_timestamp,
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
@@ -96,10 +97,10 @@ def test_updateStrategy(web3, gov, vault, strategy, rando):
     vault.updateStrategyPerformanceFee(strategy, 75, {"from": gov})
     assert vault.strategies(strategy).dict() == {
         "performanceFee": 75,  # This changed
-        "activation": activation_block,
+        "activation": activation_timestamp,
         "debtLimit": 1500,
         "rateLimit": 15,
-        "lastReport": activation_block,
+        "lastReport": activation_timestamp,
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
@@ -136,9 +137,9 @@ def test_migrateStrategy(gov, vault, strategy, rando, TestStrategy):
         vault.migrateStrategy(strategy, approved_strategy, {"from": gov})
 
 
-def test_revokeStrategy(web3, gov, vault, strategy, rando):
+def test_revokeStrategy(chain, gov, vault, strategy, rando):
     vault.addStrategy(strategy, 1000, 10, 1000, {"from": gov})
-    activation_block = web3.eth.blockNumber  # Deployed right before test started
+    activation_timestamp = chain[-1]["timestamp"]
 
     # Not just anyone can revoke a strategy
     with brownie.reverts():
@@ -147,10 +148,10 @@ def test_revokeStrategy(web3, gov, vault, strategy, rando):
     vault.revokeStrategy(strategy, {"from": gov})
     assert vault.strategies(strategy).dict() == {
         "performanceFee": 1000,
-        "activation": activation_block,
+        "activation": activation_timestamp,
         "debtLimit": 0,  # This changed
         "rateLimit": 10,
-        "lastReport": activation_block,
+        "lastReport": activation_timestamp,
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,

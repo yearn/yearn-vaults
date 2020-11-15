@@ -25,13 +25,15 @@ def test_harvest_tend_authority(gov, keeper, strategist, strategy, rando):
     strategy.harvest({"from": rando})
 
 
-def test_harvest_tend_trigger(gov, vault, token, TestStrategy):
+def test_harvest_tend_trigger(chain, gov, vault, token, TestStrategy):
     strategy = gov.deploy(TestStrategy, vault)
     assert not strategy.harvestTrigger(0)
 
     vault.addStrategy(strategy, 10 ** 18, 1000, 50, {"from": gov})
 
     token.transfer(strategy, 10 ** 8, {"from": gov})
+    assert not strategy.harvestTrigger(0)
+    chain.sleep(100000)
     assert not strategy.harvestTrigger(10 ** 9)
     assert strategy.harvestTrigger(10 ** 6)
 

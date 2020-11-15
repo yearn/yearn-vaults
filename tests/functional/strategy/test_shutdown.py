@@ -12,7 +12,7 @@ def test_emergency_shutdown(token, gov, vault, strategy, keeper, chain):
         vault.strategies(strategy).dict()["totalDebt"]
         < vault.strategies(strategy).dict()["debtLimit"]
     ):
-        chain.mine(10)
+        chain.sleep(86400)  # wait a day
         add_yield()
         strategy.harvest({"from": keeper})
 
@@ -22,7 +22,7 @@ def test_emergency_shutdown(token, gov, vault, strategy, keeper, chain):
     # Watch the strategy repay all its debt over time
     last_balance = token.balanceOf(strategy)
     while token.balanceOf(strategy) > 0:
-        chain.mine(10)
+        chain.sleep(86400)  # wait a day
         add_yield()  # We're still vested on our positions!
         strategy.harvest({"from": keeper})
 
@@ -58,7 +58,7 @@ def test_emergency_exit(token, gov, vault, strategy, keeper, chain):
         vault.strategies(strategy).dict()["totalDebt"]
         < vault.strategies(strategy).dict()["debtLimit"]
     ):
-        chain.mine(10)
+        chain.sleep(86400)  # wait a day
         add_yield()
         strategy.harvest({"from": keeper})
 
@@ -72,7 +72,7 @@ def test_emergency_exit(token, gov, vault, strategy, keeper, chain):
     # Watch the strategy repay the rest of its debt over time
     last_balance = token.balanceOf(strategy)
     while token.balanceOf(strategy) > 0:
-        chain.mine(10)
+        chain.sleep(86400)  # wait a day
         strategy.harvest({"from": keeper})
 
         # Make sure we are divesting

@@ -1,7 +1,7 @@
 import brownie
 
 
-def test_multiple_withdrawals(token, gov, Vault, TestStrategy):
+def test_multiple_withdrawals(chain, token, gov, Vault, TestStrategy):
     # Need a fresh vault to do this math right
     vault = Vault.deploy(token, gov, gov, "", "", {"from": gov})
     starting_balance = token.balanceOf(gov)
@@ -23,6 +23,7 @@ def test_multiple_withdrawals(token, gov, Vault, TestStrategy):
     assert token.balanceOf(gov) == 0
     assert token.balanceOf(vault) == starting_balance
 
+    chain.sleep(8640)
     [s.harvest({"from": gov}) for s in strategies]  # Seed all the strategies with debt
 
     assert token.balanceOf(vault) == starting_balance // 2
@@ -79,13 +80,15 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
     # Withdrawal should fail, no matter the distribution of tokens between
     # the vault and the strategies
     while vault.totalDebt() < vault.debtLimit():
-        chain.mine(25)
+        chain.sleep(86400)  # wait a day
         [s.harvest({"from": gov}) for s in strategies]
         with brownie.reverts():
             vault.withdraw(5000, {"from": rando})
 
 
-def test_progressive_withdrawal(token, gov, Vault, guardian, rewards, TestStrategy):
+def test_progressive_withdrawal(
+    chain, token, gov, Vault, guardian, rewards, TestStrategy
+):
     vault = guardian.deploy(Vault, token, gov, rewards, "", "")
 
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(2)]
@@ -101,6 +104,7 @@ def test_progressive_withdrawal(token, gov, Vault, guardian, rewards, TestStrate
     assert token.balanceOf(gov) == 0
 
     # Deposit something in strategies
+    chain.sleep(1)  # Needs to be a second ahead, at least
     [s.harvest({"from": gov}) for s in strategies]
     assert token.balanceOf(vault) < vault.totalAssets()  # Some debt is in strategies
 
@@ -134,7 +138,7 @@ def test_progressive_withdrawal(token, gov, Vault, guardian, rewards, TestStrate
 
 
 def test_withdrawal_with_empty_queue(
-    token, gov, Vault, guardian, rewards, TestStrategy
+    chain, token, gov, Vault, guardian, rewards, TestStrategy
 ):
     vault = guardian.deploy(Vault, token, gov, rewards, "", "")
 
@@ -148,6 +152,7 @@ def test_withdrawal_with_empty_queue(
     token.approve(gov, 2 ** 256 - 1, {"from": gov})
     token.transferFrom(gov, guardian, token.balanceOf(gov), {"from": gov})
 
+    chain.sleep(8640)
     strategy.harvest({"from": gov})
     assert token.balanceOf(vault) < vault.totalAssets()
 

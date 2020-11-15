@@ -1,9 +1,10 @@
 import brownie
 
 
-def test_withdraw(gov, token, vault, strategy, rando):
+def test_withdraw(chain, gov, token, vault, strategy, rando):
     token.approve(vault, token.balanceOf(gov), {"from": gov})
     vault.deposit(token.balanceOf(gov) // 2, {"from": gov})
+    chain.sleep(8640)
     strategy.harvest({"from": gov})  # Seed some debt in there
     assert strategy.estimatedTotalAssets() > 0
 
