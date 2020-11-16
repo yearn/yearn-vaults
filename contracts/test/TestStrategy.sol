@@ -16,9 +16,6 @@ contract TestStrategy is BaseStrategy {
         return "TestStrategy";
     }
 
-    // When exiting the position, wait this many times to give everything back
-    uint256 countdownTimer = 3;
-
     // NOTE: This is a test-only function to simulate losses
     function _takeFunds(uint256 amount) public {
         want.transfer(msg.sender, amount);
@@ -29,44 +26,58 @@ contract TestStrategy is BaseStrategy {
         return want.balanceOf(address(this));
     }
 
-    function prepareReturn(uint256 _debtOutstanding) internal override returns (uint256 _profit, uint256 _loss) {
+    function prepareReturn(uint256 _debtOutstanding)
+        internal
+        override
+        returns (
+            uint256 _profit,
+            uint256 _loss,
+            uint256 _debtPayment
+        )
+    {
         // During testing, send this contract some tokens to simulate "Rewards"
-        uint256 reserve = getReserve();
-        uint256 total = want.balanceOf(address(this));
-        if (total > reserve.add(_debtOutstanding)) _profit = total.sub(reserve).sub(_debtOutstanding);
-        if (total < reserve) _loss = reserve.sub(total);
+        uint256 totalAssets = want.balanceOf(address(this));
+        uint256 totalDebt = vault.strategies(address(this)).totalDebt;
+        if (totalAssets > _debtOutstanding) {
+            _debtPayment = _debtOutstanding;
+            totalAssets = totalAssets.sub(_debtOutstanding);
+        } else {
+            _debtPayment = totalAssets;
+            totalAssets = 0;
+        }
+        totalDebt = totalDebt.sub(_debtPayment);
+
+        if (totalAssets > totalDebt) {
+            _profit = totalAssets.sub(totalDebt);
+        } else {
+            _loss = totalDebt.sub(totalAssets);
+        }
     }
 
     function adjustPosition(uint256 _debtOutstanding) internal override {
         // Whatever we have "free", consider it "invested" now
-        uint256 total = want.balanceOf(address(this));
-        if (total > _debtOutstanding) {
-            setReserve(total.sub(_debtOutstanding));
-        } else {
-            setReserve(0);
-        }
     }
 
     function liquidatePosition(uint256 _amountNeeded) internal override returns (uint256 _amountFreed) {
-        uint256 reserve = getReserve();
-        if (_amountNeeded >= reserve) {
-            // Give back the entire reserves
-            _amountFreed = reserve;
+        uint256 totalAssets = want.balanceOf(address(this));
+        if (_amountNeeded >= totalAssets) {
+            _amountFreed = totalAssets;
         } else {
-            // Give back a portion of the reserves
             _amountFreed = _amountNeeded;
         }
-        setReserve(reserve.sub(_amountFreed));
     }
 
-    function exitPosition() internal override returns (uint256 _loss) {
+    function exitPosition() internal override returns (uint256 _loss, uint256 _debtPayment) {
+        uint256 totalAssets = want.balanceOf(address(this));
+        uint256 totalDebt = vault.strategies(address(this)).totalDebt;
+
         // Record any losses
-        uint256 reserve = getReserve();
-        uint256 total = want.balanceOf(address(this));
-        if (total < reserve) _loss = reserve.sub(total);
-        // Dump 1/N of original position each time this is called
-        setReserve(want.balanceOf(address(this)).mul(countdownTimer.sub(1)).div(countdownTimer));
-        countdownTimer = countdownTimer.sub(1); // NOTE: This should never be called after it hits 0
+        if (totalAssets >= totalDebt) {
+            _debtPayment = totalDebt;
+        } else {
+            _debtPayment = totalAssets;
+            _loss = totalDebt.sub(totalAssets);
+        }
     }
 
     function prepareMigration(address _newStrategy) internal override {

@@ -102,7 +102,7 @@ def test_reject_ether(gov, vault):
             ],
         ),
         ("revokeStrategy", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
-        ("report", [1, 2]),
+        ("report", [1, 2, 3]),
         ("sweep", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
         ("sweep", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1]),
     ]:

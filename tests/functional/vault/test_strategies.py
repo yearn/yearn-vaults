@@ -219,7 +219,7 @@ def test_ordering(gov, vault, TestStrategy, rando):
 def test_reporting(vault, strategy, gov, rando):
     # Not just anyone can call `Vault.report()`
     with brownie.reverts():
-        vault.report(0, 0, {"from": rando})
+        vault.report(0, 0, 0, {"from": rando})
 
     strategy.tend({"from": gov})  # Do this for converage of `Strategy.tend()`
 
