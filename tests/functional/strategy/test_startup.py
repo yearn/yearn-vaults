@@ -1,79 +1,101 @@
 def test_startup(token, gov, vault, strategy, keeper, chain):
-    # Strategy has no debt or anything yet until, we call harvest
-    assert token.balanceOf(strategy) == 0
+    all_strategies = [strategy] + ["0x0000000000000000000000000000000000000000"] * 39
+    er = lambda: vault.expectedReturn(strategy)
 
-    # Never reported yet
+    # Never reported yet (no data points)
     # NOTE: done for coverage
-    vault.expectedReturn(strategy) == 0
-    vault.availableDepositLimit() == 0
-    assert vault.balanceSheetOfStrategy(strategy) == 0
-    assert not strategy.harvestTrigger(0)
-    chain.sleep(86400)  # wait a day
-    assert strategy.harvestTrigger(0)
+    assert er() == 0
 
     # Check accounting is maintained everywhere
-    assert vault.totalDebt() == 0 == vault.strategies(strategy).dict()["totalDebt"]
-    withdrawal_queue = [strategy] + ["0x0000000000000000000000000000000000000000"] * 39
-    assert vault.totalBalanceSheet(withdrawal_queue) == token.balanceOf(vault)
+    assert token.balanceOf(vault) > 0
+    assert (
+        vault.totalAssets()
+        == vault.totalBalanceSheet(all_strategies)
+        == token.balanceOf(vault)
+    )
+    assert (
+        vault.totalDebt()
+        == vault.strategies(strategy).dict()["totalDebt"]
+        == vault.balanceSheetOfStrategy(strategy)
+        == token.balanceOf(strategy)
+        == 0
+    )
 
     # Take on debt
+    chain.mine(timestamp=chain.time() + 86400)  # wait a day
+    assert vault.expectedReturn(strategy) == 0
     strategy.harvest({"from": keeper})
 
     # Check balance is increasing
     assert token.balanceOf(strategy) > 0
-    last_balance = token.balanceOf(strategy)
+    balance = token.balanceOf(strategy)
 
     # Check accounting is maintained everywhere
-    assert vault.totalDebt() == vault.strategies(strategy).dict()["totalDebt"]
-    assert vault.balanceSheetOfStrategy(strategy) == vault.totalDebt()
     assert (
-        vault.totalBalanceSheet(withdrawal_queue)
-        == token.balanceOf(vault) + vault.totalDebt()
+        vault.totalAssets()
+        == vault.totalBalanceSheet(all_strategies)
+        == token.balanceOf(vault) + balance
+    )
+    assert (
+        vault.totalDebt()
+        == vault.strategies(strategy).dict()["totalDebt"]
+        == vault.balanceSheetOfStrategy(strategy)
+        == balance
     )
 
-    # We have 1 data point for E[R] calc, so E[R] = 0
-    chain.sleep(86400)  # wait a day
-    assert vault.expectedReturn(strategy) == 0
+    # We have 1 data point for E[R] calc w/ no profits, so E[R] = 0
+    chain.mine(timestamp=chain.time() + 86400)  # wait a day
+    assert er() == 0
 
-    r = lambda: token.balanceOf(strategy) // 50
-    token.transfer(strategy, r(), {"from": gov})
+    profit = token.balanceOf(strategy) // 50
+    assert profit > 0
+    token.transfer(strategy, profit, {"from": gov})
     strategy.harvest({"from": keeper})
+    assert vault.strategies(strategy).dict()["totalGain"] == profit
 
     # Check balance is increasing
-    assert token.balanceOf(strategy) > last_balance
-    last_balance = token.balanceOf(strategy)
+    assert token.balanceOf(strategy) > balance
+    balance = token.balanceOf(strategy)
 
     # Check accounting is maintained everywhere
-    assert vault.totalDebt() == vault.strategies(strategy).dict()["totalDebt"]
-    assert vault.balanceSheetOfStrategy(strategy) == vault.totalDebt()
     assert (
-        vault.totalBalanceSheet(withdrawal_queue)
-        == token.balanceOf(vault) + vault.totalDebt()
+        vault.totalAssets()
+        == vault.totalBalanceSheet(all_strategies)
+        == token.balanceOf(vault) + balance
+    )
+    assert (
+        vault.totalDebt()
+        == vault.strategies(strategy).dict()["totalDebt"]
+        == vault.balanceSheetOfStrategy(strategy)
+        == balance
     )
 
-    # We have 2 data points now, so E[R] > 0
-    chain.sleep(86400)  # wait a day
-    er = vault.expectedReturn(strategy)
-    assert er > 0
-
-    last_balance = 0
-    while (
+    # Ramp up debt (Should execute at least once)
+    debt_limit_hit = lambda: (
         vault.strategies(strategy).dict()["totalDebt"]
-        < vault.strategies(strategy).dict()["debtLimit"]
-    ):  # totalDebt  # debtLimit
-        token.transfer(strategy, er, {"from": gov})
+        == vault.strategies(strategy).dict()["debtLimit"]
+    )
+    assert not debt_limit_hit()
+    while not debt_limit_hit():
+
+        chain.mine(timestamp=chain.time() + 86400)  # wait a day
+        assert er() > 0
+        token.transfer(strategy, er(), {"from": gov})
         strategy.harvest({"from": keeper})
 
-        chain.sleep(86400)  # wait a day
-
         # Check balance is increasing
-        assert token.balanceOf(strategy) > last_balance
-        last_balance = token.balanceOf(strategy)
+        assert token.balanceOf(strategy) > balance
+        balance = token.balanceOf(strategy)
 
         # Check accounting is maintained everywhere
-        assert vault.totalDebt() == vault.strategies(strategy).dict()["totalDebt"]
-        assert vault.balanceSheetOfStrategy(strategy) == vault.totalDebt()
         assert (
-            vault.totalBalanceSheet(withdrawal_queue)
-            == token.balanceOf(vault) + vault.totalDebt()
+            vault.totalAssets()
+            == vault.totalBalanceSheet(all_strategies)
+            == token.balanceOf(vault) + balance
+        )
+        assert (
+            vault.totalDebt()
+            == vault.strategies(strategy).dict()["totalDebt"]
+            == vault.balanceSheetOfStrategy(strategy)
+            == balance
         )
