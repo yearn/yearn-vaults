@@ -121,7 +121,7 @@ abstract contract BaseStrategy {
 
     // Version of this contract's StrategyAPI (must match Vault)
     function apiVersion() public pure returns (string memory) {
-        return "0.1.3";
+        return "0.2.0";
     }
 
     // Name of this contract's Strategy (Must override!)
