@@ -57,6 +57,10 @@ interface Strategy:
     def migrate(_newStrategy: address): nonpayable
 
 
+interface GuestList:
+    def authorized(guest: address, amount: uint256) -> bool: view
+
+
 event Transfer:
     sender: indexed(address)
     receiver: indexed(address)
@@ -81,7 +85,7 @@ token: public(ERC20)
 governance: public(address)
 guardian: public(address)
 pendingGovernance: address
-
+guestList: public(GuestList)
 
 struct StrategyParams:
     performanceFee: uint256  # Strategist's fee (basis points)
@@ -261,6 +265,21 @@ def acceptGovernance():
     """
     assert msg.sender == self.pendingGovernance
     self.governance = msg.sender
+
+
+@external
+def setGuestList(_guestList: address):
+    """
+    @notice
+        Used to set or change `guestList`. A guest list is another contract
+        that dictates who is allowed to participate in a Vault (and transfer
+        shares).
+
+        This may only be called by governance.
+    @param _guestList The address of the `GuestList` contract to use.
+    """
+    assert msg.sender == self.governance
+    self.guestList = GuestList(_guestList)
 
 
 @external
@@ -647,6 +666,10 @@ def deposit(_amount: uint256 = MAX_UINT256, _recipient: address = msg.sender) ->
 
     # Ensure deposit limit is respected
     assert self._totalAssets() + amount <= self.depositLimit
+
+    # Ensure deposit is permitted by guest list
+    if self.guestList.address != ZERO_ADDRESS:
+        assert self.guestList.authorized(msg.sender, amount)
 
     # Issue new shares (needs to be done before taking deposit to be accurate)
     # Shares are issued to recipient (may be different from msg.sender)

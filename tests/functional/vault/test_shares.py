@@ -8,6 +8,11 @@ def vault(gov, token, Vault):
     yield gov.deploy(Vault, token, gov, gov, "", "")
 
 
+@pytest.fixture
+def guest_list(gov, TestGuestList):
+    yield gov.deploy(TestGuestList)
+
+
 def test_deposit_with_zero_funds(vault, token, rando):
     assert token.balanceOf(rando) == 0
     token.approve(vault, 2 ** 256 - 1, {"from": rando})
@@ -20,6 +25,39 @@ def test_deposit_with_wrong_amount(vault, token, gov):
     token.approve(vault, balance, {"from": gov})
     with brownie.reverts():
         vault.deposit(balance, {"from": gov})
+
+
+def test_deposit_with_guest_list(vault, guest_list, token, gov, rando, history):
+    # Make sure we're attempting to deposit something
+    token.transfer(rando, token.balanceOf(gov) // 2, {"from": gov})
+    balance = token.balanceOf(rando)
+    token.approve(vault, balance, {"from": rando})
+
+    # Note - don't need to call guest_list.setGuests, since nobody's invited by
+    # default.
+    # gov is our bouncer
+    vault.setGuestList(guest_list, {"from": gov})
+
+    # Ensure rando's not permitted to deposit
+    with brownie.reverts():
+        vault.deposit(balance, {"from": rando})
+
+    # Ensure authorized was called and that the deposit didn't revert for a
+    # different reason.
+    assert history[-1].subcalls[-1]["function"] == "authorized(address,uint256)"
+    assert history[-1].subcalls[-1]["return_value"][0] == False
+
+    # Allow rando into the party
+    guests = [rando]
+    invited = [True]
+    guest_list.setGuests(guests, invited, {"from": gov})
+
+    # Deposit balance
+    vault.deposit(balance, {"from": rando})
+
+    # Ensure the vault now has all rando's tokens
+    assert token.balanceOf(rando) == 0
+    assert vault.balanceOf(rando) == balance
 
 
 def test_deposit_all_and_withdraw_all(gov, vault, token):
