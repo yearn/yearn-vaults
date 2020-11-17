@@ -852,6 +852,9 @@ def addStrategy(
     @param _performanceFee
         The fee the strategist will receive based on this Vault's performance.
     """
+    assert _strategy != ZERO_ADDRESS
+    assert _rateLimit > 0
+
     assert msg.sender == self.governance
     assert self.strategies[_strategy].activation == 0
     self.strategies[_strategy] = StrategyParams({
@@ -907,6 +910,8 @@ def updateStrategyRateLimit(
     @param _strategy The Strategy to update.
     @param _rateLimit The quantity of assets `_strategy` may now manage.
     """
+    assert _rateLimit > 0
+
     assert msg.sender == self.governance
     assert self.strategies[_strategy].activation > 0
     self.strategies[_strategy].rateLimit = _rateLimit
@@ -1096,7 +1101,6 @@ def _creditAvailable(_strategy: address) -> uint256:
     delta: uint256 = block.timestamp - strategy_lastReport
     # NOTE: Protect against unnecessary overflow faults here
     # NOTE: Set `strategy_rateLimit` to a really high number to disable the rate limit
-    # NOTE: *NEVER* set `strategy_rateLimit` to 0 or else this will always throw
     if available / strategy_rateLimit >= delta:
         available = min(available, strategy_rateLimit * delta)
 
