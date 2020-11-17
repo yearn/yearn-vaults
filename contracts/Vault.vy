@@ -35,7 +35,7 @@
     https://github.com/iearn-finance/yearn-vaults/blob/master/SPECIFICATION.md
 """
 
-API_VERSION: constant(String[28]) = "0.1.3"
+API_VERSION: constant(String[28]) = "0.2.0"
 
 # TODO: Add ETH Configuration
 # TODO: Add Delegated Configuration
