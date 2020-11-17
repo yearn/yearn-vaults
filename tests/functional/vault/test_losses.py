@@ -1,6 +1,8 @@
 import pytest
 import brownie
 
+DAY = 86400  # seconds
+
 
 @pytest.fixture
 def vault(gov, token, Vault):
@@ -19,12 +21,12 @@ def test_losses(chain, vault, strategy, gov, token):
     token.approve(vault, 500, {"from": gov})
     vault.deposit(500, {"from": gov})
 
-    chain.sleep(8640)
+    chain.sleep(DAY // 10)
     strategy.harvest({"from": gov})
     assert token.balanceOf(strategy) == 500
 
     # First loss
-    chain.sleep(8640)
+    chain.sleep(DAY // 10)
     strategy._takeFunds(100, {"from": gov})
     strategy.harvest({"from": gov})
     params = vault.strategies(strategy).dict()
@@ -32,7 +34,7 @@ def test_losses(chain, vault, strategy, gov, token):
     assert params["totalDebt"] == 400
 
     # Harder second loss
-    chain.sleep(8640)
+    chain.sleep(DAY // 10)
     strategy._takeFunds(300, {"from": gov})
     strategy.harvest({"from": gov})
     params = vault.strategies(strategy).dict()
@@ -40,7 +42,7 @@ def test_losses(chain, vault, strategy, gov, token):
     assert params["totalDebt"] == 100
 
     # Strike three
-    chain.sleep(8640)
+    chain.sleep(DAY // 10)
     assert token.balanceOf(strategy) == 100
     strategy._takeFunds(100, {"from": gov})
     assert token.balanceOf(strategy) == 0
