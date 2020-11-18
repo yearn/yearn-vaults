@@ -52,12 +52,18 @@ def main():
 
             # TODO: Actually estimate gas
             if strategy.tendTrigger(40000 * gas_price):
-                strategy.tend({"from": bot, "gas_price": gas_price})
-                no_action = False
+                try:
+                    strategy.tend({"from": bot, "gas_price": gas_price})
+                    no_action = False
+                except:
+                    print("Call failed")
 
             elif strategy.harvestTrigger(180000 * gas_price):
-                strategy.harvest({"from": bot, "gas_price": gas_price})
-                no_action = False
+                try:
+                    strategy.harvest({"from": bot, "gas_price": gas_price})
+                    no_action = False
+                except:
+                    print("Call failed")
 
         if no_action:
             print("Sleeping for 60 seconds...")
