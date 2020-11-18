@@ -36,7 +36,7 @@ jobs:
         node-version: '12.x'
 
     - name: Install ganache
-      run: npm install -g ganache-cli@6.11
+      run: npm install -g ganache-cli@6.12.1
 
     - name: Set up python 3.8
       uses: actions/setup-python@v2
@@ -96,7 +96,7 @@ jobs:
         node-version: '12.x'
 
     - name: Install ganache
-      run: npm install -g ganache-cli@6.11
+      run: npm install -g ganache-cli@6.12.1
 
     - name: Set up python 3.8
       uses: actions/setup-python@v2
