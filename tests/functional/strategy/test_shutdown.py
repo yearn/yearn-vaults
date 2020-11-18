@@ -83,8 +83,9 @@ def test_emergency_exit(token, gov, vault, strategy, keeper, chain):
         last_balance = token.balanceOf(strategy)
 
     # All the debt left is out of the system now
-    assert vault.totalDebt() == stolen_funds
-    assert vault.strategies(strategy).dict()["totalDebt"] == stolen_funds
+    assert vault.totalDebt() == 0
+    assert vault.strategies(strategy).dict()["totalDebt"] == 0
+    assert vault.strategies(strategy).dict()["totalLoss"] == stolen_funds
 
     # Vault returned something overall though
     strategyReturn = vault.strategies(strategy).dict()["totalGain"]

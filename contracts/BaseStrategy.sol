@@ -50,7 +50,11 @@ interface VaultAPI is IERC20 {
      * Therefore, this function will be called by BaseStrategy to make sure the
      * integration is correct.
      */
-    function report(uint256 _gain, uint256 _loss) external returns (uint256);
+    function report(
+        uint256 _gain,
+        uint256 _loss,
+        uint256 _debtPayment
+    ) external returns (uint256);
 
     /*
      * This function is used in the scenario where there is a newer strategy that
@@ -117,7 +121,7 @@ abstract contract BaseStrategy {
 
     // Version of this contract's StrategyAPI (must match Vault)
     function apiVersion() public pure returns (string memory) {
-        return "0.1.3";
+        return "0.2.0";
     }
 
     // Name of this contract's Strategy (Must override!)
@@ -145,18 +149,6 @@ abstract contract BaseStrategy {
 
     // Use this to adjust the threshold at which running a debt causes a harvest trigger
     uint256 public debtThreshold = 0;
-
-    // Adjust this using `setReserve(...)` to keep some of the position in reserve in the strategy,
-    // to accomodate larger variations needed to sustain the strategy's core positon(s)
-    uint256 private reserve = 0;
-
-    function getReserve() internal view returns (uint256) {
-        return reserve;
-    }
-
-    function setReserve(uint256 _reserve) internal {
-        if (_reserve != reserve) reserve = _reserve;
-    }
 
     bool public emergencyExit;
 
@@ -228,16 +220,27 @@ abstract contract BaseStrategy {
     function estimatedTotalAssets() public virtual view returns (uint256);
 
     /*
-     * Perform any strategy unwinding or other calls necessary to capture
-     * the "free return" this strategy has generated since the last time it's
-     * core position(s) were adusted. Examples include unwrapping extra rewards.
-     * This call is only used during "normal operation" of a Strategy, and should
-     * be optimized to minimize losses as much as possible. It is okay to report
-     * "no returns", however this will affect the credit limit extended to the
-     * strategy and reduce it's overall position if lower than expected returns
-     * are sustained for long periods of time.
+     * Perform any strategy unwinding or other calls necessary to capture the "free return"
+     * this strategy has generated since the last time it's core position(s) were adjusted.
+     * Examples include unwrapping extra rewards. This call is only used during "normal operation"
+     * of a Strategy, and should be optimized to minimize losses as much as possible. This method
+     * returns any realized profits and/or realized losses incurred, and should return the total
+     * amounts of profits/losses/debt payments (in `want` tokens) for the Vault's accounting
+     * (e.g. `want.balanceOf(this) >= _debtPayment + _profit - _loss`).
+     *
+     * NOTE: `_debtPayment` should be less than or equal to `_debtOutstanding`. It is okay for it
+     *       to be less than `_debtOutstanding`, as that should only used as a guide for how much
+     *       is left to pay back. Payments should be made to minimize loss from slippage, debt,
+     *       withdrawal fees, etc.
      */
-    function prepareReturn(uint256 _debtOutstanding) internal virtual returns (uint256 _profit, uint256 _loss);
+    function prepareReturn(uint256 _debtOutstanding)
+        internal
+        virtual
+        returns (
+            uint256 _profit,
+            uint256 _loss,
+            uint256 _debtPayment
+        );
 
     /*
      * Perform any adjustments to the core position(s) of this strategy given
@@ -253,9 +256,11 @@ abstract contract BaseStrategy {
      * is allowed, since when this method is called the strategist is no longer receiving
      * their performance fee. The goal is for the strategy to divest as quickly as possible
      * while not suffering exorbitant losses. This function is used during emergency exit
-     * instead of `prepareReturn()`
+     * instead of `prepareReturn()`. This method returns any realized losses incurred, and
+     * should also return the amount of `want` tokens available to repay outstanding debt
+     * to the Vault.
      */
-    function exitPosition() internal virtual returns (uint256 _loss);
+    function exitPosition() internal virtual returns (uint256 _loss, uint256 _debtPayment);
 
     /*
      * Vault calls this function after shares are created during `Vault.report()`.
@@ -340,22 +345,21 @@ abstract contract BaseStrategy {
 
         uint256 profit = 0;
         uint256 loss = 0;
+        uint256 debtPayment = 0;
         if (emergencyExit) {
-            loss = exitPosition(); // Free up as much capital as possible
+            (loss, debtPayment) = exitPosition(); // Free up as much capital as possible
             // NOTE: Don't take performance fee in this scenario
         } else {
             // Free up returns for Vault to pull
-            (profit, loss) = prepareReturn(vault.debtOutstanding());
+            (profit, loss, debtPayment) = prepareReturn(vault.debtOutstanding());
         }
-
-        if (reserve > want.balanceOf(address(this))) reserve = want.balanceOf(address(this));
 
         // Allow Vault to take up to the "harvested" balance of this contract, which is
         // the amount it has earned since the last time it reported to the Vault
-        uint256 outstanding = vault.report(want.balanceOf(address(this)).sub(reserve), loss);
+        uint256 debtOutstanding = vault.report(profit, loss, debtPayment);
 
         // Check if free returns are left, and re-invest them
-        adjustPosition(outstanding);
+        adjustPosition(debtOutstanding);
 
         emit Harvested(profit);
     }
@@ -372,8 +376,6 @@ abstract contract BaseStrategy {
         uint256 amountFreed = liquidatePosition(_amountNeeded);
         // Send it directly back (NOTE: Using `msg.sender` saves some gas here)
         want.transfer(msg.sender, amountFreed);
-        // Adjust reserve to what we have after the freed amount is sent to the Vault
-        reserve = want.balanceOf(address(this));
     }
 
     /*
@@ -394,7 +396,6 @@ abstract contract BaseStrategy {
         emergencyExit = true;
         exitPosition();
         vault.revokeStrategy();
-        if (reserve > want.balanceOf(address(this))) reserve = want.balanceOf(address(this));
     }
 
     // Override this to add all tokens/tokenized positions this contract manages

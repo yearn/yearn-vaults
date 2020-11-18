@@ -35,7 +35,7 @@
     https://github.com/iearn-finance/yearn-vaults/blob/master/SPECIFICATION.md
 """
 
-API_VERSION: constant(String[28]) = "0.1.3"
+API_VERSION: constant(String[28]) = "0.2.0"
 
 # TODO: Add ETH Configuration
 # TODO: Add Delegated Configuration
@@ -1190,50 +1190,22 @@ def expectedReturn(_strategy: address = msg.sender) -> uint256:
     return self._expectedReturn(_strategy)
 
 
-@external
-def report(_gain: uint256, _loss: uint256) -> uint256:
-    """
-    @notice
-        Reports the amount of assets the calling Strategy has free (usually in
-        terms of ROI).
+@internal
+def _reportLoss(_strategy: address, _loss: uint256):
+    # Loss can only be up the amount of debt issued to strategy
+    totalDebt: uint256 = self.strategies[_strategy].totalDebt
+    loss: uint256 = min(_loss, totalDebt)
+    self.strategies[_strategy].totalLoss += loss
+    self.strategies[_strategy].totalDebt = totalDebt - loss
+    self.totalDebt -= loss
 
-        This may only be called by a Strategy managed by this Vault.
-    @dev
-        For approved strategies, this is the most efficient behavior.
-        The Strategy reports back what it has free, then Vault "decides"
-        whether to take some back or give it more. Note that the most it can
-        take is `_gain`, and the most it can give is all of the remaining
-        reserves. Anything outside of those bounds is abnormal behavior.
+    # Also, make sure we reduce our trust with the strategy by the same amount
+    debtLimit: uint256 = self.strategies[_strategy].debtLimit
+    self.strategies[_strategy].debtLimit -= min(loss, debtLimit)
 
-        All approved strategies must have increased diligence around
-        calling this function, as abnormal behavior could become catastrophic.
-    @param _gain
-        Amount Strategy has realized as a gain on it's investment since its
-        last report, and is free to be given back to Vault as earnings
-    @param _loss
-        Amount Strategy has realized as a loss on it's investment since its
-        last report, and should be accounted for on the Vault's balance sheet
-    @return Amount of debt outstanding (iff totalDebt > debtLimit).
-    """
 
-    # Only approved strategies can call this function
-    assert self.strategies[msg.sender].activation > 0
-
-    # We have a loss to report, do it before the rest of the calculations
-    if _loss > 0:
-        loss: uint256 = min(_loss, self.strategies[msg.sender].totalDebt)
-        self.strategies[msg.sender].totalLoss += loss
-        self.strategies[msg.sender].totalDebt -= loss
-        self.totalDebt -= loss
-        # Also, make sure we reduce our trust with the strategy by the same amount
-        self.strategies[msg.sender].debtLimit -= min(
-            loss,
-            self.strategies[msg.sender].debtLimit,
-        )
-
-    # Outstanding debt the Vault wants to take back from the Strategy (if any)
-    debt: uint256 = self._debtOutstanding(msg.sender)
-
+@internal
+def _assessFees(_strategy: address, _gain: uint256):
     # Issue new shares to cover fees
     # NOTE: In effect, this reduces overall share price by the combined fee
     # NOTE: may throw if Vault.totalAssets() > 1e64, or not called for more than a year
@@ -1246,45 +1218,89 @@ def report(_gain: uint256, _loss: uint256) -> uint256:
 
     # NOTE: Applies if Strategy is not shutting down, or it is but all debt paid off
     # NOTE: No fee is taken when a Strategy is unwinding it's position, until all debt is paid
-    if _gain > debt:
+    if _gain > 0:
         # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
         strategist_fee = (
-            (_gain - debt) * self.strategies[msg.sender].performanceFee
+            _gain * self.strategies[_strategy].performanceFee
         ) / FEE_MAX
         # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
-        governance_fee += (_gain - debt) * self.performanceFee / FEE_MAX
+        governance_fee += _gain * self.performanceFee / FEE_MAX
 
     # NOTE: This must be called prior to taking new collateral,
     #       or the calculation will be wrong!
     # NOTE: This must be done at the same time, to ensure the relative
     #       ratio of governance_fee : strategist_fee is kept intact
     total_fee: uint256 = governance_fee + strategist_fee
-    if total_fee > 0:
+    if total_fee > 0:  # NOTE: If mgmt fee is 0% and no gains were realized, skip
         reward: uint256 = self._issueSharesForAmount(self, total_fee)
 
         # Send the rewards out as new shares in this Vault
         if strategist_fee > 0:  # NOTE: Guard against DIV/0 fault
             # NOTE: Unlikely to throw unless sqrt(reward) >>> 1e39
             strategist_reward: uint256 = (strategist_fee * reward) / total_fee
-            self._transfer(self, msg.sender, strategist_reward)
-            Strategy(msg.sender).distributeRewards(strategist_reward)
+            self._transfer(self, _strategy, strategist_reward)
+            Strategy(_strategy).distributeRewards(strategist_reward)
         # NOTE: Governance earns any dust leftover from flooring math above
         if self.balanceOf[self] > 0:
             self._transfer(self, self.rewards, self.balanceOf[self])
 
+
+@external
+def report(_gain: uint256, _loss: uint256, _debtPayment: uint256) -> uint256:
+    """
+    @notice
+        Reports the amount of assets the calling Strategy has free (usually in
+        terms of ROI).
+
+        This may only be called by a Strategy managed by this Vault.
+    @dev
+        For approved strategies, this is the most efficient behavior.
+        The Strategy reports back what it has free, then Vault "decides"
+        whether to take some back or give it more. Note that the most it can
+        take is `_gain + _debtPayment`, and the most it can give is all of the
+        remaining reserves. Anything outside of those bounds is abnormal behavior.
+
+        All approved strategies must have increased diligence around
+        calling this function, as abnormal behavior could become catastrophic.
+    @param _gain
+        Amount Strategy has realized as a gain on it's investment since its
+        last report, and is free to be given back to Vault as earnings
+    @param _loss
+        Amount Strategy has realized as a loss on it's investment since its
+        last report, and should be accounted for on the Vault's balance sheet
+    @param _debtPayment
+        Amount Strategy has made available to cover outstanding debt
+    @return Amount of debt outstanding (iff totalDebt > debtLimit).
+    """
+
+    # Only approved strategies can call this function
+    assert self.strategies[msg.sender].activation > 0
+    # No lying about total available to withdraw!
+    assert self.token.balanceOf(msg.sender) >= _gain + _debtPayment
+
+    # We have a loss to report, do it before the rest of the calculations
+    if _loss > 0:
+        self._reportLoss(msg.sender, _loss)
+
+    # Assess both management fee and performance fee, and issue both as shares of the vault
+    self._assessFees(msg.sender, _gain)
+
+    # Returns are always "realized gains"
+    self.strategies[msg.sender].totalGain += _gain
+
+    # Outstanding debt the Strategy wants to take back from the Vault (if any)
+    # NOTE: debtOutstanding <= StrategyParams.totalDebt
+    debt: uint256 = self._debtOutstanding(msg.sender)
+    debtPayment: uint256 = min(_debtPayment, debt)
+
+    if debtPayment > 0:
+        self.strategies[msg.sender].totalDebt -= debtPayment
+        self.totalDebt -= debtPayment
+        debt -= debtPayment
+        # NOTE: `debt` is being tracked for later
+
     # Compute the line of credit the Vault is able to offer the Strategy (if any)
     credit: uint256 = self._creditAvailable(msg.sender)
-
-    # Give/take balance to Strategy, based on the difference between the return and
-    # the credit increase we are offering (if any)
-    # NOTE: This is just used to adjust the balance of tokens between the Strategy and
-    #       the Vault based on the Strategy's debt limit (as well as the Vault's).
-    if _gain < credit:  # credit surplus, give to Strategy
-        assert self.token.transfer(msg.sender, credit - _gain)
-    elif _gain > credit:  # credit deficit, take from Strategy
-        assert self.token.transferFrom(msg.sender, self, _gain - credit)
-
-    # else, don't do anything because it is performing well as is
 
     # Update the actual debt based on the full credit we are extending to the Strategy
     # or the returns if we are taking funds back
@@ -1294,30 +1310,17 @@ def report(_gain: uint256, _loss: uint256) -> uint256:
         self.strategies[msg.sender].totalDebt += credit
         self.totalDebt += credit
 
-        # Returns are always "realized gains"
-        self.strategies[msg.sender].totalGain += _gain
-
-    elif debt > 0:  # We're repaying debt now, so there are no gains
-        if _gain <= debt:
-            # Pay down our debt with profit
-            # NOTE: Cannot return more than you borrowed
-            self.strategies[msg.sender].totalDebt -= _gain
-            self.totalDebt -= _gain
-            debt -= _gain  # Debt payment complete (to report back to Strategy)
-
-        else:
-            # Finish off our debt payments here
-            self.totalDebt -= debt
-            self.strategies[msg.sender].totalDebt -= debt
-
-            # Returns are always "realized gains" (after we have paid off our debt)
-            self.strategies[msg.sender].totalGain += _gain - debt
-            debt = 0  # All debts paid off (to report back to Strategy)
-
-    elif _gain > 0:  # No debt to pay, nor credit to expand with, add to profit!
-        self.strategies[msg.sender].totalGain += _gain
-
-    # else, no credit/debt to manage, nor returns to report. Nothing really happened!
+    # Give/take balance to Strategy, based on the difference between the reported gains
+    # (if any), the debt payment (if any), the credit increase we are offering (if any),
+    # and the debt needed to be paid off (if any)
+    # NOTE: This is just used to adjust the balance of tokens between the Strategy and
+    #       the Vault based on the Strategy's debt limit (as well as the Vault's).
+    totalAvail: uint256 = _gain + debtPayment
+    if totalAvail < credit:  # credit surplus, give to Strategy
+        assert self.token.transfer(msg.sender, credit - totalAvail)
+    elif totalAvail > credit:  # credit deficit, take from Strategy
+        assert self.token.transferFrom(msg.sender, self, totalAvail - credit)
+    # else, don't do anything because it is balanced
 
     # Update reporting time
     self.strategies[msg.sender].lastReport = block.timestamp
@@ -1334,7 +1337,7 @@ def report(_gain: uint256, _loss: uint256) -> uint256:
         self.strategies[msg.sender].debtLimit,
     )
 
-    if self.strategies[msg.sender].totalDebt == 0 or self.emergencyShutdown:
+    if self.strategies[msg.sender].debtLimit == 0 or self.emergencyShutdown:
         # Take every last penny the Strategy has (Emergency Exit/revokeStrategy)
         # NOTE: This is different than `debt` in order to extract *all* of the returns
         return self._balanceSheetOfStrategy(msg.sender)
