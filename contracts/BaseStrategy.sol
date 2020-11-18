@@ -220,14 +220,18 @@ abstract contract BaseStrategy {
     function estimatedTotalAssets() public virtual view returns (uint256);
 
     /*
-     * Perform any strategy unwinding or other calls necessary to capture
-     * the "free return" this strategy has generated since the last time it's
-     * core position(s) were adusted. Examples include unwrapping extra rewards.
-     * This call is only used during "normal operation" of a Strategy, and should
-     * be optimized to minimize losses as much as possible. This method returns
-     * any realized profits and/or realized losses incurred, and should also return
-     * the amount of `want` tokens available to repay outstanding debt to the Vault.
-
+     * Perform any strategy unwinding or other calls necessary to capture the "free return"
+     * this strategy has generated since the last time it's core position(s) were adjusted.
+     * Examples include unwrapping extra rewards. This call is only used during "normal operation"
+     * of a Strategy, and should be optimized to minimize losses as much as possible. This method
+     * returns any realized profits and/or realized losses incurred, and should return the total
+     * amounts of profits/losses/debt payments (in `want` tokens) for the Vault's accounting
+     * (e.g. `want.balanceOf(this) >= _debtPayment + _profit - _loss`).
+     *
+     * NOTE: `_debtPayment` should be less than or equal to `_debtOutstanding`. It is okay for it
+     *       to be less than `_debtOutstanding`, as that should only used as a guide for how much
+     *       is left to pay back. Payments should be made to minimize loss from slippage, debt,
+     *       withdrawal fees, etc.
      */
     function prepareReturn(uint256 _debtOutstanding)
         internal
