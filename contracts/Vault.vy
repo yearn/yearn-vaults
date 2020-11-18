@@ -92,7 +92,7 @@ struct StrategyParams:
     activation: uint256  # Activation block.number
     debtLimit: uint256  # Maximum borrow amount
     rateLimit: uint256  # Increase/decrease per block
-    lastReport: uint256  # block.number of the last time a report occured
+    lastReport: uint256  # block.timestamp of the last time a report occured
     totalDebt: uint256  # Total outstanding debt that Strategy has
     totalGain: uint256  # Total returns that Strategy has realized for Vault
     totalLoss: uint256  # Total losses that Strategy has realized for Vault
@@ -135,7 +135,7 @@ emergencyShutdown: public(bool)
 depositLimit: public(uint256)  # Limit for totalAssets the Vault can hold
 debtLimit: public(uint256)  # Debt limit for the Vault across all strategies
 totalDebt: public(uint256)  # Amount of tokens that all strategies have borrowed
-lastReport: public(uint256)  # Number of blocks since last report
+lastReport: public(uint256)  # block.timestamp of last report
 
 rewards: public(address)  # Rewards contract where Governance fees are sent to
 # Governance Fee for management of Vault (given to `rewards`)
@@ -143,7 +143,7 @@ managementFee: public(uint256)
 # Governance Fee for performance of Vault (given to `rewards`)
 performanceFee: public(uint256)
 FEE_MAX: constant(uint256) = 10_000  # 100%, or 10k basis points
-BLOCKS_PER_YEAR: constant(uint256) = 2_300_000
+SECS_PER_YEAR: constant(uint256) = 31_557_600  # 365.25 days
 
 
 @external
@@ -190,7 +190,7 @@ def __init__(
     self.performanceFee = 1000  # 10% of yield (per Strategy)
     self.managementFee = 200  # 2% per year
     self.depositLimit = MAX_UINT256  # Start unlimited
-    self.lastReport = block.number
+    self.lastReport = block.timestamp
 
 
 @pure
@@ -875,14 +875,17 @@ def addStrategy(
     @param _performanceFee
         The fee the strategist will receive based on this Vault's performance.
     """
+    assert _strategy != ZERO_ADDRESS
+    assert _rateLimit > 0
+
     assert msg.sender == self.governance
     assert self.strategies[_strategy].activation == 0
     self.strategies[_strategy] = StrategyParams({
         performanceFee: _performanceFee,
-        activation: block.number,
+        activation: block.timestamp,
         debtLimit: _debtLimit,
         rateLimit: _rateLimit,
-        lastReport: block.number,
+        lastReport: block.timestamp,
         totalDebt: 0,
         totalGain: 0,
         totalLoss: 0,
@@ -930,6 +933,8 @@ def updateStrategyRateLimit(
     @param _strategy The Strategy to update.
     @param _rateLimit The quantity of assets `_strategy` may now manage.
     """
+    assert _rateLimit > 0
+
     assert msg.sender == self.governance
     assert self.strategies[_strategy].activation > 0
     self.strategies[_strategy].rateLimit = _rateLimit
@@ -1116,12 +1121,11 @@ def _creditAvailable(_strategy: address) -> uint256:
     available = min(available, self.debtLimit - self.totalDebt)
 
     # Adjust by the rate limit algorithm (limits the step size per reporting period)
-    blockDelta: uint256 = block.number - strategy_lastReport
+    delta: uint256 = block.timestamp - strategy_lastReport
     # NOTE: Protect against unnecessary overflow faults here
     # NOTE: Set `strategy_rateLimit` to a really high number to disable the rate limit
-    # NOTE: *NEVER* set `strategy_rateLimit` to 0 or else this will always throw
-    if available / strategy_rateLimit >= blockDelta:
-        available = min(available, strategy_rateLimit * blockDelta)
+    if available / strategy_rateLimit >= delta:
+        available = min(available, strategy_rateLimit * delta)
 
     # Can only borrow up to what the contract has in reserve
     # NOTE: Running near 100% is discouraged
@@ -1150,19 +1154,15 @@ def creditAvailable(_strategy: address = msg.sender) -> uint256:
 @internal
 def _expectedReturn(_strategy: address) -> uint256:
     # See note on `expectedReturn()`.
-    strategy_lastReport: uint256 = self.strategies[_strategy].lastReport
-    strategy_totalGain: uint256 = self.strategies[_strategy].totalGain
-    strategy_activation: uint256 = self.strategies[_strategy].activation
-
-    blockDelta: uint256 = block.number - strategy_lastReport
-    if blockDelta > 0:
+    delta: uint256 = block.timestamp - self.strategies[_strategy].lastReport
+    if delta > 0:
         # NOTE: Unlikely to throw unless strategy accumalates >1e68 returns
         # NOTE: Will not throw for DIV/0 because activation <= lastReport
-        return (strategy_totalGain * blockDelta) / (
-            block.number - strategy_activation
+        return (self.strategies[_strategy].totalGain * delta) / (
+            block.timestamp - self.strategies[_strategy].activation
         )
     else:
-        return 0  # Covers the scenario when block.number == strategy_activation
+        return 0  # Covers the scenario when block.timestamp == activation
 
 
 @view
@@ -1236,13 +1236,12 @@ def report(_gain: uint256, _loss: uint256) -> uint256:
 
     # Issue new shares to cover fees
     # NOTE: In effect, this reduces overall share price by the combined fee
-    # NOTE: may throw if Vault.totalAssets() > 1e68, or not called for more than a year
+    # NOTE: may throw if Vault.totalAssets() > 1e64, or not called for more than a year
     governance_fee: uint256 = (
-        (self._totalAssets() * (block.number - self.lastReport) * self.managementFee)
+        (self._totalAssets() * (block.timestamp - self.lastReport) * self.managementFee)
         / FEE_MAX
-        / BLOCKS_PER_YEAR
+        / SECS_PER_YEAR
     )
-    self.lastReport = block.number
     strategist_fee: uint256 = 0  # Only applies in certain conditions
 
     # NOTE: Applies if Strategy is not shutting down, or it is but all debt paid off
@@ -1321,9 +1320,8 @@ def report(_gain: uint256, _loss: uint256) -> uint256:
     # else, no credit/debt to manage, nor returns to report. Nothing really happened!
 
     # Update reporting time
-    self.strategies[msg.sender].lastReport = block.number
-
-
+    self.strategies[msg.sender].lastReport = block.timestamp
+    self.lastReport = block.timestamp
 
     log StrategyReported(
         msg.sender,
