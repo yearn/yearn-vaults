@@ -27,7 +27,7 @@ NOTE: "free" assets in the Vault means the amount the Vault has freely available
 1. Only Governance can increase the parameters of a Strategy's borrowing limit.
 1. Only Governance can migrate a Strategy, and their current capital and debt, to a newer version of the Strategy.
 1. Governance can set the Guardian role to another account, without their permission.
-1. Either the Guardian or Governance can revoke a Strategy from borrowing any more assets from the Strategy and trigger a divestment of that Strategy.
+1. Either the Guardian or Governance can revoke a Strategy from borrowing any more assets from the Vault and trigger a divestment of that Strategy.
 1. Either the Guardian or Governance can trigger the Vault to enter Emergency Shutdown Mode and trigger a divestment from all connected Strategies.
 
 ### Fees
