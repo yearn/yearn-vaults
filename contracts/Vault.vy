@@ -421,6 +421,8 @@ def _transfer(_from: address, _to: address, _value: uint256):
 
     # Protect people from accidentally sending their shares to bad places
     assert not (_to in [self, ZERO_ADDRESS])
+    if self.lastDeposit[_from] == block.number:
+        self.lastDeposit[_to] = block.number
     self.balanceOf[_from] -= _value
     self.balanceOf[_to] += _value
     log Transfer(_from, _to, _value)
@@ -650,7 +652,7 @@ def deposit(_amount: uint256 = MAX_UINT256, _recipient: address = msg.sender) ->
         caller's address.
     @return The issued Vault shares.
     """
-    self.lastDeposit[msg.sender] = block.number
+    self.lastDeposit[_recipient] = block.number
     assert not self.emergencyShutdown  # Deposits are locked out
 
     amount: uint256 = _amount
