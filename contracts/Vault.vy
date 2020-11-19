@@ -86,6 +86,7 @@ governance: public(address)
 guardian: public(address)
 pendingGovernance: address
 guestList: public(GuestList)
+lastDeposit: HashMap[address, uint256]
 
 struct StrategyParams:
     performanceFee: uint256  # Strategist's fee (basis points)
@@ -649,6 +650,7 @@ def deposit(_amount: uint256 = MAX_UINT256, _recipient: address = msg.sender) ->
         caller's address.
     @return The issued Vault shares.
     """
+    self.lastDeposit[msg.sender] = block.number
     assert not self.emergencyShutdown  # Deposits are locked out
 
     amount: uint256 = _amount
@@ -764,6 +766,7 @@ def withdraw(_shares: uint256 = MAX_UINT256, _recipient: address = msg.sender) -
         caller's address.
     @return The quantity of tokens redeemable for `_shares`.
     """
+    assert block.number > self.lastDeposit[msg.sender]
     shares: uint256 = _shares  # May reduce this number below
 
     # If _shares not specified, transfer full share balance
