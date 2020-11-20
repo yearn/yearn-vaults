@@ -691,7 +691,10 @@ def deposit(_amount: uint256 = MAX_UINT256, _recipient: address = msg.sender) ->
 def _shareValue(_shares: uint256) -> uint256:
     # Determines the current value of `_shares`.
         # NOTE: if sqrt(Vault.totalAssets()) >>> 1e39, this could potentially revert
-    return (_shares * (self._totalAssets())) / self.totalSupply
+    if self.totalSupply == 0:
+        return 0
+    else:
+        return (_shares * (self._totalAssets())) / self.totalSupply
 
 
 @view

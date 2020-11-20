@@ -30,6 +30,7 @@ def test_vault_deployment(guardian, gov, rewards, token, Vault):
     assert vault.debtOutstanding() == 0
     assert vault.maxAvailableShares() == 0
     assert vault.totalAssets() == 0
+    assert vault.pricePerShare() == 0
 
 
 def test_vault_name_symbol_override(guardian, gov, rewards, token, Vault):
