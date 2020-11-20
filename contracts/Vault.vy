@@ -38,7 +38,6 @@
 API_VERSION: constant(String[28]) = "0.2.0"
 
 # TODO: Add ETH Configuration
-# TODO: Add Delegated Configuration
 from vyper.interfaces import ERC20
 
 implements: ERC20
@@ -173,7 +172,6 @@ def __init__(
     @param _nameOverride Specify a custom Vault name. Leave empty for default choice.
     @param _symbolOverride Specify a custom Vault symbol name. Leave empty for default choice.
     """
-    # TODO: Non-detailed Configuration?
     self.token = ERC20(_token)
     if _nameOverride == "":
         self.name = concat(DetailedERC20(_token).symbol(), " yVault")
@@ -680,8 +678,6 @@ def deposit(_amount: uint256 = MAX_UINT256, _recipient: address = msg.sender) ->
     reserve: uint256 = self.token.balanceOf(self)
     # Tokens are transferred from msg.sender (may be different from _recipient)
     assert self.token.transferFrom(msg.sender, self, amount)
-    # TODO: `Deflationary` configuration only
-    assert self.token.balanceOf(self) - reserve == amount  # Deflationary token check
 
     return shares  # Just in case someone wants them
 
