@@ -67,16 +67,24 @@ contract TestStrategy is BaseStrategy {
         }
     }
 
-    function exitPosition() internal override returns (uint256 _loss, uint256 _debtPayment) {
+    function exitPosition(uint256 _debtOutstanding)
+        internal
+        override
+        returns (
+            uint256 _profit,
+            uint256 _loss,
+            uint256 _debtPayment
+        )
+    {
         uint256 totalAssets = want.balanceOf(address(this));
-        uint256 totalDebt = vault.strategies(address(this)).totalDebt;
 
-        // Record any losses
-        if (totalAssets >= totalDebt) {
-            _debtPayment = totalDebt;
+        // Three possibilities, profit, breakeven, losses
+        if (totalAssets >= _debtOutstanding) {
+            _profit = totalAssets.sub(_debtOutstanding);
+            _debtPayment = _debtOutstanding;
         } else {
             _debtPayment = totalAssets;
-            _loss = totalDebt.sub(totalAssets);
+            _loss = _debtOutstanding.sub(totalAssets);
         }
     }
 

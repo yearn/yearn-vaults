@@ -107,7 +107,7 @@ interface StrategyAPI {
 
     function harvest() external;
 
-    event Harvested(uint256 profit);
+    event Harvested(uint256 profit, uint256 loss, uint256 debtPayment);
 }
 
 /*
@@ -137,7 +137,7 @@ abstract contract BaseStrategy {
     IERC20 public want;
 
     // So indexers can keep track of this
-    event Harvested(uint256 profit);
+    event Harvested(uint256 profit, uint256 loss, uint256 debtPayment);
 
     // The minimum number of seconds between harvest calls
     // NOTE: Override this value with your own, or set dynamically below
@@ -260,7 +260,14 @@ abstract contract BaseStrategy {
      * should also return the amount of `want` tokens available to repay outstanding debt
      * to the Vault.
      */
-    function exitPosition() internal virtual returns (uint256 _loss, uint256 _debtPayment);
+    function exitPosition(uint256 _debtOutstanding)
+        internal
+        virtual
+        returns (
+            uint256 _profit,
+            uint256 _loss,
+            uint256 _debtPayment
+        );
 
     /*
      * Vault calls this function after shares are created during `Vault.report()`.
@@ -347,8 +354,9 @@ abstract contract BaseStrategy {
         uint256 loss = 0;
         uint256 debtPayment = 0;
         if (emergencyExit) {
-            (loss, debtPayment) = exitPosition(); // Free up as much capital as possible
+            // Free up as much capital as possible
             // NOTE: Don't take performance fee in this scenario
+            (profit, loss, debtPayment) = exitPosition(vault.debtOutstanding());
         } else {
             // Free up returns for Vault to pull
             (profit, loss, debtPayment) = prepareReturn(vault.debtOutstanding());
@@ -361,7 +369,7 @@ abstract contract BaseStrategy {
         // Check if free returns are left, and re-invest them
         adjustPosition(debtOutstanding);
 
-        emit Harvested(profit);
+        emit Harvested(profit, loss, debtPayment);
     }
 
     /*
@@ -394,7 +402,6 @@ abstract contract BaseStrategy {
     function setEmergencyExit() external {
         require(msg.sender == strategist || msg.sender == governance(), "!authorized");
         emergencyExit = true;
-        exitPosition();
         vault.revokeStrategy();
     }
 
