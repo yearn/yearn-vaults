@@ -691,10 +691,7 @@ def deposit(_amount: uint256 = MAX_UINT256, _recipient: address = msg.sender) ->
 def _shareValue(_shares: uint256) -> uint256:
     # Determines the current value of `_shares`.
         # NOTE: if sqrt(Vault.totalAssets()) >>> 1e39, this could potentially revert
-    if self.totalSupply == 0:
-        return 0
-    else:
-        return (_shares * (self._totalAssets())) / self.totalSupply
+    return (_shares * (self._totalAssets())) / self.totalSupply
 
 
 @view
@@ -836,7 +833,10 @@ def pricePerShare() -> uint256:
     @dev See dev note on `withdraw`.
     @return The value of a single share.
     """
-    return self._shareValue(10 ** self.decimals)
+    if self.totalSupply == 0:
+        return 0
+    else:
+        return self._shareValue(10 ** self.decimals)
 
 
 @internal
