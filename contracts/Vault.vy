@@ -833,7 +833,10 @@ def pricePerShare() -> uint256:
     @dev See dev note on `withdraw`.
     @return The value of a single share.
     """
-    return self._shareValue(10 ** self.decimals)
+    if self.totalSupply == 0:
+        return 10 ** self.decimals  # price of 1:1
+    else:
+        return self._shareValue(10 ** self.decimals)
 
 
 @internal
