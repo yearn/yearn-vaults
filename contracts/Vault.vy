@@ -834,7 +834,7 @@ def pricePerShare() -> uint256:
     @return The value of a single share.
     """
     if self.totalSupply == 0:
-        return 0
+        return 10 ** self.decimals()  # price of 1:1
     else:
         return self._shareValue(10 ** self.decimals)
 
