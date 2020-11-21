@@ -22,19 +22,19 @@ def test_deposit_with_zero_funds(vault, token, rando):
 
 def test_deposit_with_wrong_amount(chain, vault, token, gov):
     chain.mine(3)
-    balance = token.balanceOf(gov) + 1
+    balance = token.balanceOf(gov) + 1e18
     chain.mine(3)
     print(f"balance={balance}")
     chain.mine(3)
     token.approve(vault, balance, {"from": gov})
     chain.mine(3)
     with brownie.reverts():
-        vault.deposit(balance, {"from": gov})
+        t = vault.deposit(balance, {"from": gov})
 
 
 def test_deposit_with_wrong_amount2(chain, vault, token, gov):
     chain.mine(3)
-    balance = token.balanceOf(gov) + 1
+    balance = token.balanceOf(gov) + 1e18
     chain.mine(3)
     print(f"balance={balance}")
     chain.mine(3)
