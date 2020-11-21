@@ -21,7 +21,7 @@ def test_deposit_with_zero_funds(vault, token, rando):
 
 
 def test_deposit_with_wrong_amount(vault, token, gov):
-    balance = token.balanceOf(gov) + 1
+    balance = token.balanceOf(gov) + 1e18
     token.approve(vault, balance, {"from": gov})
     with brownie.reverts():
         vault.deposit(balance, {"from": gov})
