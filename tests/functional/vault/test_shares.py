@@ -31,6 +31,7 @@ def test_deposit_with_wrong_amount(chain, vault, token, gov):
     with brownie.reverts():
         vault.deposit(balance, {"from": gov})
 
+
 def test_deposit_with_wrong_amount2(chain, vault, token, gov):
     chain.mine(3)
     balance = token.balanceOf(gov) + 1
@@ -42,6 +43,7 @@ def test_deposit_with_wrong_amount2(chain, vault, token, gov):
     t = vault.deposit(balance, {"from": gov})
     print(f"events: {t.events}")
     print(f"errors: {t.errors}")
+
 
 def test_deposit_with_guest_list(vault, guest_list, token, gov, rando, history):
     # Make sure we're attempting to deposit something
