@@ -107,7 +107,7 @@ interface StrategyAPI {
 
     function harvest() external;
 
-    event Harvested(uint256 profit, uint256 loss, uint256 debtPayment);
+    event Harvested(uint256 profit, uint256 loss, uint256 debtPayment, uint256 debtOutstanding);
 }
 
 /*
@@ -137,7 +137,7 @@ abstract contract BaseStrategy {
     IERC20 public want;
 
     // So indexers can keep track of this
-    event Harvested(uint256 profit, uint256 loss, uint256 debtPayment);
+    event Harvested(uint256 profit, uint256 loss, uint256 debtPayment, uint256 debtOutstanding);
 
     // The minimum number of seconds between harvest calls
     // NOTE: Override this value with your own, or set dynamically below
@@ -369,7 +369,7 @@ abstract contract BaseStrategy {
         // Check if free returns are left, and re-invest them
         adjustPosition(debtOutstanding);
 
-        emit Harvested(profit, loss, debtPayment);
+        emit Harvested(profit, loss, debtPayment, debtOutstanding);
     }
 
     /*
