@@ -674,8 +674,6 @@ def deposit(_amount: uint256 = MAX_UINT256, _recipient: address = msg.sender) ->
     # See @dev note, above.
     shares: uint256 = self._issueSharesForAmount(_recipient, amount)
 
-    # Get new collateral
-    reserve: uint256 = self.token.balanceOf(self)
     # Tokens are transferred from msg.sender (may be different from _recipient)
     assert self.token.transferFrom(msg.sender, self, amount)
 
