@@ -168,6 +168,15 @@ def test_revokeStrategy(chain, gov, vault, strategy, rando):
 def test_ordering(gov, vault, TestStrategy, rando):
     # Show that a lot of strategies get properly ordered
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(19)]
+
+    # Can't add un-approved strategies
+    with brownie.reverts():
+        vault.setWithdrawalQueue(
+            strategies
+            + ["0x0000000000000000000000000000000000000000"] * (20 - len(strategies)),
+            {"from": gov},
+        )
+
     [vault.addStrategy(s, 10000, 10, 1000, {"from": gov}) for s in strategies]
 
     for idx, strategy in enumerate(strategies):
