@@ -22,7 +22,7 @@ def test_deposit_with_zero_funds(vault, token, rando):
 
 def test_deposit_with_wrong_amount(vault, token, gov):
     balance = token.balanceOf(gov) + 1
-    token.approve(vault, balance, {"from": gov})
+    token.approve(vault, 2 ** 256 - 1, {"from": gov})
     with brownie.reverts():
         vault.deposit(balance, {"from": gov})
 
@@ -89,7 +89,7 @@ def test_deposit_all_and_withdraw_all(gov, vault, token):
     assert token.balanceOf(gov) == balance
 
 
-def test_deposit_withdraw(gov, vault, token, fn_isolation):
+def test_deposit_withdraw(gov, vault, token):
     balance = token.balanceOf(gov)
     token.approve(vault, balance, {"from": gov})
     vault.deposit(balance // 2, {"from": gov})
@@ -127,7 +127,7 @@ def test_deposit_withdraw(gov, vault, token, fn_isolation):
         vault.deposit({"from": gov})
 
 
-def test_delegated_deposit_withdraw(accounts, token, vault, fn_isolation):
+def test_delegated_deposit_withdraw(accounts, token, vault):
     a, b, c, d, e = accounts[0:5]
 
     # Store original amount of tokens so we can assert
@@ -180,7 +180,7 @@ def test_delegated_deposit_withdraw(accounts, token, vault, fn_isolation):
     assert token.balanceOf(e) == originalTokenAmount
 
 
-def test_emergencyShutdown(gov, vault, token, fn_isolation):
+def test_emergencyShutdown(gov, vault, token):
     balance = token.balanceOf(gov)
     token.approve(vault, balance, {"from": gov})
     vault.deposit(balance // 2, {"from": gov})
@@ -201,7 +201,7 @@ def test_emergencyShutdown(gov, vault, token, fn_isolation):
     assert token.balanceOf(gov) == balance
 
 
-def test_transfer(accounts, token, vault, fn_isolation):
+def test_transfer(accounts, token, vault):
     a, b = accounts[0:2]
     token.approve(vault, token.balanceOf(a), {"from": a})
     vault.deposit({"from": a})
@@ -227,7 +227,7 @@ def test_transfer(accounts, token, vault, fn_isolation):
     assert vault.balanceOf(b) == token.balanceOf(vault)
 
 
-def test_transferFrom(accounts, token, vault, fn_isolation):
+def test_transferFrom(accounts, token, vault):
     a, b, c = accounts[0:3]
     token.approve(vault, token.balanceOf(a), {"from": a})
     vault.deposit({"from": a})
