@@ -1028,10 +1028,7 @@ def addStrategyToQueue(_strategy: address):
     """
     assert msg.sender == self.governance
     # Must be a current Strategy
-    assert (
-        self.strategies[_strategy].activation > 0
-        and self.strategies[_strategy].totalDebt > 0
-    )
+    assert self.strategies[_strategy].activation > 0
     # Check if queue is full
     assert self.withdrawalQueue[MAXIMUM_STRATEGIES - 1] == ZERO_ADDRESS
     # Can't already be in the queue
