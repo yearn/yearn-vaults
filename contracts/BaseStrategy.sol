@@ -342,7 +342,7 @@ abstract contract BaseStrategy {
 
         // Otherwise, only trigger if it "makes sense" economically (gas cost is <N% of value moved)
         uint256 credit = vault.creditAvailable();
-        return (profitFactor * callCost < credit.add(profit));
+        return (profitFactor.mul(callCost) < credit.add(profit));
     }
 
     function harvest() external {
