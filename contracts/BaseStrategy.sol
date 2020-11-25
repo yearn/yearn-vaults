@@ -164,6 +164,27 @@ abstract contract BaseStrategy {
 
     bool public emergencyExit;
 
+    // modifiers
+    modifier onlyAuthorized() {
+        require(msg.sender == strategist || msg.sender == governance(), "!authorized");
+        _;
+    }
+
+    modifier onlyStrategist() {
+        require(msg.sender == strategist, "!strategist");
+        _;
+    }
+
+    modifier onlyGovernance() {
+        require(msg.sender == governance(), "!authorized");
+        _;
+    }
+
+    modifier onlyKeepers() {
+        require(msg.sender == keeper || msg.sender == strategist || msg.sender == governance(), "!authorized");
+        _;
+    }
+
     constructor(address _vault) public {
         vault = VaultAPI(_vault);
         want = IERC20(vault.token());
@@ -173,38 +194,32 @@ abstract contract BaseStrategy {
         keeper = msg.sender;
     }
 
-    function setStrategist(address _strategist) external {
-        require(msg.sender == strategist || msg.sender == governance(), "!authorized");
+    function setStrategist(address _strategist) external onlyAuthorized {
         strategist = _strategist;
         emit UpdatedStrategist(_strategist);
     }
 
-    function setKeeper(address _keeper) external {
-        require(msg.sender == strategist || msg.sender == governance(), "!authorized");
+    function setKeeper(address _keeper) external onlyAuthorized {
         keeper = _keeper;
         emit UpdatedKeeper(_keeper);
     }
 
-    function setRewards(address _rewards) external {
-        require(msg.sender == strategist, "!authorized");
+    function setRewards(address _rewards) external onlyStrategist {
         rewards = _rewards;
         emit UpdatedRewards(_rewards);
     }
 
-    function setMinReportDelay(uint256 _delay) external {
-        require(msg.sender == strategist || msg.sender == governance(), "!authorized");
+    function setMinReportDelay(uint256 _delay) external onlyAuthorized {
         minReportDelay = _delay;
         emit UpdatedReportDelay(_delay);
     }
 
-    function setProfitFactor(uint256 _profitFactor) external {
-        require(msg.sender == strategist || msg.sender == governance(), "!authorized");
+    function setProfitFactor(uint256 _profitFactor) external onlyAuthorized {
         profitFactor = _profitFactor;
         emit UpdatedProfitFactor(_profitFactor);
     }
 
-    function setDebtThreshold(uint256 _debtThreshold) external {
-        require(msg.sender == strategist || msg.sender == governance(), "!authorized");
+    function setDebtThreshold(uint256 _debtThreshold) external onlyAuthorized {
         debtThreshold = _debtThreshold;
         emit UpdatedDebtThreshold(_debtThreshold);
     }
@@ -314,11 +329,7 @@ abstract contract BaseStrategy {
         return false;
     }
 
-    function tend() external {
-        if (keeper != address(0)) {
-            require(msg.sender == keeper || msg.sender == strategist || msg.sender == governance(), "!authorized");
-        }
-
+    function tend() external onlyKeepers {
         // Don't take profits with this call, but adjust for better gains
         adjustPosition(vault.debtOutstanding());
     }
@@ -363,11 +374,7 @@ abstract contract BaseStrategy {
         return (profitFactor.mul(callCost) < credit.add(profit));
     }
 
-    function harvest() external {
-        if (keeper != address(0)) {
-            require(msg.sender == keeper || msg.sender == strategist || msg.sender == governance(), "!authorized");
-        }
-
+    function harvest() external onlyKeepers {
         uint256 profit = 0;
         uint256 loss = 0;
         uint256 debtPayment = 0;
@@ -417,8 +424,7 @@ abstract contract BaseStrategy {
         want.transfer(_newStrategy, want.balanceOf(address(this)));
     }
 
-    function setEmergencyExit() external {
-        require(msg.sender == strategist || msg.sender == governance(), "!authorized");
+    function setEmergencyExit() external onlyAuthorized {
         emergencyExit = true;
         vault.revokeStrategy();
     }
@@ -438,8 +444,7 @@ abstract contract BaseStrategy {
     //    }
     function protectedTokens() internal virtual view returns (address[] memory);
 
-    function sweep(address _token) external {
-        require(msg.sender == governance(), "!authorized");
+    function sweep(address _token) external onlyGovernance {
         require(_token != address(want), "!want");
 
         address[] memory _protectedTokens = protectedTokens();
