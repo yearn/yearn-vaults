@@ -1,5 +1,6 @@
 class NormalOperation:
-    def __init__(self, web3, token, vault, strategy, user, farm, keeper):
+    def __init__(self, chain, web3, token, vault, strategy, user, farm, keeper):
+        self.chain = chain
         self.web3 = web3
         self.token = token
         self.vault = vault
@@ -30,6 +31,7 @@ class NormalOperation:
         self.token.transfer(self.strategy, amt, {"from": self.farm})
 
         # Keeper decides to harvest the yield
+        self.chain.sleep(1)
         self.strategy.harvest({"from": self.keeper})
 
     # TODO: Invariant that user did not get > they should have
@@ -38,8 +40,10 @@ class NormalOperation:
 
 
 def test_normal_operation(
-    web3, new_strategy, vault, token, chad, andre, keeper, state_machine
+    chain, web3, new_strategy, vault, token, chad, andre, keeper, state_machine
 ):
     strategy = new_strategy(debt_ratio=1.0, seed_debt=True)
     assert token.balanceOf(vault) == 0
-    state_machine(NormalOperation, web3, token, vault, strategy, chad, andre, keeper)
+    state_machine(
+        NormalOperation, chain, web3, token, vault, strategy, chad, andre, keeper
+    )

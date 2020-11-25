@@ -5,6 +5,7 @@ def test_emergency_shutdown(token, gov, vault, strategy, keeper, chain):
     # NOTE: totalSupply matches total investment at t = 0
     initial_investment = vault.totalSupply()
     # Do it once to seed it with debt
+    chain.sleep(1)  # Reverts if no delta time
     strategy.harvest({"from": keeper})
     add_yield = lambda: token.transfer(
         strategy, token.balanceOf(strategy) // 50, {"from": gov}
@@ -43,6 +44,7 @@ def test_emergency_shutdown(token, gov, vault, strategy, keeper, chain):
 
     # Do it once more, for good luck (and also coverage)
     token.transfer(strategy, token.balanceOf(gov), {"from": gov})
+    chain.sleep(1)  # Reverts if no delta time
     strategy.harvest({"from": keeper})
 
     # Vault didn't lose anything during shutdown
@@ -55,6 +57,7 @@ def test_emergency_exit(token, gov, vault, strategy, keeper, chain):
     # NOTE: totalSupply matches total investment at t = 0
     initial_investment = vault.totalSupply()
     # Do it once to seed it with debt
+    chain.sleep(1)  # Reverts if no delta time
     strategy.harvest({"from": keeper})
     add_yield = lambda: token.transfer(
         strategy, token.balanceOf(strategy) // 50, {"from": gov}

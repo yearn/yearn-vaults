@@ -34,5 +34,6 @@ def test_zero_limit(gov, vault, token, TestStrategy):
     vault.addStrategy(strategy, 2_000, 0, 0, {"from": gov})
 
     assert token.balanceOf(strategy) == 0
+    chain.sleep(1)  # Reverts if no delta time
     strategy.harvest({"from": gov})
     assert token.balanceOf(strategy) == vault.totalAssets() // 5

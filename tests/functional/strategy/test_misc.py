@@ -2,7 +2,7 @@ import pytest
 import brownie
 
 
-def test_harvest_tend_authority(gov, keeper, strategist, strategy, rando):
+def test_harvest_tend_authority(chain, gov, keeper, strategist, strategy, rando):
     # Only keeper, strategist, or gov can call tend
     strategy.tend({"from": keeper})
     strategy.tend({"from": strategist})
@@ -11,9 +11,13 @@ def test_harvest_tend_authority(gov, keeper, strategist, strategy, rando):
         strategy.tend({"from": rando})
 
     # Only keeper, strategist, or gov can call harvest
+    chain.sleep(1)  # Reverts if no delta time
     strategy.harvest({"from": keeper})
+    chain.sleep(1)  # Reverts if no delta time
     strategy.harvest({"from": strategist})
+    chain.sleep(1)  # Reverts if no delta time
     strategy.harvest({"from": gov})
+    chain.sleep(1)  # Reverts if no delta time
     with brownie.reverts():
         strategy.harvest({"from": rando})
 
@@ -48,6 +52,7 @@ def test_harvest_tend_trigger(chain, gov, vault, token, TestStrategy):
 
     # Stops after it runs out of balance
     while strategy.harvestTrigger(0):
+        chain.sleep(1)  # Reverts if no delta time
         strategy.harvest({"from": gov})
 
     assert strategy.estimatedTotalAssets() == 0

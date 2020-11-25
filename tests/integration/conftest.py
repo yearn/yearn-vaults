@@ -96,11 +96,9 @@ def new_strategy(chain, gov, strategist, keeper, vault, TestStrategy):
         if seed_debt:
             mgmt_fee = vault.managementFee()
             vault.setManagementFee(0, {"from": gov})
-            blocks_to_wait = math.ceil(
-                vault.strategies(strategy)[2] / vault.strategies(strategy)[3]
-            )
-            assert blocks_to_wait < 50, "Set the rate limit lower!"
-            chain.mine(blocks_to_wait)  # Should be at least 1
+            params = vault.strategies(strategy).dict()
+            secs_to_wait = math.ceil(debt_limit / rate_limit)
+            chain.sleep(secs_to_wait)  # Should be at least 1
             strategy.harvest({"from": keeper})  # Seed strategy up with debt
             vault.setManagementFee(mgmt_fee, {"from": gov})
         return strategy
