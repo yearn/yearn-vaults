@@ -139,6 +139,18 @@ abstract contract BaseStrategy {
     // So indexers can keep track of this
     event Harvested(uint256 profit, uint256 loss, uint256 debtPayment, uint256 debtOutstanding);
 
+    event UpdatedStrategist(address newStrategist);
+
+    event UpdatedKeeper(address newKeeper);
+
+    event UpdatedRewards(address rewards);
+
+    event UpdatedReportDelay(uint256 delay);
+
+    event UpdatedProfitFactor(uint256 profitFactor);
+
+    event UpdatedDebtThreshold(uint256 debtThreshold);
+
     // The minimum number of seconds between harvest calls
     // NOTE: Override this value with your own, or set dynamically below
     uint256 public minReportDelay = 86400; // ~ once a day
@@ -164,31 +176,37 @@ abstract contract BaseStrategy {
     function setStrategist(address _strategist) external {
         require(msg.sender == strategist || msg.sender == governance(), "!authorized");
         strategist = _strategist;
+        emit UpdatedStrategist(_strategist);
     }
 
     function setKeeper(address _keeper) external {
         require(msg.sender == strategist || msg.sender == governance(), "!authorized");
         keeper = _keeper;
+        emit UpdatedKeeper(_keeper);
     }
 
     function setRewards(address _rewards) external {
         require(msg.sender == strategist, "!authorized");
         rewards = _rewards;
+        emit UpdatedRewards(_rewards);
     }
 
     function setMinReportDelay(uint256 _delay) external {
         require(msg.sender == strategist || msg.sender == governance(), "!authorized");
         minReportDelay = _delay;
+        emit UpdatedReportDelay(_delay);
     }
 
     function setProfitFactor(uint256 _profitFactor) external {
         require(msg.sender == strategist || msg.sender == governance(), "!authorized");
         profitFactor = _profitFactor;
+        emit UpdatedProfitFactor(_profitFactor);
     }
 
     function setDebtThreshold(uint256 _debtThreshold) external {
         require(msg.sender == strategist || msg.sender == governance(), "!authorized");
         debtThreshold = _debtThreshold;
+        emit UpdatedDebtThreshold(_debtThreshold);
     }
 
     /*
