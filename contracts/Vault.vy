@@ -764,7 +764,7 @@ def withdraw(_shares: uint256 = MAX_UINT256, _recipient: address = msg.sender) -
         caller's address.
     @return The quantity of tokens redeemable for `_shares`.
     """
-    assert block.timestamp != self.lastReport  # dev: harvest in progress
+    assert block.timestamp != self.lastReport  # dev: harvest already happened this block
     shares: uint256 = _shares  # May reduce this number below
 
     # If _shares not specified, transfer full share balance
