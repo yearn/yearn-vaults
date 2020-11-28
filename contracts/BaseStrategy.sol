@@ -308,7 +308,9 @@ abstract contract BaseStrategy {
      */
     function distributeRewards() internal virtual {
         // Transfer 100% of newly-minted shares awarded to this contract to the rewards address.
-        vault.transfer(rewards, vault.balanceOf(address(this)));
+        if (vault.balanceOf(address(this)) > 0) {
+            vault.transfer(rewards, vault.balanceOf(address(this)));
+        }
     }
 
     /*
