@@ -662,12 +662,12 @@ def deposit(_amount: uint256 = MAX_UINT256, _recipient: address = msg.sender) ->
             self.depositLimit - self._totalAssets(),
             self.token.balanceOf(msg.sender),
         )
+    else:
+        # Ensure deposit limit is respected
+        assert self._totalAssets() + amount <= self.depositLimit
 
     # Ensure we are depositing something
     assert amount > 0
-
-    # Ensure deposit limit is respected
-    assert self._totalAssets() + amount <= self.depositLimit
 
     # Ensure deposit is permitted by guest list
     if self.guestList.address != ZERO_ADDRESS:
