@@ -120,11 +120,39 @@ def test_deposit_withdraw(gov, vault, token):
     assert vault.totalDebt() == 0
     assert token.balanceOf(gov) == balance
 
+
+def test_deposit_limit(gov, token, vault):
+    token.approve(vault, 2 ** 256 - 1, {"from": gov})
+
     vault.setDepositLimit(0, {"from": gov})
 
     # Deposits are locked out
     with brownie.reverts():
         vault.deposit({"from": gov})
+
+    balance = token.balanceOf(gov)
+    vault.setDepositLimit(balance // 2, {"from": gov})
+
+    # Can deposit less than limit
+    vault.deposit(balance // 3, {"from": gov})
+    assert vault.balanceOf(gov) == balance // 3
+
+    # With the integer arg, it must be at or below the limit
+    with brownie.reverts():
+        vault.deposit(token.balanceOf(gov), {"from": gov})
+
+    # Without the integer arg, it takes up to whatever's left
+    vault.deposit({"from": gov})
+    assert vault.balanceOf(gov) == balance // 2
+
+    # Deposits are locked out
+    with brownie.reverts():
+        vault.deposit({"from": gov})
+
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+
+    # Now it will take the rest
+    vault.deposit({"from": gov})
 
 
 def test_delegated_deposit_withdraw(accounts, token, vault):

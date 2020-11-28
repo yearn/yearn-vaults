@@ -2,6 +2,9 @@ import pytest
 import brownie
 
 
+ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
+
+
 @pytest.fixture
 def vault(gov, token, Vault):
     # NOTE: Because the fixture has tokens in it already
@@ -159,7 +162,7 @@ def test_revokeStrategy(chain, gov, vault, strategy, rando):
 
     assert vault.withdrawalQueue(0) == strategy
     vault.removeStrategyFromQueue(strategy, {"from": gov})
-    assert vault.withdrawalQueue(0) == "0x0000000000000000000000000000000000000000"
+    assert vault.withdrawalQueue(0) == ZERO_ADDRESS
     # Can only do it once
     with brownie.reverts():
         vault.removeStrategyFromQueue(strategy, {"from": gov})
@@ -168,6 +171,13 @@ def test_revokeStrategy(chain, gov, vault, strategy, rando):
 def test_ordering(gov, vault, TestStrategy, rando):
     # Show that a lot of strategies get properly ordered
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(19)]
+
+    # Can't add un-approved strategies
+    with brownie.reverts():
+        vault.setWithdrawalQueue(
+            strategies + [ZERO_ADDRESS] * (20 - len(strategies)), {"from": gov},
+        )
+
     [vault.addStrategy(s, 10000, 10, 1000, {"from": gov}) for s in strategies]
 
     for idx, strategy in enumerate(strategies):
@@ -178,14 +188,10 @@ def test_ordering(gov, vault, TestStrategy, rando):
     # NOTE: Not just anyone can do this
     with brownie.reverts():
         vault.setWithdrawalQueue(
-            strategies
-            + ["0x0000000000000000000000000000000000000000"] * (20 - len(strategies)),
-            {"from": rando},
+            strategies + [ZERO_ADDRESS] * (20 - len(strategies)), {"from": rando},
         )
     vault.setWithdrawalQueue(
-        strategies
-        + ["0x0000000000000000000000000000000000000000"] * (20 - len(strategies)),
-        {"from": gov},
+        strategies + [ZERO_ADDRESS] * (20 - len(strategies)), {"from": gov},
     )
 
     for idx, strategy in enumerate(strategies):
@@ -206,14 +212,35 @@ def test_ordering(gov, vault, TestStrategy, rando):
         )
 
     # Show that removing from the middle properly orders
-    strategy = strategies.pop(1)
+    removed_strategy = strategies.pop(1)
     # NOTE: Not just anyone can do this
     with brownie.reverts():
-        vault.removeStrategyFromQueue(strategy, {"from": rando})
-    vault.removeStrategyFromQueue(strategy, {"from": gov})
+        vault.removeStrategyFromQueue(removed_strategy, {"from": rando})
+
+    vault.removeStrategyFromQueue(removed_strategy, {"from": gov})
 
     for idx, strategy in enumerate(strategies):
         assert vault.withdrawalQueue(idx) == strategy
+
+    assert vault.withdrawalQueue(len(strategies)) == ZERO_ADDRESS
+
+    # Not just anyone can add it back
+    with brownie.reverts():
+        vault.addStrategyToQueue(removed_strategy, {"from": rando})
+
+    # Can't add an unauthorized strategy
+    with brownie.reverts():
+        vault.addStrategyToQueue(rando, {"from": gov})
+
+    vault.addStrategyToQueue(removed_strategy, {"from": gov})
+    strategies.append(removed_strategy)
+
+    for idx, strategy in enumerate(strategies):
+        assert vault.withdrawalQueue(idx) == strategy
+
+    # Can't add the same strategy twice
+    with brownie.reverts():
+        vault.addStrategyToQueue(removed_strategy, {"from": gov})
 
 
 def test_reporting(vault, strategy, gov, rando):
