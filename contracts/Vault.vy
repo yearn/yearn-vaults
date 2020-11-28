@@ -50,7 +50,6 @@ interface DetailedERC20:
 
 
 interface Strategy:
-    def distributeRewards(_shares: uint256): nonpayable
     def estimatedTotalAssets() -> uint256: view
     def withdraw(_amount: uint256): nonpayable
     def migrate(_newStrategy: address): nonpayable
@@ -90,7 +89,7 @@ struct StrategyParams:
     performanceFee: uint256  # Strategist's fee (basis points)
     activation: uint256  # Activation block.number
     debtLimit: uint256  # Maximum borrow amount
-    rateLimit: uint256  # Increase/decrease per block
+    rateLimit: uint256  # Max increase in debt per second since last harvest
     lastReport: uint256  # block.timestamp of the last time a report occured
     totalDebt: uint256  # Total outstanding debt that Strategy has
     totalGain: uint256  # Total returns that Strategy has realized for Vault
@@ -465,7 +464,10 @@ def transferFrom(_from: address, _to: address, _value: uint256) -> bool:
     """
     # Unlimited approval (saves an SSTORE)
     if (self.allowance[_from][msg.sender] < MAX_UINT256):
-        self.allowance[_from][msg.sender] -= _value
+        allowance: uint256 = self.allowance[_from][msg.sender] - _value
+        self.allowance[_from][msg.sender] = allowance
+        # NOTE: Allows log filters to have a full accounting of allowance changes
+        log Approval(_from, msg.sender, allowance)
     self._transfer(_from, _to, _value)
     return True
 
@@ -660,12 +662,12 @@ def deposit(_amount: uint256 = MAX_UINT256, _recipient: address = msg.sender) ->
             self.depositLimit - self._totalAssets(),
             self.token.balanceOf(msg.sender),
         )
+    else:
+        # Ensure deposit limit is respected
+        assert self._totalAssets() + amount <= self.depositLimit
 
     # Ensure we are depositing something
     assert amount > 0
-
-    # Ensure deposit limit is respected
-    assert self._totalAssets() + amount <= self.depositLimit
 
     # Ensure deposit is permitted by guest list
     if self.guestList.address != ZERO_ADDRESS:
@@ -780,10 +782,10 @@ def withdraw(_shares: uint256 = MAX_UINT256, _recipient: address = msg.sender) -
             if strategy == ZERO_ADDRESS:
                 break  # We've exhausted the queue
 
-            amountNeeded: uint256 = value - self.token.balanceOf(self)
-
-            if amountNeeded == 0:
+            if value <= self.token.balanceOf(self):
                 break  # We're done withdrawing
+
+            amountNeeded: uint256 = value - self.token.balanceOf(self)
 
             # NOTE: Don't withdraw more than the debt so that Strategy can still
             #       continue to work based on the profits it has
@@ -1235,7 +1237,7 @@ def _assessFees(_strategy: address, _gain: uint256):
             # NOTE: Unlikely to throw unless sqrt(reward) >>> 1e39
             strategist_reward: uint256 = (strategist_fee * reward) / total_fee
             self._transfer(self, _strategy, strategist_reward)
-            Strategy(_strategy).distributeRewards(strategist_reward)
+            # NOTE: Strategy distributes rewards at the end of harvest()
         # NOTE: Governance earns any dust leftover from flooring math above
         if self.balanceOf[self] > 0:
             self._transfer(self, self.rewards, self.balanceOf[self])
@@ -1266,7 +1268,7 @@ def report(_gain: uint256, _loss: uint256, _debtPayment: uint256) -> uint256:
         last report, and should be accounted for on the Vault's balance sheet
     @param _debtPayment
         Amount Strategy has made available to cover outstanding debt
-    @return Amount of debt outstanding (iff totalDebt > debtLimit).
+    @return Amount of debt outstanding (if totalDebt > debtLimit or emergency shutdown).
     """
 
     # Only approved strategies can call this function
