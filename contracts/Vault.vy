@@ -780,10 +780,10 @@ def withdraw(_shares: uint256 = MAX_UINT256, _recipient: address = msg.sender) -
             if strategy == ZERO_ADDRESS:
                 break  # We've exhausted the queue
 
-            amountNeeded: uint256 = value - self.token.balanceOf(self)
-
-            if amountNeeded == 0:
+            if value <= self.token.balanceOf(self):
                 break  # We're done withdrawing
+
+            amountNeeded: uint256 = value - self.token.balanceOf(self)
 
             # NOTE: Don't withdraw more than the debt so that Strategy can still
             #       continue to work based on the profits it has
