@@ -464,7 +464,10 @@ def transferFrom(_from: address, _to: address, _value: uint256) -> bool:
     """
     # Unlimited approval (saves an SSTORE)
     if (self.allowance[_from][msg.sender] < MAX_UINT256):
-        self.allowance[_from][msg.sender] -= _value
+        allowance: uint256 = self.allowance[_from][msg.sender] - _value
+        self.allowance[_from][msg.sender] = allowance
+        # NOTE: Allows log filters to have a full accounting of allowance changes
+        log Approval(_from, msg.sender, allowance)
     self._transfer(_from, _to, _value)
     return True
 
