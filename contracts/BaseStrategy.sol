@@ -306,9 +306,9 @@ abstract contract BaseStrategy {
      * Vault calls this function after shares are created during `Vault.report()`.
      * You can customize this function to any share distribution mechanism you want.
      */
-    function distributeRewards(uint256 _shares) external virtual {
-        // Send 100% of newly-minted shares to the rewards address.
-        vault.transfer(rewards, _shares);
+    function distributeRewards() internal virtual {
+        // Transfer 100% of newly-minted shares awarded to this contract to the rewards address.
+        vault.transfer(rewards, vault.balanceOf(address(this)));
     }
 
     /*
@@ -391,6 +391,9 @@ abstract contract BaseStrategy {
         // the amount it has earned since the last time it reported to the Vault
         uint256 debtOutstanding = vault.report(profit, loss, debtPayment);
 
+        // Distribute any reward shares earned by the strategy on this report
+        distributeRewards();
+
         // Check if free returns are left, and re-invest them
         adjustPosition(debtOutstanding);
 
@@ -446,6 +449,7 @@ abstract contract BaseStrategy {
 
     function sweep(address _token) external onlyGovernance {
         require(_token != address(want), "!want");
+        require(_token != address(vault), "!shares");
 
         address[] memory _protectedTokens = protectedTokens();
         for (uint256 i; i < _protectedTokens.length; i++) require(_token != _protectedTokens[i], "!protected");

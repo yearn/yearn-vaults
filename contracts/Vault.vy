@@ -50,7 +50,6 @@ interface DetailedERC20:
 
 
 interface Strategy:
-    def distributeRewards(_shares: uint256): nonpayable
     def estimatedTotalAssets() -> uint256: view
     def withdraw(_amount: uint256): nonpayable
     def migrate(_newStrategy: address): nonpayable
@@ -1235,7 +1234,7 @@ def _assessFees(_strategy: address, _gain: uint256):
             # NOTE: Unlikely to throw unless sqrt(reward) >>> 1e39
             strategist_reward: uint256 = (strategist_fee * reward) / total_fee
             self._transfer(self, _strategy, strategist_reward)
-            Strategy(_strategy).distributeRewards(strategist_reward)
+            # NOTE: Strategy distributes rewards at the end of harvest()
         # NOTE: Governance earns any dust leftover from flooring math above
         if self.balanceOf[self] > 0:
             self._transfer(self, self.rewards, self.balanceOf[self])
