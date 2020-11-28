@@ -254,9 +254,9 @@ abstract contract BaseStrategy {
 
     /**
      * @notice
-     *  Changes `rewards`. Any distributed rewards will cease flowing to the
-     *  old address and begin flowing to this address once the change is in
-     *  effect.
+     *  Used to change `rewards`. Any distributed rewards will cease flowing
+     *  to the old address and begin flowing to this address once the change
+     *  is in effect.
      *
      *  This will not change any Strategy reports in progress, only
      *  new reports made after this change goes into effect.
