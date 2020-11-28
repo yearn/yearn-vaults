@@ -1268,7 +1268,7 @@ def report(_gain: uint256, _loss: uint256, _debtPayment: uint256) -> uint256:
         last report, and should be accounted for on the Vault's balance sheet
     @param _debtPayment
         Amount Strategy has made available to cover outstanding debt
-    @return Amount of debt outstanding (iff totalDebt > debtLimit).
+    @return Amount of debt outstanding (if totalDebt > debtLimit or emergency shutdown).
     """
 
     # Only approved strategies can call this function
