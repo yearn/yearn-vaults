@@ -200,6 +200,9 @@ def apiVersion() -> String[28]:
         Used to track the deployed version of this contract. In practice you
         can use this version number to compare with Yearn's GitHub and
         determine which version of the source matches this deployed contract.
+    @dev
+        All strategies must have an `apiVersion()` that matches the Vault's
+        `API_VERSION`.
     @return API_VERSION which holds the current version of this contract.
     """
     return API_VERSION
@@ -598,7 +601,7 @@ def _issueSharesForAmount(_to: address, _amount: uint256) -> uint256:
     # Issues `_amount` Vault shares to `_to`.
     # Shares must be issued prior to taking on new collateral, or
     # calculation will be wrong. This means that only *trusted* tokens
-    # (with no capability for exploitive behavior) can be used.
+    # (with no capability for exploitative behavior) can be used.
     shares: uint256 = 0
     # HACK: Saves 2 SLOADs (~4000 gas)
     totalSupply: uint256 = self.totalSupply
@@ -712,7 +715,11 @@ def maxAvailableShares() -> uint256:
         Determines the total quantity of shares this Vault can provide,
         factoring in assets currently residing in the Vault, as well as
         those deployed to strategies.
-    @dev Regarding how shares are calculated, see dev note on `deposit`.
+    @dev
+        Regarding how shares are calculated, see dev note on `deposit`.
+
+        If you want to calculated the maximum a user could withdraw up to,
+        you want to use this function.
     @return The total quantity of shares this Vault can provide.
     """
     shares: uint256 = self._sharesForAmount(self.token.balanceOf(self))
@@ -1246,6 +1253,13 @@ def report(_gain: uint256, _loss: uint256, _debtPayment: uint256) -> uint256:
     @notice
         Reports the amount of assets the calling Strategy has free (usually in
         terms of ROI).
+
+        The performance fee is determined here, off of the strategy's profits
+        (if any), and sent to governance.
+
+        The strategist's fee is also determined here (off of profits), and sent
+        to `strategy.distributeRewards()` to be handled according to the
+        strategist.
 
         This may only be called by a Strategy managed by this Vault.
     @dev
