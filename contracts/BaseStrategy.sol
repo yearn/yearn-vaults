@@ -111,7 +111,6 @@ interface StrategyAPI {
 
 /**
  * @title Yearn Base Strategy
- * @license GNU AGPLv3
  * @author yearn.finance
  * @notice
  *  BaseStrategy implements all of the required functionality to interoperate
@@ -294,8 +293,8 @@ abstract contract BaseStrategy {
      *  for more details.)
      *
      *  This may only be called by governance or the strategist.
-     * @param _profitFactor
-     *  A ratio to multiply anticipated `harvest()` gas cost against.
+     * @param _profitFactor A ratio to multiply anticipated
+     * `harvest()` gas cost against.
      */
     function setProfitFactor(uint256 _profitFactor) external onlyAuthorized {
         profitFactor = _profitFactor;
@@ -312,9 +311,8 @@ abstract contract BaseStrategy {
      *  `harvestTrigger()` for more details.)
      *
      *  This may only be called by governance or the strategist.
-     * @param _debtThreshold
-     *  How big of a loss this Strategy may carry without being required to
-     *  report to the Vault.
+     * @param _debtThreshold How big of a loss this Strategy may carry without
+     * being required to report to the Vault.
      */
     function setDebtThreshold(uint256 _debtThreshold) external onlyAuthorized {
         debtThreshold = _debtThreshold;
