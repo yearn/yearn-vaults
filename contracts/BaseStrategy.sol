@@ -114,7 +114,7 @@ interface StrategyAPI {
  * @author yearn.finance
  * @notice
  *  BaseStrategy implements all of the required functionality to interoperate
- *  closely with the core protocol. This contract should be inherited and the
+ *  closely with the Vault contract. This contract should be inherited and the
  *  abstract methods implemented to adapt the Strategy to the particular needs
  *  it has to create a return.
  *
