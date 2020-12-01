@@ -1257,9 +1257,8 @@ def report(_gain: uint256, _loss: uint256, _debtPayment: uint256) -> uint256:
         The performance fee is determined here, off of the strategy's profits
         (if any), and sent to governance.
 
-        The strategist's fee is also determined here (off of profits), and sent
-        to `strategy.distributeRewards()` to be handled according to the
-        strategist.
+        The strategist's fee is also determined here (off of profits), to be
+        handled according to the strategist on the next harvest.
 
         This may only be called by a Strategy managed by this Vault.
     @dev

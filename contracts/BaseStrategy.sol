@@ -418,15 +418,11 @@ abstract contract BaseStrategy {
         );
 
     /**
-     * @notice
-     *  Vault calls this function after shares are created during
+     *  `Harvest()` calls this function after shares are created during
      *  `vault.report()`. You can customize this function to any share
      *  distribution mechanism you want.
      *
-     *  The value of `_shares` is the strategist's fee, calculated as a
-     *  percentage of the Vault's profits. See `vault.report()` for further
-     *  details.
-     * @param _shares The strategist's rewards.
+     *   See `vault.report()` for further details.
      */
     function distributeRewards() internal virtual {
         // Transfer 100% of newly-minted shares awarded to this contract to the rewards address.
@@ -540,6 +536,9 @@ abstract contract BaseStrategy {
      *  Harvests the Strategy, recognizing any profits or losses and adjusting
      *  the Strategy's position.
      *
+     *  In the rare case the Strategy is in emergency shutdown, this will exit
+     *  the Strategy's position.
+     *
      *  This may only be called by governance, the strategist, or the keeper.
      * @dev
      *  When `harvest()` is called, the Strategy reports to the Vault (via
@@ -624,12 +623,12 @@ abstract contract BaseStrategy {
     /**
      * @notice
      *  Activates emergency exit. Once activated, the Strategy will exit its
-     *  position and deposit all funds to the Vault, as quickly as is
-     *  reasonable given on-chain conditions.
+     *  position upon the next harvest, depositing all funds into the Vault as
+     *  quickly as is reasonable given on-chain conditions.
      *
      *  This may only be called by governance or the strategist.
      * @dev
-     *  See `vault.setEmergencyShutdown()` for further details.
+     *  See `vault.setEmergencyShutdown()` and `harvest()` for further details.
      */
     function setEmergencyExit() external onlyAuthorized {
         emergencyExit = true;
