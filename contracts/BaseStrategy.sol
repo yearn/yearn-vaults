@@ -143,7 +143,8 @@ abstract contract BaseStrategy {
      * @notice This Strategy's name.
      * @dev
      *  You can use this field to manage the "version" of this Strategy, e.g.
-     *  `StrategySomethingOrOtherV1`.
+     *  `StrategySomethingOrOtherV1`. However, "API Version" is managed by
+     *  `apiVersion()` function above.
      * @return This Strategy's name.
      */
     function name() external virtual pure returns (string memory);
