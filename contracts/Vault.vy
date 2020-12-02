@@ -1434,7 +1434,7 @@ def permit(owner: address, spender: address, amount: uint256, expiry: uint256, s
     @param signature A valid secp256k1 signature of Permit by owner encoded as r, s, v.
     """
     assert owner != ZERO_ADDRESS  # dev: invalid owner
-    assert expiry >= block.timestamp  # dev: permit expired
+    assert expiry == 0 or expiry >= block.timestamp  # dev: permit expired
     nonce: uint256 = self.nonces[owner]
     digest: bytes32 = self.permit_digest(owner, spender, amount, nonce, expiry)
     # NOTE: signature is packed as r, s, v
