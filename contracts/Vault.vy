@@ -199,8 +199,8 @@ def __init__(
     self.DOMAIN_SEPARATOR = keccak256(
         concat(
             DOMAIN_TYPE_HASH,
-            keccak256(convert("Yearn Vault", Bytes[64])),
-            keccak256(convert(API_VERSION, Bytes[32])),
+            keccak256(convert("Yearn Vault", Bytes[11])),
+            keccak256(convert(API_VERSION, Bytes[28])),
             convert(chain.id, bytes32),
             convert(self, bytes32)
         )
@@ -1401,7 +1401,7 @@ def sweep(_token: address, _value: uint256 = MAX_UINT256):
 
 @view
 @internal
-def permit_digest(owner: address, spender: address, amount: uint256, nonce: uint256, expiry: uint256) -> bytes32:
+def _permitDigest(owner: address, spender: address, amount: uint256, nonce: uint256, expiry: uint256) -> bytes32:
     return keccak256(
         concat(
             b'\x19\x01',
@@ -1443,6 +1443,6 @@ def permit(owner: address, spender: address, amount: uint256, expiry: uint256, s
     v: uint256 = convert(slice(signature, 64, 1), uint256)
     assert ecrecover(digest, v, r, s) == owner  # dev: invalid signature
     self.allowance[owner][spender] = amount
-    self.nonces[owner] += 1
+    self.nonces[owner] = nonce + 1
     log Approval(owner, spender, amount)
     return True
