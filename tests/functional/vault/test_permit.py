@@ -1,16 +1,18 @@
+import brownie
+import pytest
 from brownie import chain
 from eth_account import Account
-from eth_account._utils.structured_data.hashing import hash_domain
 from eth_account.messages import encode_structured_data
-from eth_utils import encode_hex
+
+amount = 100
+owner = Account.create()
+spender = Account.create()
 
 
-def test_permit(vault):
-    owner = Account.create()
-    spender = Account.create()
-    nonce = vault.nonces(owner.address)
-    expiry = chain[-1].timestamp + 3600
-    amount = 10 ** 21
+def generate_permit(vault, owner: Account, spender: Account, amount, nonce, expiry):
+    name = "Yearn Vault"
+    version = vault.apiVersion()
+    contract = str(vault)
     data = {
         "types": {
             "EIP712Domain": [
@@ -28,10 +30,10 @@ def test_permit(vault):
             ],
         },
         "domain": {
-            "name": "Yearn Vault",
-            "version": vault.apiVersion(),
+            "name": name,
+            "version": version,
             "chainId": 1,
-            "verifyingContract": str(vault),
+            "verifyingContract": contract,
         },
         "primaryType": "Permit",
         "message": {
@@ -42,9 +44,35 @@ def test_permit(vault):
             "expiry": expiry,
         },
     }
-    assert encode_hex(hash_domain(data)) == vault.DOMAIN_SEPARATOR()
-    message = encode_structured_data(data)
-    signed = owner.sign_message(message)
+    return encode_structured_data(data)
+
+
+@pytest.mark.parametrize("expiry", [True, False])
+def test_permit(vault, expiry):
+    nonce = vault.nonces(owner.address)
+    expiry = chain[-1].timestamp + 3600 if expiry else 0
+    permit = generate_permit(vault, owner, spender, amount, nonce, expiry)
+    signature = owner.sign_message(permit).signature
     assert vault.allowance(owner.address, spender.address) == 0
-    vault.permit(owner.address, spender.address, amount, expiry, signed.signature)
+    vault.permit(owner.address, spender.address, amount, expiry, signature)
     assert vault.allowance(owner.address, spender.address) == amount
+
+
+def test_permit_wrong_signature(vault):
+    nonce = vault.nonces(owner.address)
+    expiry = 0
+    permit = generate_permit(vault, owner, spender, amount, nonce, expiry)
+    signature = spender.sign_message(permit).signature
+    assert vault.allowance(owner.address, spender.address) == 0
+    with brownie.reverts('dev: invalid signature'):
+        vault.permit(owner.address, spender.address, amount, expiry, signature)
+
+
+def test_permit_expired(vault):
+    nonce = vault.nonces(owner.address)
+    expiry = chain[-1].timestamp - 600
+    permit = generate_permit(vault, owner, spender, amount, nonce, expiry)
+    signature = owner.sign_message(permit).signature
+    assert vault.allowance(owner.address, spender.address) == 0
+    with brownie.reverts('dev: permit expired'):
+        vault.permit(owner.address, spender.address, amount, expiry, signature)
