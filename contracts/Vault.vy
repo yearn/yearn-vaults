@@ -1421,7 +1421,7 @@ def permit_digest(owner: address, spender: address, amount: uint256, nonce: uint
 
 
 @external
-def permit(owner: address, spender: address, amount: uint256, nonce: uint256, expiry: uint256, signature: Bytes[65]) -> bool:
+def permit(owner: address, spender: address, amount: uint256, expiry: uint256, signature: Bytes[65]) -> bool:
     """
     @notice
         Approves spender by owner's signature to expend owner's tokens.
@@ -1430,13 +1430,12 @@ def permit(owner: address, spender: address, amount: uint256, nonce: uint256, ex
     @param owner The address which is a source of funds and has signed the Permit.
     @param spender The address which is allowed to spend the funds.
     @param amount The amount of tokens to be spent.
-    @param nonce The current nonce of the owner.
     @param expiry The timestamp after which the Permit is no longer valid.
     @param signature A valid secp256k1 signature of Permit by owner encoded as r, s, v.
     """
     assert owner != ZERO_ADDRESS  # dev: invalid owner
     assert expiry >= block.timestamp  # dev: permit expired
-    assert nonce == self.nonces[owner]  # dev: invalid nonce
+    nonce: uint256 = self.nonces[owner]
     digest: bytes32 = self.permit_digest(owner, spender, amount, nonce, expiry)
     # NOTE: signature is packed as r, s, v
     r: uint256 = convert(slice(signature, 0, 32), uint256)

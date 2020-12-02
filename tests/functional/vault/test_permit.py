@@ -46,7 +46,5 @@ def test_permit(vault):
     message = encode_structured_data(data)
     signed = owner.sign_message(message)
     assert vault.allowance(owner.address, spender.address) == 0
-    vault.permit(
-        owner.address, spender.address, amount, nonce, expiry, signed.signature
-    )
+    vault.permit(owner.address, spender.address, amount, expiry, signed.signature)
     assert vault.allowance(owner.address, spender.address) == amount
