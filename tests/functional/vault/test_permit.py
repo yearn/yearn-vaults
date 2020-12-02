@@ -12,6 +12,7 @@ spender = Account.create()
 def generate_permit(vault, owner: Account, spender: Account, amount, nonce, expiry):
     name = "Yearn Vault"
     version = vault.apiVersion()
+    chain_id = 1  # ganache bug https://github.com/trufflesuite/ganache/issues/1643
     contract = str(vault)
     data = {
         "types": {
@@ -32,7 +33,7 @@ def generate_permit(vault, owner: Account, spender: Account, amount, nonce, expi
         "domain": {
             "name": name,
             "version": version,
-            "chainId": 1,
+            "chainId": chain_id,
             "verifyingContract": contract,
         },
         "primaryType": "Permit",
