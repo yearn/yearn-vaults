@@ -1399,27 +1399,6 @@ def sweep(_token: address, _value: uint256 = MAX_UINT256):
     self.erc20_safe_transfer(_token, self.governance, value)
 
 
-@view
-@internal
-def _permitDigest(owner: address, spender: address, amount: uint256, nonce: uint256, expiry: uint256) -> bytes32:
-    return keccak256(
-        concat(
-            b'\x19\x01',
-            self.DOMAIN_SEPARATOR,
-            keccak256(
-                concat(
-                    PERMIT_TYPE_HASH,
-                    convert(owner, bytes32),
-                    convert(spender, bytes32),
-                    convert(amount, bytes32),
-                    convert(nonce, bytes32),
-                    convert(expiry, bytes32),
-                )
-            )
-        )
-    )
-
-
 @external
 def permit(owner: address, spender: address, amount: uint256, expiry: uint256, signature: Bytes[65]) -> bool:
     """
@@ -1436,7 +1415,22 @@ def permit(owner: address, spender: address, amount: uint256, expiry: uint256, s
     assert owner != ZERO_ADDRESS  # dev: invalid owner
     assert expiry == 0 or expiry >= block.timestamp  # dev: permit expired
     nonce: uint256 = self.nonces[owner]
-    digest: bytes32 = self.permit_digest(owner, spender, amount, nonce, expiry)
+    digest: bytes32 = keccak256(
+        concat(
+            b'\x19\x01',
+            self.DOMAIN_SEPARATOR,
+            keccak256(
+                concat(
+                    PERMIT_TYPE_HASH,
+                    convert(owner, bytes32),
+                    convert(spender, bytes32),
+                    convert(amount, bytes32),
+                    convert(nonce, bytes32),
+                    convert(expiry, bytes32),
+                )
+            )
+        )
+    )
     # NOTE: signature is packed as r, s, v
     r: uint256 = convert(slice(signature, 0, 32), uint256)
     s: uint256 = convert(slice(signature, 32, 32), uint256)
