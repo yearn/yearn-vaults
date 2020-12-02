@@ -35,7 +35,9 @@ def main():
         assert (
             strategy.keeper() == bot.address
         ), "Bot is not set as keeper! [{strategy.address}]"
-        assert strategy.vault() == vault.address, "Vault mismatch! [{strategy.address}]"
+        assert (
+            strategy.vault() == vault.address
+        ), f"Vault mismatch! [{strategy.address}]"
 
     while True:
         starting_balance = bot.balance()
