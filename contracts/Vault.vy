@@ -1399,7 +1399,6 @@ def sweep(_token: address, _value: uint256 = MAX_UINT256):
     self.erc20_safe_transfer(_token, self.governance, value)
 
 
-
 @view
 @internal
 def permit_digest(owner: address, spender: address, amount: uint256, nonce: uint256, expiry: uint256) -> bytes32:
@@ -1425,15 +1424,15 @@ def permit_digest(owner: address, spender: address, amount: uint256, nonce: uint
 def permit(owner: address, spender: address, amount: uint256, nonce: uint256, expiry: uint256, signature: Bytes[65]) -> bool:
     """
     @notice
-        Approve the spender to expend the specified amount of owner's tokens by signature.
+        Approves spender by owner's signature to expend owner's tokens.
         See https://eips.ethereum.org/EIPS/eip-2612.
     
-    @param owner The address which has signed the Permit.
+    @param owner The address which is a source of funds and has signed the Permit.
     @param spender The address which is allowed to spend the funds.
     @param amount The amount of tokens to be spent.
-    @param nonce The current nonce of the funds owner.
-    @param expiry The timestamp after which the Permit expires.
-    @param signature A valid secp256k1 signature encoded as r, s, v.
+    @param nonce The current nonce of the owner.
+    @param expiry The timestamp after which the Permit is no longer valid.
+    @param signature A valid secp256k1 signature of Permit by owner encoded as r, s, v.
     """
     assert owner != ZERO_ADDRESS  # dev: invalid owner
     assert expiry >= block.timestamp  # dev: permit expired
