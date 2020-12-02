@@ -143,6 +143,11 @@ managementFee: public(uint256)
 performanceFee: public(uint256)
 FEE_MAX: constant(uint256) = 10_000  # 100%, or 10k basis points
 SECS_PER_YEAR: constant(uint256) = 31_557_600  # 365.25 days
+# `nonces` track `permit` approvals with signature.
+nonces: public(HashMap[address, uint256])
+DOMAIN_SEPARATOR: public(bytes32)
+DOMAIN_TYPE_HASH: constant(bytes32) = keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)')
+PERMIT_TYPE_HASH: constant(bytes32) = keccak256("Permit(address owner,address spender,uint256 amount,uint256 nonce,uint256 expiry)")
 
 
 @external
@@ -190,6 +195,16 @@ def __init__(
     self.depositLimit = MAX_UINT256  # Start unlimited
     self.lastReport = block.timestamp
     self.activation = block.timestamp
+    # EIP-712
+    self.DOMAIN_SEPARATOR = keccak256(
+        concat(
+            DOMAIN_TYPE_HASH,
+            keccak256(convert("Yearn Vault", Bytes[64])),
+            keccak256(convert(API_VERSION, Bytes[32])),
+            convert(chain.id, bytes32),
+            convert(self, bytes32)
+        )
+    )
 
 
 @pure
@@ -1382,3 +1397,54 @@ def sweep(_token: address, _value: uint256 = MAX_UINT256):
     if _value == MAX_UINT256:
         value = ERC20(_token).balanceOf(self)
     self.erc20_safe_transfer(_token, self.governance, value)
+
+
+
+@view
+@internal
+def permit_digest(owner: address, spender: address, amount: uint256, nonce: uint256, expiry: uint256) -> bytes32:
+    return keccak256(
+        concat(
+            b'\x19\x01',
+            self.DOMAIN_SEPARATOR,
+            keccak256(
+                concat(
+                    PERMIT_TYPE_HASH,
+                    convert(owner, bytes32),
+                    convert(spender, bytes32),
+                    convert(amount, bytes32),
+                    convert(nonce, bytes32),
+                    convert(expiry, bytes32),
+                )
+            )
+        )
+    )
+
+
+@external
+def permit(owner: address, spender: address, amount: uint256, nonce: uint256, expiry: uint256, signature: Bytes[65]) -> bool:
+    """
+    @notice
+        Approve the spender to expend the specified amount of owner's tokens by signature.
+        See https://eips.ethereum.org/EIPS/eip-2612.
+    
+    @param owner The address which has signed the Permit.
+    @param spender The address which is allowed to spend the funds.
+    @param amount The amount of tokens to be spent.
+    @param nonce The current nonce of the funds owner.
+    @param expiry The timestamp after which the Permit expires.
+    @param signature A valid secp256k1 signature encoded as r, s, v.
+    """
+    assert owner != ZERO_ADDRESS  # dev: invalid owner
+    assert expiry >= block.timestamp  # dev: permit expired
+    assert nonce == self.nonces[owner]  # dev: invalid nonce
+    digest: bytes32 = self.permit_digest(owner, spender, amount, nonce, expiry)
+    # NOTE: signature is packed as r, s, v
+    r: uint256 = convert(slice(signature, 0, 32), uint256)
+    s: uint256 = convert(slice(signature, 32, 32), uint256)
+    v: uint256 = convert(slice(signature, 64, 1), uint256)
+    assert ecrecover(digest, v, r, s) == owner  # dev: invalid signature
+    self.allowance[owner][spender] = amount
+    self.nonces[owner] += 1
+    log Approval(owner, spender, amount)
+    return True
