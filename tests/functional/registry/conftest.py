@@ -1,5 +1,4 @@
 from pathlib import Path
-import difflib
 
 import pytest
 import yaml
@@ -16,7 +15,6 @@ VAULT_SOURCE_CODE = (Path(__file__).parents[3] / "contracts/Vault.vy").read_text
 
 def patch_vault_version(version):
     source = VAULT_SOURCE_CODE.replace(PACKAGE_VERSION, version)
-    [print(li) for li in difflib.ndiff(VAULT_SOURCE_CODE, source) if li[0] != " "]
     return compile_source(source).Vyper
 
 
