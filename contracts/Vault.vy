@@ -394,6 +394,8 @@ def setEmergencyShutdown(_active: bool):
         goes back into Normal Operation.
     """
     assert msg.sender in [self.guardian, self.governance]
+    if(self.emergencyShutdown and not _active):
+        assert msg.sender == self.governance
     self.emergencyShutdown = _active
 
 
