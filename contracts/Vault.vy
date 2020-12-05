@@ -396,8 +396,6 @@ def setEmergencyShutdown(_active: bool):
     if _active:
         assert msg.sender in [self.guardian, self.governance]
     else:
-        assert msg.sender == self.governanc3
-    if(self.emergencyShutdown and not _active):
         assert msg.sender == self.governance
     self.emergencyShutdown = _active
 
