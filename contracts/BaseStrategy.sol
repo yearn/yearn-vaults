@@ -602,7 +602,7 @@ abstract contract BaseStrategy {
      * transferring any reserve or LP tokens, CDPs, or other tokens or stores of
      * value.
      */
-    function prepareMigration(address _newStrategy) internal virtual;
+    function executeMigration(address _newStrategy) internal virtual returns (bool _success);
 
     /**
      * @notice
@@ -616,7 +616,7 @@ abstract contract BaseStrategy {
     function migrate(address _newStrategy) external {
         require(msg.sender == address(vault) || msg.sender == governance());
         require(BaseStrategy(_newStrategy).vault() == vault);
-        prepareMigration(_newStrategy);
+        require(executeMigration(_newStrategy));
         want.transfer(_newStrategy, want.balanceOf(address(this)));
     }
 
