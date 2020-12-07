@@ -92,6 +92,8 @@ interface VaultAPI is IERC20 {
 interface StrategyAPI {
     function apiVersion() external pure returns (string memory);
 
+    function delegatedAssets() external virtual pure returns (uint256);
+
     function name() external pure returns (string memory);
 
     function vault() external view returns (address);
@@ -148,6 +150,23 @@ abstract contract BaseStrategy {
      * @return This Strategy's name.
      */
     function name() external virtual pure returns (string memory);
+
+    /**
+     * @notice
+     *  The amount (priced in want) of the total assets managed by this strategy should not count
+     *  towards Yearn's TVL calculations.
+     * @dev
+     *  You can override this field to set it to a non-zero value if some of the assets of this
+     *  Strategy is somehow delegated inside another part of of Yearn's ecosystem e.g. another Vault.
+     *  Note that this value must be strictly less than or equal to the amount provided by
+     *  `estimatedTotalAssets()` below, as the TVL calc will be total assets minus delegated assets.
+     * @return
+     *  The amount of assets this strategy manages that should not be included in Yearn's Total Value
+     *  Locked (TVL) calculation across it's ecosystem.
+     */
+    function delegatedAssets() external virtual pure returns (uint256) {
+        return 0;
+    }
 
     VaultAPI public vault;
     address public strategist;
