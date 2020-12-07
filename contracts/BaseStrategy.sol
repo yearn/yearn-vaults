@@ -92,6 +92,8 @@ interface VaultAPI is IERC20 {
 interface StrategyAPI {
     function apiVersion() external pure returns (string memory);
 
+    function isActive() external view returns (bool);
+
     function delegatedAssets() external virtual pure returns (uint256);
 
     function name() external pure returns (string memory);
@@ -372,6 +374,18 @@ abstract contract BaseStrategy {
      * @return The estimated total assets in this Strategy.
      */
     function estimatedTotalAssets() public virtual view returns (uint256);
+
+    /*
+     * @notice
+     *  Provide an indication of whether this strategy is currently "active"
+     *  in that it is managing an active position, or will manage a position in
+     *  the future. This should correlate to `harvest()` activity, so that Harvest
+     *  events can be tracked externally by indexing agents.
+     * @return True if the strategy is actively managing a position.
+     */
+    function isActive() public view returns (bool) {
+        return vault.strategies(address(this)).debtLimit > 0 || estimatedTotalAssets() > 0;
+    }
 
     /**
      * Perform any Strategy unwinding or other calls necessary to capture the
