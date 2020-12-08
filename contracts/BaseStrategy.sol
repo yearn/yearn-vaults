@@ -616,7 +616,7 @@ abstract contract BaseStrategy {
     function migrate(address _newStrategy) external {
         require(msg.sender == address(vault) || msg.sender == governance());
         require(BaseStrategy(_newStrategy).vault() == vault);
-        // Explicitly require a migration success signal from the implementers of `prepareMigration`
+        // Explicitly require a migration success signal from the implementer of `prepareMigration`
         require(prepareMigration(_newStrategy));
         want.transfer(_newStrategy, want.balanceOf(address(this)));
     }
