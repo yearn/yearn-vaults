@@ -602,13 +602,13 @@ abstract contract BaseStrategy {
      * transferring any reserve or LP tokens, CDPs, or other tokens or stores of
      * value.
      */
-    function prepareMigration(address _newStrategy) internal virtual;
+    function prepareMigration(address _newStrategy) internal virtual returns (bool _success);
 
     /**
      * @notice
      *  Transfers all `want` from this Strategy to `_newStrategy`.
      *
-     *  This may only be called by governance or the Vault.
+     *  This may only be called by governance or the Vault. The Strategy must explicitly signal success of migration prerequisites before balance is transferred to `_newStrategy`
      * @dev
      *  The new Strategy's Vault must be the same as this Strategy's Vault.
      * @param _newStrategy The Strategy to migrate to.
@@ -616,7 +616,7 @@ abstract contract BaseStrategy {
     function migrate(address _newStrategy) external {
         require(msg.sender == address(vault) || msg.sender == governance());
         require(BaseStrategy(_newStrategy).vault() == vault);
-        prepareMigration(_newStrategy);
+        require(prepareMigration(_newStrategy));
         want.transfer(_newStrategy, want.balanceOf(address(this)));
     }
 

@@ -88,8 +88,9 @@ contract TestStrategy is BaseStrategy {
         }
     }
 
-    function prepareMigration(address _newStrategy) internal override {
+    function prepareMigration(address _newStrategy) internal override returns (bool _success){
         // Nothing needed here because no additional tokens/tokenized positions for mock
+        return true;
     }
 
     function protectedTokens() internal override view returns (address[] memory) {
