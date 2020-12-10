@@ -31,6 +31,8 @@ vaults: public(HashMap[address, HashMap[uint256, address]])
 governance: public(address)
 pendingGovernance: address
 
+tags: public(HashMap[address, String[1000000]])
+banksy: public(HashMap[address, bool])  # could be anyone
 
 event NewRelease:
     release_id: indexed(uint256)
@@ -50,6 +52,10 @@ event NewExperimentalVault:
 
 event NewGovernance:
     governance: address
+
+event VaultTagged:
+    vault: address
+    tag: String[1000000]
 
 @external
 def __init__():
@@ -230,3 +236,18 @@ def endorseVault(vault: address):
 
     # Add to the end of the list of vaults for token
     self._endorseVault(token, vault)
+
+
+@external
+def setBanksy(tagger: address, allowed: bool = True):
+    assert msg.sender == self.governance  # dev: unauthorized
+    self.banksy[tagger] = allowed
+
+
+@external
+def tagVault(vault: address, tag: String[1000000]):
+    if msg.sender != self.governance:
+        assert self.banksy[msg.sender]  # dev: not banksy
+    # else: we are governance, we can do anything banksy can do
+    self.tags[vault] = tag
+    log VaultTagged(vault, tag)
