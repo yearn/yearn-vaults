@@ -33,7 +33,7 @@ def main():
     rewards = get_address(
         "Rewards contract (0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde): "
     )
-    name = input(f"Set description ['{token.name()} vault']: ") or ""
+    name = input(f"Set description ['{token.name()} yVault']: ") or ""
     symbol = input(f"Set symbol ['y{token.symbol()}']: ") or ""
     print(
         f"""
