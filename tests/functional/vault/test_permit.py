@@ -9,7 +9,7 @@ owner = Account.create()
 spender = Account.create()
 
 
-def generate_permit(vault, owner: Account, spender: Account, amount, nonce, expiry):
+def generate_permit(vault, owner: Account, spender: Account, value, nonce, deadline):
     name = "Yearn Vault"
     version = vault.apiVersion()
     chain_id = 1  # ganache bug https://github.com/trufflesuite/ganache/issues/1643
@@ -25,9 +25,9 @@ def generate_permit(vault, owner: Account, spender: Account, amount, nonce, expi
             "Permit": [
                 {"name": "owner", "type": "address"},
                 {"name": "spender", "type": "address"},
-                {"name": "amount", "type": "uint256"},
+                {"name": "value", "type": "uint256"},
                 {"name": "nonce", "type": "uint256"},
-                {"name": "expiry", "type": "uint256"},
+                {"name": "deadline", "type": "uint256"},
             ],
         },
         "domain": {
@@ -40,9 +40,9 @@ def generate_permit(vault, owner: Account, spender: Account, amount, nonce, expi
         "message": {
             "owner": owner.address,
             "spender": spender.address,
-            "amount": amount,
+            "value": value,
             "nonce": nonce,
-            "expiry": expiry,
+            "deadline": deadline,
         },
     }
     return encode_structured_data(data)
