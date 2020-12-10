@@ -226,11 +226,12 @@ PERMIT_TYPE_HASH: constant(bytes32) = keccak256("Permit(address owner,address sp
 
 @external
 def initialize(
-    _token: address,
-    _governance: address,
-    _name: String[64],
-    _symbol: String[32],
-    _guardian: address = msg.sender,
+    token: address,
+    governance: address,
+    rewards: address,
+    name: String[64],
+    symbol: String[32],
+    guardian: address = msg.sender,
 ):
     """
     @notice
@@ -244,20 +245,21 @@ def initialize(
     @param rewards The address to distribute rewards to.
     @param name Specify a custom Vault name.
     @param symbol Specify a custom Vault symbol name.
+    @param guardian The address authorized for guardian interactions. Defaults to caller.
     """
-    assert self.token == ERC20(ZERO_ADDRESS)  # NOTE: Ensures this can only be called once
-    self.token = ERC20(_token)
-    self.name = _name
-    self.symbol = _symbol
-    self.decimals = DetailedERC20(_token).decimals()
-    self.governance = _governance
+    assert self.activation == 0  # dev: no devops199
+    self.token = ERC20(token)
+    self.name = name
+    self.symbol = symbol
+    self.decimals = DetailedERC20(token).decimals()
+    self.governance = governance
     log UpdateGovernance(governance)
     self.management = governance
     log UpdateManagement(governance)
     self.rewards = rewards
     log UpdateRewards(rewards)
-    self.guardian = msg.sender
-    log UpdateGuardian(msg.sender)
+    self.guardian = guardian
+    log UpdateGuardian(guardian)
     self.performanceFee = 1000  # 10% of yield (per Strategy)
     log UpdatePerformanceFee(convert(1000, uint256))
     self.managementFee = 200  # 2% per year
