@@ -29,7 +29,7 @@ def main():
     dev = accounts.load(click.prompt("Account", type=click.Choice(accounts.load())))
     print(f"You are using: 'dev' [{dev.address}]")
     token = Token.at(get_address("ERC20 Token: "))
-    gov = get_address("Yearn Governance (0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52): ")
+    gov = get_address("Yearn Governance [ychad.eth]: ")
     rewards = get_address(
         "Rewards contract (0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde): "
     )
