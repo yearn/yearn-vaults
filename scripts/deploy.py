@@ -31,7 +31,7 @@ def main():
     token = Token.at(get_address("ERC20 Token: "))
     gov = get_address("Yearn Governance [ychad.eth]: ")
     rewards = get_address(
-        "Rewards contract (0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde): "
+        "Rewards contract [0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde]: "
     )
     name = input(f"Set description ['{token.name()} yVault']: ") or ""
     symbol = input(f"Set symbol ['yv{token.symbol()}']: ") or ""
