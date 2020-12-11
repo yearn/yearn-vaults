@@ -50,6 +50,8 @@ interface DetailedERC20:
 
 
 interface Strategy:
+    def want() -> address: view
+    def vault() -> address: view
     def estimatedTotalAssets() -> uint256: view
     def withdraw(_amount: uint256): nonpayable
     def migrate(_newStrategy: address): nonpayable
@@ -949,6 +951,8 @@ def addStrategy(
 
     assert msg.sender == self.governance
     assert self.strategies[_strategy].activation == 0
+    assert self == Strategy(_strategy).vault() 
+    assert self.token.address == Strategy(_strategy).want() 
     self.strategies[_strategy] = StrategyParams({
         performanceFee: _performanceFee,
         activation: block.timestamp,

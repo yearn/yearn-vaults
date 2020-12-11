@@ -17,7 +17,14 @@ def strategy(gov, vault, TestStrategy):
     yield gov.deploy(TestStrategy, vault)
 
 
-def test_addStrategy(chain, gov, vault, strategy, rando):
+@pytest.fixture
+def wrong_strategy(gov, Vault, Token, TestStrategy):
+    otherToken = gov.deploy(Token)
+    otherVault = gov.deploy(Vault, otherToken, gov, gov, "", "")
+    yield gov.deploy(TestStrategy, otherVault)
+
+
+def test_addStrategy(chain, gov, vault, strategy, wrong_strategy, rando):
 
     # Only governance can add a strategy
     with brownie.reverts():
@@ -51,6 +58,10 @@ def test_addStrategy(chain, gov, vault, strategy, rando):
     # Can't add a strategy twice
     with brownie.reverts():
         vault.addStrategy(strategy, 10000, 10, 1000, {"from": gov})
+
+    # Can't add a strategy with incorrect vault or want token
+    with brownie.reverts():
+        vault.addStrategy(wrong_strategy, 10000, 10, 1000, {"from": gov})
 
 
 def test_updateStrategy(chain, gov, vault, strategy, rando):
