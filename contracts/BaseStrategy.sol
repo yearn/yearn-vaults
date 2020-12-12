@@ -608,7 +608,8 @@ abstract contract BaseStrategy {
      * @notice
      *  Transfers all `want` from this Strategy to `_newStrategy`.
      *
-     *  This may only be called by governance or the Vault. The Strategy must explicitly signal success of migration prerequisites before balance is transferred to `_newStrategy`
+     *  This may only be called by governance or the Vault. The Strategy must explicitly signal success of migration
+     *  prerequisites before balance is transferred to `_newStrategy`
      * @dev
      *  The new Strategy's Vault must be the same as this Strategy's Vault.
      * @param _newStrategy The Strategy to migrate to.
