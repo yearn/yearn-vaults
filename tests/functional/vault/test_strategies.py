@@ -8,7 +8,11 @@ ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 @pytest.fixture
 def vault(gov, token, Vault):
     # NOTE: Because the fixture has tokens in it already
-    yield gov.deploy(Vault, token, gov, gov, "", "")
+    vault = gov.deploy(Vault)
+    vault.initialize(
+        token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
+    )
+    yield vault
 
 
 @pytest.fixture
@@ -26,7 +30,15 @@ def other_strategy(gov, vault, TestStrategy):
 @pytest.fixture
 def wrong_strategy(gov, Vault, Token, TestStrategy):
     otherToken = gov.deploy(Token)
-    otherVault = gov.deploy(Vault, otherToken, gov, gov, "", "")
+    otherVault = gov.deploy(Vault)
+    otherVault.initialize(
+        otherToken,
+        gov,
+        gov,
+        otherToken.symbol() + " yVault",
+        "yv" + otherToken.symbol(),
+        gov,
+    )
     yield gov.deploy(TestStrategy, otherVault)
 
 

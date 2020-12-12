@@ -44,8 +44,6 @@ implements: ERC20
 
 
 interface DetailedERC20:
-    def name() -> String[42]: view
-    def symbol() -> String[20]: view
     def decimals() -> uint256: view
 
 
@@ -227,12 +225,12 @@ PERMIT_TYPE_HASH: constant(bytes32) = keccak256("Permit(address owner,address sp
 
 
 @external
-def __init__(
-    token: address,
-    governance: address,
-    rewards: address,
-    nameOverride: String[64],
-    symbolOverride: String[32],
+def initialize(
+    _token: address,
+    _governance: address,
+    _name: String[64],
+    _symbol: String[32],
+    _guardian: address = msg.sender,
 ):
     """
     @notice
@@ -241,29 +239,18 @@ def __init__(
         The performance fee is set to 10% of yield, per Strategy.
         The management fee is set to 2%, per year.
         There is no initial deposit limit.
-    @dev
-        If `nameOverride` is not specified, the name will be 'yearn'
-        combined with the name of `token`.
-
-        If `symbolOverride` is not specified, the symbol will be 'y'
-        combined with the symbol of `token`.
     @param token The token that may be deposited into this Vault.
     @param governance The address authorized for governance interactions.
     @param rewards The address to distribute rewards to.
-    @param nameOverride Specify a custom Vault name. Leave empty for default choice.
-    @param symbolOverride Specify a custom Vault symbol name. Leave empty for default choice.
+    @param name Specify a custom Vault name.
+    @param symbol Specify a custom Vault symbol name.
     """
-    self.token = ERC20(token)
-    if nameOverride == "":
-        self.name = concat(DetailedERC20(token).symbol(), " yVault")
-    else:
-        self.name = nameOverride
-    if symbolOverride == "":
-        self.symbol = concat("yv", DetailedERC20(token).symbol())
-    else:
-        self.symbol = symbolOverride
-    self.decimals = DetailedERC20(token).decimals()
-    self.governance = governance
+    assert self.token == ERC20(ZERO_ADDRESS)  # NOTE: Ensures this can only be called once
+    self.token = ERC20(_token)
+    self.name = _name
+    self.symbol = _symbol
+    self.decimals = DetailedERC20(_token).decimals()
+    self.governance = _governance
     log UpdateGovernance(governance)
     self.management = governance
     log UpdateManagement(governance)

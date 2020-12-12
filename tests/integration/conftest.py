@@ -31,7 +31,10 @@ def guardian(accounts):
 
 @pytest.fixture
 def vault(gov, rewards, guardian, token, Vault):
-    vault = guardian.deploy(Vault, token, gov, rewards, "", "")
+    vault = guardian.deploy(Vault)
+    vault.initialize(
+        token, gov, rewards, token.symbol() + " yVault", "yv" + token.symbol(), guardian
+    )
     yield vault
 
 
