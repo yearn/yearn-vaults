@@ -152,7 +152,7 @@ def _newVault(
 
     nameOverride: String[64] = name
     if nameOverride == "":
-        nameOverride = concat("Yearn ", DetailedERC20(token).name(), " Vault")
+        nameOverride = concat(DetailedERC20(token).symbol(), " yVault")
 
     symbolOverride: String[32] = symbol
     if symbolOverride == "":
