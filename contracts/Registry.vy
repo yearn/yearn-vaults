@@ -84,12 +84,22 @@ def latestVault(token: address) -> address:
 
 
 @internal
-def _addVault(token: address, vault: address):
+def _endorseVault(token: address, vault: address):
+    next_version: String[28] = Vault(vault).apiVersion()
     deployment_id: uint256 = self.nextDeployment[token]  # Next id in series
+
+    # Check if there is an existing deployed vault for this token, and that we are not overwriting
+    # NOTE: This doesn't check for strict semver-style linearly increasing release versions
+    if deployment_id > 0:
+        current_version: String[28] = Vault(self.vaults[token][deployment_id - 1]).apiVersion()
+        assert next_version != current_version  # dev: cannot override current version
+    # else: we are adding a new asset to the ecosystem!
+    #       (typically after a successful "experimental" vault)
+
     self.vaults[token][deployment_id] = vault
     self.nextDeployment[token] = deployment_id + 1
 
-    log NewVault(token, deployment_id, vault, Vault(vault).apiVersion())
+    log NewVault(token, deployment_id, vault, next_version)
 
 
 @external
@@ -108,7 +118,8 @@ def newRelease(vault: address):
     release_id: uint256 = self.nextRelease  # Next id in series
     api_version: String[28] = Vault(vault).apiVersion()
     if release_id > 0:
-        assert Vault(self.releases[release_id - 1]).apiVersion() != api_version  # dev: same version
+        next_version: String[28] = Vault(self.releases[release_id - 1]).apiVersion()
+        assert next_version != api_version  # dev: same version
 
     self.releases[release_id] = vault
     self.nextRelease = release_id + 1
@@ -116,7 +127,35 @@ def newRelease(vault: address):
     log NewRelease(release_id, vault, api_version)
 
     # Also register the release as a new Vault
-    self._addVault(Vault(vault).token(), vault)
+    self._endorseVault(Vault(vault).token(), vault)
+
+
+@internal
+def _newVault(
+    token: address,
+    template: address,
+    governance: address,
+    rewards: address,
+    guardian: address,
+    name: String[64],
+    symbol: String[32],
+) -> address:
+
+    # NOTE: Underflow if no releases created yet (this is okay)
+    vault: address = create_forwarder_to(template)
+
+    nameOverride: String[64] = name
+    if nameOverride == "":
+        nameOverride = concat("Yearn ", DetailedERC20(token).name(), " Vault")
+
+    symbolOverride: String[32] = symbol
+    if symbolOverride == "":
+        symbolOverride = concat("yv", DetailedERC20(token).symbol())
+
+    # NOTE: Must initialize the Vault atomically with deploying it
+    Vault(vault).initialize(token, governance, rewards, nameOverride, symbolOverride, guardian)
+
+    return vault
 
 
 @external
@@ -124,8 +163,8 @@ def newVault(
     token: address,
     guardian: address,
     rewards: address,
-    nameOverride: String[64] = "",
-    symbolOverride: String[32] = "",
+    name: String[64],
+    symbol: String[32],
 ) -> address:
     """
     @notice
@@ -140,27 +179,17 @@ def newVault(
     @param token The token that may be deposited into this Vault.
     @param guardian The address authorized for guardian interactions.
     @param rewards The address to use for collecting rewards.
-    @param nameOverride Specify a custom Vault name. Leave empty for default choice.
-    @param symbolOverride Specify a custom Vault symbol name. Leave empty for default choice.
+    @param name Specify a custom Vault name. Set to empty string for default choice.
+    @param symbol Specify a custom Vault symbol name. Set to empty string for default choice.
     @return The address of the newly-deployed vault
     """
     assert msg.sender == self.governance  # dev: unauthorized
 
     # NOTE: Underflow if no releases created yet (this is okay)
-    vault: address = create_forwarder_to(self.releases[self.nextRelease - 1])
+    release_template: address = self.releases[self.nextRelease - 1]  # dev: no releases
+    vault: address = self._newVault(token, release_template, msg.sender, msg.sender, guardian, name, symbol)
 
-    name: String[64] = nameOverride
-    if name == "":
-        name = concat("Yearn ", DetailedERC20(token).name(), " Vault")
-
-    symbol: String[32] = symbolOverride
-    if symbol == "":
-        symbol = concat("yv", DetailedERC20(token).symbol())
-
-    # NOTE: Must initialize the Vault atomically with deploying it
-    Vault(vault).initialize(token, msg.sender, rewards, name, symbol, guardian)
-
-    self._addVault(token, vault)
+    self._endorseVault(token, vault)
 
     return vault
 
@@ -168,28 +197,20 @@ def newVault(
 @external
 def newExperimentalVault(
     token: address,
-    governance: address = msg.sender,
-    guardian: address = msg.sender,
-    rewards: address = msg.sender,
-    nameOverride: String[64] = "",
-    symbolOverride: String[32] = "",
+    governance: address,
+    guardian: address,
+    rewards: address,
+    name: String[64],
+    symbol: String[32],
 ) -> address:
     # NOTE: Anyone can call this method, as a convenience to Strategist' experiments
     # NOTE: Underflow if no releases created yet (this is okay)
-    release_template: address = self.releases[self.nextRelease - 1]
-    vault: address = create_forwarder_to(release_template)
-
-    name: String[64] = nameOverride
-    if name == "":
-        name = concat("Yearn ", DetailedERC20(token).name(), " Vault")
-
-    symbol: String[32] = symbolOverride
-    if symbol == "":
-        symbol = concat("yv", DetailedERC20(token).symbol())
-
+    release_template: address = self.releases[self.nextRelease - 1]  # dev: no releases
+    vault: address = self._newVault(token, release_template, governance, governance, guardian, name, symbol)
     # NOTE: Must initialize the Vault atomically with deploying it
     Vault(vault).initialize(token, governance, rewards, name, symbol, guardian)
 
+    # NOTE: Don't add to list of endorsed vaults (hence no event there, so we emit here)
     log NewExperimentalVault(token, vault, Vault(release_template).apiVersion())
 
     return vault
@@ -199,20 +220,13 @@ def newExperimentalVault(
 def endorseVault(vault: address):
     assert msg.sender == self.governance  # dev: unauthorized
     # NOTE: Underflow if no releases created yet (this is okay)
-    latest_version: String[28] = Vault(self.releases[self.nextRelease - 1]).apiVersion()
+    release_template: address = self.releases[self.nextRelease - 1]  # dev: no releases
+    latest_version: String[28] = Vault(release_template).apiVersion()
     assert Vault(vault).apiVersion() == latest_version  # dev: not latest release
 
     assert Vault(vault).governance() == msg.sender  # dev: unauthorized
 
-    # Check if there is an existing deployed vault for this token, and that we are not overwriting
-    # NOTE: This doesn't check for strict semver-style linearly increasing release versions
     token: address = Vault(vault).token()
-    nextDeployment: uint256 = self.nextDeployment[token]
-    if nextDeployment > 0:
-        current_version: String[28] = Vault(self.vaults[token][nextDeployment - 1]).apiVersion()
-        assert current_version != latest_version  # dev: cannot override current version
-    # else: we are adding a new asset to the ecosystem!
-    #       (typically after a successful "experimental" vault)
 
     # Add to the end of the list of vaults for token
-    self._addVault(token, vault)
+    self._endorseVault(token, vault)
