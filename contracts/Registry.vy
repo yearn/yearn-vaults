@@ -47,6 +47,7 @@ event NewVault:
 
 event NewExperimentalVault:
     token: indexed(address)
+    deployer: indexed(address)
     vault: address
     api_version: String[28]
 
@@ -217,7 +218,7 @@ def newExperimentalVault(
     Vault(vault).initialize(token, governance, rewards, name, symbol, guardian)
 
     # NOTE: Don't add to list of endorsed vaults (hence no event there, so we emit here)
-    log NewExperimentalVault(token, vault, Vault(release_template).apiVersion())
+    log NewExperimentalVault(token, msg.sender, vault, Vault(release_template).apiVersion())
 
     return vault
 
