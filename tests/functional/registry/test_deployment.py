@@ -34,3 +34,57 @@ def test_deployment_management(
     assert proxy_vault.rewards() == rewards
     assert proxy_vault.guardian() == guardian
     assert registry.latestVault(token) == proxy_vault
+
+
+def test_experimental_deployments(
+    gov, rando, registry, Vault, create_token, create_vault
+):
+    v1_vault = create_vault(version="1.0.0")
+    registry.newRelease(v1_vault, {"from": gov})
+
+    # Anyone can make an experiment
+    token = create_token()
+    registry.newExperimentalVault(token, rando, rando, rando, "", "", {"from": rando})
+
+    # You can make as many experiments as you want with same api version
+    experimental_vault = Vault.at(
+        registry.newExperimentalVault(
+            token, rando, rando, rando, "", "", {"from": rando}
+        ).return_value
+    )
+
+    # Experimental Vaults do not count towards deployments
+    with brownie.reverts():
+        registry.latestVault(token)
+
+    # You can't endorse a vault if governance isn't set properly
+    with brownie.reverts():
+        registry.endorseVault(experimental_vault, {"from": gov})
+
+    experimental_vault.setGovernance(gov, {"from": rando})
+    experimental_vault.acceptGovernance({"from": gov})
+
+    # You can only endorse a vault if it creates an new deployment
+    registry.endorseVault(experimental_vault, {"from": gov})
+    assert registry.latestVault(token) == experimental_vault
+
+    # You can't endorse a vault if it would overwrite a current deployment
+    experimental_vault = Vault.at(
+        registry.newExperimentalVault(
+            token, gov, gov, gov, "", "", {"from": rando}
+        ).return_value
+    )
+    with brownie.reverts():
+        registry.endorseVault(experimental_vault, {"from": gov})
+
+    # You can only endorse a vault if it creates a new deployment
+    v2_vault = create_vault(version="2.0.0")
+    registry.newRelease(v2_vault, {"from": gov})
+
+    experimental_vault = Vault.at(
+        registry.newExperimentalVault(
+            token, gov, gov, gov, "", "", {"from": rando}
+        ).return_value
+    )
+    registry.endorseVault(experimental_vault, {"from": gov})
+    assert registry.latestVault(token) == experimental_vault
