@@ -193,8 +193,15 @@ def newVault(
     assert msg.sender == self.governance  # dev: unauthorized
 
     # NOTE: Underflow if no releases created yet (this is okay)
-    release_template: address = self.releases[self.nextRelease - 1]  # dev: no releases
-    vault: address = self._newVault(token, release_template, msg.sender, msg.sender, guardian, name, symbol)
+    vault: address = self._newVault(
+        token,
+        self.releases[self.nextRelease - 1],  # dev: no releases
+        msg.sender,  # self.governance
+        rewards,
+        guardian,
+        name,
+        symbol,
+    )
 
     self._endorseVault(token, vault)
 
@@ -211,14 +218,22 @@ def newExperimentalVault(
     symbol: String[32],
 ) -> address:
     # NOTE: Anyone can call this method, as a convenience to Strategist' experiments
+
     # NOTE: Underflow if no releases created yet (this is okay)
-    release_template: address = self.releases[self.nextRelease - 1]  # dev: no releases
-    vault: address = self._newVault(token, release_template, governance, governance, guardian, name, symbol)
+    vault: address = self._newVault(
+        token,
+        self.releases[self.nextRelease - 1],  # dev: no releases
+        governance,
+        rewards,
+        guardian,
+        name,
+        symbol,
+    )
     # NOTE: Must initialize the Vault atomically with deploying it
     Vault(vault).initialize(token, governance, rewards, name, symbol, guardian)
 
     # NOTE: Don't add to list of endorsed vaults (hence no event there, so we emit here)
-    log NewExperimentalVault(token, msg.sender, vault, Vault(release_template).apiVersion())
+    log NewExperimentalVault(token, msg.sender, vault, Vault(vault).apiVersion())
 
     return vault
 
