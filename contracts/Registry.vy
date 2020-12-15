@@ -113,7 +113,27 @@ def latestVault(token: address) -> address:
 
 
 @internal
-def _addDeployment(token: address, vault: address):
+def _registerRelease(vault: address):
+    api_version: String[28] = Vault(vault).apiVersion()
+
+    # Check if the release is different from the current one
+    # NOTE: This doesn't check for strict semver-style linearly increasing release versions
+    release_id: uint256 = self.nextRelease  # Next id in series
+    if release_id > 0:
+        current_version: String[28] = Vault(self.releases[release_id - 1]).apiVersion()
+        assert current_version != api_version  # dev: same api version
+    # else: we are adding the first release to the Registry!
+
+    # Update latest release
+    self.releases[release_id] = vault
+    self.nextRelease = release_id + 1
+
+    # Log the release for external listeners (e.g. Graph)
+    log NewRelease(release_id, vault, api_version)
+
+
+@internal
+def _registerDeployment(token: address, vault: address):
     api_version: String[28] = Vault(vault).apiVersion()
 
     # Check if there is an existing deployment for this token at the particular api version
@@ -150,40 +170,21 @@ def newRelease(vault: address):
     assert msg.sender == self.governance  # dev: unauthorized
     assert Vault(vault).governance() == msg.sender  # dev: not governed
 
-    api_version: String[28] = Vault(vault).apiVersion()
-
-    # Check if the release is different from the current one
-    # NOTE: This doesn't check for strict semver-style linearly increasing release versions
-    release_id: uint256 = self.nextRelease  # Next id in series
-    if release_id > 0:
-        current_version: String[28] = Vault(self.releases[release_id - 1]).apiVersion()
-        assert current_version != api_version  # dev: same api version
-    # else: we are adding the first release to the Registry!
-
-    # Update latest release
-    self.releases[release_id] = vault
-    self.nextRelease = release_id + 1
-
-    # Log the release for external listeners (e.g. Graph)
-    log NewRelease(release_id, vault, api_version)
-
-    # Also register the release as a new Vault
-    self._addDeployment(Vault(vault).token(), vault)
+    self._registerRelease(vault)
+    self._registerDeployment(Vault(vault).token(), vault)
 
 
 @internal
 def _newProxyVault(
     token: address,
-    template: address,
     governance: address,
     rewards: address,
     guardian: address,
     name: String[64],
     symbol: String[32],
 ) -> address:
-
     # NOTE: Underflow if no releases created yet (this is okay)
-    vault: address = create_forwarder_to(template)
+    vault: address = create_forwarder_to(self.releases[self.nextRelease - 1])  # dev: no releases
 
     nameOverride: String[64] = name
     if nameOverride == "":
@@ -227,18 +228,9 @@ def newVault(
     """
     assert msg.sender == self.governance  # dev: unauthorized
 
-    # NOTE: Underflow if no releases created yet (this is okay)
-    vault: address = self._newProxyVault(
-        token,
-        self.releases[self.nextRelease - 1],  # dev: no releases
-        msg.sender,  # self.governance
-        rewards,
-        guardian,
-        name,
-        symbol,
-    )
+    vault: address = self._newProxyVault(token, msg.sender, rewards, guardian, name, symbol)
 
-    self._addDeployment(token, vault)
+    self._registerDeployment(token, vault)
 
     return vault
 
@@ -269,21 +261,9 @@ def newExperimentalVault(
     @return The address of the newly-deployed vault
     """
     # NOTE: Anyone can call this method, as a convenience to Strategist' experiments
+    vault: address = self._newProxyVault(token, governance, rewards, guardian, name, symbol)
 
-    # NOTE: Underflow if no releases created yet (this is okay)
-    vault: address = self._newProxyVault(
-        token,
-        self.releases[self.nextRelease - 1],  # dev: no releases
-        governance,
-        rewards,
-        guardian,
-        name,
-        symbol,
-    )
-    # NOTE: Must initialize the Vault atomically with deploying it
-    Vault(vault).initialize(token, governance, rewards, name, symbol, guardian)
-
-    # NOTE: Don't add to list of endorsed vaults (hence no event there, so we emit here)
+    # NOTE: Not registered, so emit an "experiment" event here instead
     log NewExperimentalVault(token, msg.sender, vault, Vault(vault).apiVersion())
 
     return vault
@@ -314,7 +294,7 @@ def endorseVault(vault: address):
     assert Vault(vault).apiVersion() == api_version  # dev: not latest release
 
     # Add to the end of the list of vaults for token
-    self._addDeployment(Vault(vault).token(), vault)
+    self._registerDeployment(Vault(vault).token(), vault)
 
 
 @external
