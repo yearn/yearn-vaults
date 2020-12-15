@@ -92,21 +92,24 @@ def latestVault(token: address) -> address:
 
 @internal
 def _endorseVault(token: address, vault: address):
-    next_version: String[28] = Vault(vault).apiVersion()
-    deployment_id: uint256 = self.nextDeployment[token]  # Next id in series
+    api_version: String[28] = Vault(vault).apiVersion()
+
 
     # Check if there is an existing deployed vault for this token, and that we are not overwriting
     # NOTE: This doesn't check for strict semver-style linearly increasing release versions
+    deployment_id: uint256 = self.nextDeployment[token]  # Next id in series
     if deployment_id > 0:
         current_version: String[28] = Vault(self.vaults[token][deployment_id - 1]).apiVersion()
-        assert next_version != current_version  # dev: cannot override current version
+        assert current_version != api_version  # dev: same version
     # else: we are adding a new asset to the ecosystem!
     #       (typically after a successful "experimental" vault)
 
+    # Update the latest deployment
     self.vaults[token][deployment_id] = vault
     self.nextDeployment[token] = deployment_id + 1
 
-    log NewVault(token, deployment_id, vault, next_version)
+    # Log the deployment for external listeners (e.g. Graph)
+    log NewVault(token, deployment_id, vault, api_version)
 
 
 @external
@@ -122,15 +125,21 @@ def newRelease(vault: address):
     """
     assert msg.sender == self.governance  # dev: unauthorized
 
-    release_id: uint256 = self.nextRelease  # Next id in series
     api_version: String[28] = Vault(vault).apiVersion()
-    if release_id > 0:
-        next_version: String[28] = Vault(self.releases[release_id - 1]).apiVersion()
-        assert next_version != api_version  # dev: same version
 
+    # Check if the release is different from the current one
+    # NOTE: This doesn't check for strict semver-style linearly increasing release versions
+    release_id: uint256 = self.nextRelease  # Next id in series
+    if release_id > 0:
+        current_version: String[28] = Vault(self.releases[release_id - 1]).apiVersion()
+        assert current_version != api_version  # dev: same version
+    # else: we are adding the first release to the Registry!
+
+    # Update latest release
     self.releases[release_id] = vault
     self.nextRelease = release_id + 1
 
+    # Log the release for external listeners (e.g. Graph)
     log NewRelease(release_id, vault, api_version)
 
     # Also register the release as a new Vault
