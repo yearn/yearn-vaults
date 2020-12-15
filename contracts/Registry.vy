@@ -65,12 +65,23 @@ def __init__():
 
 @external
 def setGovernance(governance: address):
+    """
+    @notice Starts the 1st phase of the governance transfer.
+    @dev Throws if the caller is not current governance.
+    @param governance The next governance address
+    """
     assert msg.sender == self.governance  # dev: unauthorized
     self.pendingGovernance = governance
 
 
 @external
 def acceptGovernance():
+    """
+    @notice Completes the 2nd phase of the governance transfer.
+    @dev
+        Throws if the caller is not the pending caller.
+        Emits a `NewGovernance` event.
+    """
     assert msg.sender == self.pendingGovernance  # dev: unauthorized
     self.governance = msg.sender
     log NewGovernance(msg.sender)
@@ -79,6 +90,11 @@ def acceptGovernance():
 @view
 @external
 def latestRelease() -> String[28]:
+    """
+    @notice Returns the api version of the latest release.
+    @dev Throws if no releases are registered yet.
+    @return The api version of the latest release.
+    """
     # NOTE: Throws if there has not been a release yet
     return Vault(self.releases[self.nextRelease - 1]).apiVersion()  # dev: no release
 
@@ -86,23 +102,27 @@ def latestRelease() -> String[28]:
 @view
 @external
 def latestVault(token: address) -> address:
+    """
+    @notice Returns the latest deployed vault for the given token.
+    @dev Throws if no deployments are endorsed yet for the given token.
+    @param token The token address to find the latest deployment for.
+    @return The address of the latest deployment.
+    """
     # NOTE: Throws if there has not been a deployment yet for this token
     return self.vaults[token][self.nextDeployment[token] - 1]  # dev: no vault for token
 
 
 @internal
-def _endorseVault(token: address, vault: address):
+def _addDeployment(token: address, vault: address):
     api_version: String[28] = Vault(vault).apiVersion()
 
-
-    # Check if there is an existing deployed vault for this token, and that we are not overwriting
+    # Check if there is an existing deployment for this token at the particular api version
     # NOTE: This doesn't check for strict semver-style linearly increasing release versions
     deployment_id: uint256 = self.nextDeployment[token]  # Next id in series
     if deployment_id > 0:
         current_version: String[28] = Vault(self.vaults[token][deployment_id - 1]).apiVersion()
-        assert current_version != api_version  # dev: same version
-    # else: we are adding a new asset to the ecosystem!
-    #       (typically after a successful "experimental" vault)
+        assert current_version != api_version  # dev: same api version
+    # else: we are adding a new token to the Registry
 
     # Update the latest deployment
     self.vaults[token][deployment_id] = vault
@@ -116,14 +136,19 @@ def _endorseVault(token: address, vault: address):
 def newRelease(vault: address):
     """
     @notice
-        Add a previously deployed Vault as a vault for a particular release
+        Add a previously deployed Vault as the template contract for the latest release,
+        to be used by further "forwarder-style" delegatecall proxy contracts that can be
+        deployed from the registry throw other methods (to save gas).
     @dev
-        The Vault must be a valid Vault, and should be the next in the release series, meaning
-        semver is being followed. The code does not check for that, only that the release is not
-        the same as the previous one.
-    @param vault The deployed Vault to use as the cornerstone template for the given release.
+        Throws if caller isn't `self.governance`.
+        Throws if `vault`'s governance isn't `self.governance`.
+        Throws if the api version is the same as the previous release.
+        Throws if there already is a deployment for the given token with the latest api version.
+        Emits a `NewVault` event.
+    @param vault The vault that will be used as the template contract for the next release.
     """
     assert msg.sender == self.governance  # dev: unauthorized
+    assert Vault(vault).governance() == msg.sender  # dev: not governed
 
     api_version: String[28] = Vault(vault).apiVersion()
 
@@ -132,7 +157,7 @@ def newRelease(vault: address):
     release_id: uint256 = self.nextRelease  # Next id in series
     if release_id > 0:
         current_version: String[28] = Vault(self.releases[release_id - 1]).apiVersion()
-        assert current_version != api_version  # dev: same version
+        assert current_version != api_version  # dev: same api version
     # else: we are adding the first release to the Registry!
 
     # Update latest release
@@ -143,11 +168,11 @@ def newRelease(vault: address):
     log NewRelease(release_id, vault, api_version)
 
     # Also register the release as a new Vault
-    self._endorseVault(Vault(vault).token(), vault)
+    self._addDeployment(Vault(vault).token(), vault)
 
 
 @internal
-def _newVault(
+def _newProxyVault(
     token: address,
     template: address,
     governance: address,
@@ -184,17 +209,18 @@ def newVault(
 ) -> address:
     """
     @notice
-        Add a new deployed vault for the given token as a simple "forwarder-style" proxy to the
-        latest version being managed by this registry
+        Create a new vault for the given token using the latest release in the registry,
+        as a simple "forwarder-style" delegatecall proxy to the latest release. Also adds
+        the new vault to the list of "endorsed" vaults for that token.
     @dev
-        If `nameOverride` is not specified, the name will be 'yearn' combined with the name of
-        `token`.
-
-        If `symbolOverride` is not specified, the symbol will be 'yv' combined with the symbol
-        of `token`.
-    @param token The token that may be deposited into this Vault.
-    @param guardian The address authorized for guardian interactions.
-    @param rewards The address to use for collecting rewards.
+        `governance` is set in the new vault as `self.governance`, with no ability to override.
+        Throws if caller isn't `self.governance`.
+        Throws if no releases are registered yet.
+        Throws if there already is a deployment for the given token with the latest api version.
+        Emits a `NewVault` event.
+    @param token The token that may be deposited into the new Vault.
+    @param guardian The address authorized for guardian interactions in the new Vault.
+    @param rewards The address to use for collecting rewards in the new Vault
     @param name Specify a custom Vault name. Set to empty string for default choice.
     @param symbol Specify a custom Vault symbol name. Set to empty string for default choice.
     @return The address of the newly-deployed vault
@@ -202,7 +228,7 @@ def newVault(
     assert msg.sender == self.governance  # dev: unauthorized
 
     # NOTE: Underflow if no releases created yet (this is okay)
-    vault: address = self._newVault(
+    vault: address = self._newProxyVault(
         token,
         self.releases[self.nextRelease - 1],  # dev: no releases
         msg.sender,  # self.governance
@@ -212,7 +238,7 @@ def newVault(
         symbol,
     )
 
-    self._endorseVault(token, vault)
+    self._addDeployment(token, vault)
 
     return vault
 
@@ -226,10 +252,26 @@ def newExperimentalVault(
     name: String[64],
     symbol: String[32],
 ) -> address:
+    """
+    @notice
+        Create a new vault for the given token using the latest release in the registry,
+        as a simple "forwarder-style" delegatecall proxy to the latest release. Does not add
+        the new vault to the list of "endorsed" vaults for that token.
+    @dev
+        Throws if no releases are registered yet.
+        Emits a `NewExperimentalVault` event.
+    @param token The token that may be deposited into the new Vault.
+    @param governance The address authorized for governance interactions in the new Vault.
+    @param guardian The address authorized for guardian interactions in the new Vault.
+    @param rewards The address to use for collecting rewards in the new Vault
+    @param name Specify a custom Vault name. Set to empty string for default choice.
+    @param symbol Specify a custom Vault symbol name. Set to empty string for default choice.
+    @return The address of the newly-deployed vault
+    """
     # NOTE: Anyone can call this method, as a convenience to Strategist' experiments
 
     # NOTE: Underflow if no releases created yet (this is okay)
-    vault: address = self._newVault(
+    vault: address = self._newProxyVault(
         token,
         self.releases[self.nextRelease - 1],  # dev: no releases
         governance,
@@ -249,30 +291,57 @@ def newExperimentalVault(
 
 @external
 def endorseVault(vault: address):
+    """
+    @notice
+        Adds an existing vault to the list of "endorsed" vaults for that token.
+    @dev
+        `governance` is set in the new vault as `self.governance`, with no ability to override.
+        Throws if caller isn't `self.governance`.
+        Throws if `vault`'s governance isn't `self.governance`.
+        Throws if no releases are registered yet.
+        Throws if `vault`'s api version does not match latest release.
+        Throws if there already is a deployment for the vault's token with the latest api version.
+        Emits a `NewVault` event.
+    @param vault The vault that will be endorsed by the Registry.
+    """
     assert msg.sender == self.governance  # dev: unauthorized
+    assert Vault(vault).governance() == msg.sender  # dev: not governed
+
     # NOTE: Underflow if no releases created yet (this is okay)
-    release_template: address = self.releases[self.nextRelease - 1]  # dev: no releases
-    latest_version: String[28] = Vault(release_template).apiVersion()
-    assert Vault(vault).apiVersion() == latest_version  # dev: not latest release
-
-    assert Vault(vault).governance() == msg.sender  # dev: unauthorized
-
-    token: address = Vault(vault).token()
+    api_version: String[28] = (
+        Vault(self.releases[self.nextRelease - 1]).apiVersion()  # dev: no releases
+    )
+    assert Vault(vault).apiVersion() == api_version  # dev: not latest release
 
     # Add to the end of the list of vaults for token
-    self._endorseVault(token, vault)
+    self._addDeployment(Vault(vault).token(), vault)
 
 
 @external
 def setBanksy(tagger: address, allowed: bool = True):
+    """
+    @notice Set the ability of a particular tagger to tag current vaults.
+    @dev Throws if caller is not `self.governance`.
+    @param tagger The address to approve or deny access to tagging.
+    @param allowed Whether to approve or deny `tagger`. Defaults to approve.
+    """
     assert msg.sender == self.governance  # dev: unauthorized
     self.banksy[tagger] = allowed
 
 
 @external
 def tagVault(vault: address, tag: String[1000000]):
+    """
+    @notice Tag a Vault with a message.
+    @dev
+        Throws if caller is not `self.governance` or an approved tagger.
+        Emits a `VaultTagged` event.
+    @param vault The address to tag with the given `tag` message.
+    @param tag The message to tag `vault` with.
+    """
     if msg.sender != self.governance:
         assert self.banksy[msg.sender]  # dev: not banksy
     # else: we are governance, we can do anything banksy can do
+
     self.tags[vault] = tag
     log VaultTagged(vault, tag)
