@@ -603,7 +603,9 @@ abstract contract BaseStrategy {
         distributeRewards();
 
         // Check if free returns are left, and re-invest them
-        adjustPosition(debtOutstanding);
+        if (want.balanceOf(address(this)) > debtOutstanding) {
+            adjustPosition(debtOutstanding);
+        }
 
         emit Harvested(profit, loss, debtPayment, debtOutstanding);
     }
