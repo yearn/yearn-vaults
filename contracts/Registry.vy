@@ -114,14 +114,14 @@ def latestVault(token: address) -> address:
 
 @internal
 def _registerRelease(vault: address):
-    api_version: String[28] = Vault(vault).apiVersion()
-
     # Check if the release is different from the current one
     # NOTE: This doesn't check for strict semver-style linearly increasing release versions
     release_id: uint256 = self.nextRelease  # Next id in series
     if release_id > 0:
-        current_version: String[28] = Vault(self.releases[release_id - 1]).apiVersion()
-        assert current_version != api_version  # dev: same api version
+        assert (
+            Vault(self.releases[release_id - 1]).apiVersion()
+            != Vault(vault).apiVersion()
+        )  # dev: same api version
     # else: we are adding the first release to the Registry!
 
     # Update latest release
@@ -129,19 +129,19 @@ def _registerRelease(vault: address):
     self.nextRelease = release_id + 1
 
     # Log the release for external listeners (e.g. Graph)
-    log NewRelease(release_id, vault, api_version)
+    log NewRelease(release_id, vault, Vault(vault).apiVersion())
 
 
 @internal
 def _registerDeployment(token: address, vault: address):
-    api_version: String[28] = Vault(vault).apiVersion()
-
     # Check if there is an existing deployment for this token at the particular api version
     # NOTE: This doesn't check for strict semver-style linearly increasing release versions
     deployment_id: uint256 = self.nextDeployment[token]  # Next id in series
     if deployment_id > 0:
-        current_version: String[28] = Vault(self.vaults[token][deployment_id - 1]).apiVersion()
-        assert current_version != api_version  # dev: same api version
+        assert (
+            Vault(self.vaults[token][deployment_id - 1]).apiVersion()
+            != Vault(vault).apiVersion()
+        )  # dev: same api version
     # else: we are adding a new token to the Registry
 
     # Update the latest deployment
@@ -149,7 +149,7 @@ def _registerDeployment(token: address, vault: address):
     self.nextDeployment[token] = deployment_id + 1
 
     # Log the deployment for external listeners (e.g. Graph)
-    log NewVault(token, deployment_id, vault, api_version)
+    log NewVault(token, deployment_id, vault, Vault(vault).apiVersion())
 
 
 @external
