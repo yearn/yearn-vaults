@@ -1,4 +1,24 @@
+from pathlib import Path
+
 import pytest
+import yaml
+
+from brownie import compile_source, Vault
+
+PACKAGE_VERSION = yaml.safe_load(
+    (Path(__file__).parents[2] / "ethpm-config.yaml").read_text()
+)["version"]
+
+
+VAULT_SOURCE_CODE = (Path(__file__).parents[2] / "contracts/Vault.vy").read_text()
+
+
+def patch_vault_version(version):
+    if version == PACKAGE_VERSION:
+        return Vault
+    else:
+        source = VAULT_SOURCE_CODE.replace(PACKAGE_VERSION, version)
+        return compile_source(source).Vyper
 
 
 @pytest.fixture
@@ -8,14 +28,24 @@ def andre(accounts):
 
 
 @pytest.fixture
-def token(andre, Token):
-    yield andre.deploy(Token)
+def create_token(andre, Token):
+    yield lambda: andre.deploy(Token)
+
+
+@pytest.fixture
+def token(create_token):
+    yield create_token()
 
 
 @pytest.fixture
 def gov(accounts):
     # yearn multis... I mean YFI governance. I swear!
     yield accounts[1]
+
+
+@pytest.fixture
+def registry(gov, Registry):
+    yield Registry.deploy({"from": gov})
 
 
 @pytest.fixture
@@ -30,12 +60,28 @@ def guardian(accounts):
 
 
 @pytest.fixture
-def vault(gov, rewards, guardian, token, Vault):
-    vault = guardian.deploy(Vault)
-    vault.initialize(
-        token, gov, rewards, token.symbol() + " yVault", "yv" + token.symbol(), guardian
-    )
-    yield vault
+def create_vault(gov, rewards, guardian, create_token):
+    def create_vault(token=None, version=PACKAGE_VERSION):
+        if token is None:
+            token = create_token()
+        vault = patch_vault_version(version).deploy({"from": guardian})
+        vault.initialize(
+            token,
+            gov,
+            rewards,
+            token.symbol() + " yVault",
+            "yv" + token.symbol(),
+            guardian,
+        )
+        assert vault.token() == token
+        return vault
+
+    yield create_vault
+
+
+@pytest.fixture
+def vault(token, create_vault):
+    yield create_vault(token)
 
 
 @pytest.fixture
