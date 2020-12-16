@@ -163,7 +163,6 @@ def newRelease(vault: address):
         Throws if caller isn't `self.governance`.
         Throws if `vault`'s governance isn't `self.governance`.
         Throws if the api version is the same as the previous release.
-        Throws if there already is a deployment for the given token with the latest api version.
         Emits a `NewVault` event.
     @param vault The vault that will be used as the template contract for the next release.
     """
@@ -171,7 +170,7 @@ def newRelease(vault: address):
     assert Vault(vault).governance() == msg.sender  # dev: not governed
 
     self._registerRelease(vault)
-    self._registerDeployment(Vault(vault).token(), vault)
+    self._registerDeployment(Vault(vault).token(), vault)  # NOTE: Should never throw
 
 
 @internal
