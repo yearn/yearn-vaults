@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from brownie import compile_source
+from brownie import compile_source, Vault
 
 PACKAGE_VERSION = yaml.safe_load(
     (Path(__file__).parents[3] / "ethpm-config.yaml").read_text()
@@ -14,8 +14,11 @@ VAULT_SOURCE_CODE = (Path(__file__).parents[3] / "contracts/Vault.vy").read_text
 
 
 def patch_vault_version(version):
-    source = VAULT_SOURCE_CODE.replace(PACKAGE_VERSION, version)
-    return compile_source(source).Vyper
+    if version == PACKAGE_VERSION:
+        return Vault
+    else:
+        source = VAULT_SOURCE_CODE.replace(PACKAGE_VERSION, version)
+        return compile_source(source).Vyper
 
 
 @pytest.fixture
