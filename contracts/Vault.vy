@@ -124,16 +124,6 @@ event SetSymbol:
     symbol: String[32] # New active Vault ERC20 symbol
 
 
-event SetGovernancePending:
-    currentGovernance: indexed(address) # Currently active governance
-    pendingGovernance: indexed(address) # New pending governance (not accepted/active yet)
-
-
-event AcceptGovernance:
-    oldGovernance: indexed(address) # Old (now inactive) governance replaced by new governance
-    governance: indexed(address) # Governance that was activated from pending
-
-
 event SetGuestList:
     guestList: indexed(address) # Vault guest list address
 
@@ -327,7 +317,6 @@ def setGovernance(governance: address):
     """
     assert msg.sender == self.governance
     self.pendingGovernance = governance
-    log SetGovernancePending(self.governance, self.pendingGovernance)
 
 
 @external
@@ -344,7 +333,6 @@ def acceptGovernance():
         prior to calling this function.
     """
     assert msg.sender == self.pendingGovernance
-    log AcceptGovernance(self.governance, self.pendingGovernance)
     self.governance = msg.sender
 
 
