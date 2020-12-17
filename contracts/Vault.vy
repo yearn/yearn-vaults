@@ -249,7 +249,6 @@ def __init__(
     )
     log SetName(self.name)
     log SetSymbol(self.symbol)
-    log AcceptGovernance(convert(0, address), self.governance)
     log SetRewards(self.rewards)
     log SetGuardian(self.guardian)
     log SetPerformanceFee(self.performanceFee)
