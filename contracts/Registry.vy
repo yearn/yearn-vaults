@@ -31,7 +31,7 @@ vaults: public(HashMap[address, HashMap[uint256, address]])
 governance: public(address)
 pendingGovernance: address
 
-tags: public(HashMap[address, String[1000000]])
+tags: public(HashMap[address, String[120]])
 banksy: public(HashMap[address, bool])  # could be anyone
 
 event NewRelease:
@@ -56,7 +56,7 @@ event NewGovernance:
 
 event VaultTagged:
     vault: address
-    tag: String[1000000]
+    tag: String[120]
 
 @external
 def __init__():
@@ -309,7 +309,7 @@ def setBanksy(tagger: address, allowed: bool = True):
 
 
 @external
-def tagVault(vault: address, tag: String[1000000]):
+def tagVault(vault: address, tag: String[120]):
     """
     @notice Tag a Vault with a message.
     @dev
