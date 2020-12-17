@@ -116,6 +116,56 @@ event StrategyReported:
     debtLimit: uint256
 
 
+event SetName:
+    name: String[64] # New active Vault ERC20 name
+
+
+event SetSymbol:
+    symbol: String[32] # New active Vault ERC20 symbol
+
+
+event SetGovernancePending:
+    currentGovernance: indexed(address) # Currently active governance
+    pendingGovernance: indexed(address) # New pending governance (not accepted/active yet)
+
+
+event AcceptGovernance:
+    oldGovernance: indexed(address) # Old (now inactive) governance replaced by new governance
+    governance: indexed(address) # Governance that was activated from pending
+
+
+event SetGuestList:
+    guestList: indexed(address) # Vault guest list address
+
+
+event SetRewards:
+    rewards: indexed(address) # New active rewards recipient 
+
+
+event SetDepositLimit:
+    depositLimit: indexed(uint256) # New active deposit limit
+
+
+event SetPerformanceFee:
+    performanceFee: indexed(uint256) # New active performance fee
+
+
+event SetManagementFee:
+    managementFee: indexed(uint256) # New active management fee
+
+
+event SetGuardian:
+    guardian: indexed(address) # Address of the active guardian
+
+
+event EmergencyShutdown:
+    active: bool # New emergency shutdown state (if false, normal operation enable)
+
+
+event SetWithdrawalQueue:
+    queue: address[MAXIMUM_STRATEGIES] # New active withdrawal queue
+
+
 # NOTE: Track the total for overhead targeting purposes
 strategies: public(HashMap[address, StrategyParams])
 MAXIMUM_STRATEGIES: constant(uint256) = 20
@@ -207,6 +257,14 @@ def __init__(
             convert(self, bytes32)
         )
     )
+    log SetName(self.name)
+    log SetSymbol(self.symbol)
+    log AcceptGovernance(convert(0, address), self.governance)
+    log SetRewards(self.rewards)
+    log SetGuardian(self.guardian)
+    log SetPerformanceFee(self.performanceFee)
+    log SetManagementFee(self.managementFee)
+    log SetDepositLimit(self.depositLimit)
 
 
 @pure
@@ -236,6 +294,7 @@ def setName(name: String[42]):
     """
     assert msg.sender == self.governance
     self.name = name
+    log SetName(self.name)
 
 
 @external
@@ -249,6 +308,7 @@ def setSymbol(symbol: String[20]):
     """
     assert msg.sender == self.governance
     self.symbol = symbol
+    log SetSymbol(self.symbol)
 
 
 # 2-phase commit for a change in governance
@@ -267,6 +327,7 @@ def setGovernance(governance: address):
     """
     assert msg.sender == self.governance
     self.pendingGovernance = governance
+    log SetGovernancePending(self.governance, self.pendingGovernance)
 
 
 @external
@@ -283,6 +344,7 @@ def acceptGovernance():
         prior to calling this function.
     """
     assert msg.sender == self.pendingGovernance
+    log AcceptGovernance(self.governance, self.pendingGovernance)
     self.governance = msg.sender
 
 
@@ -299,6 +361,7 @@ def setGuestList(guestList: address):
     """
     assert msg.sender == self.governance
     self.guestList = GuestList(guestList)
+    log SetGuestList(self.guestList.address)
 
 
 @external
@@ -317,6 +380,7 @@ def setRewards(rewards: address):
     """
     assert msg.sender == self.governance
     self.rewards = rewards
+    log SetRewards(self.rewards)
 
 
 @external
@@ -333,6 +397,7 @@ def setDepositLimit(limit: uint256):
     """
     assert msg.sender == self.governance
     self.depositLimit = limit
+    log SetDepositLimit(self.depositLimit)
 
 
 @external
@@ -346,6 +411,7 @@ def setPerformanceFee(fee: uint256):
     """
     assert msg.sender == self.governance
     self.performanceFee = fee
+    log SetPerformanceFee(self.performanceFee)
 
 
 @external
@@ -359,6 +425,7 @@ def setManagementFee(fee: uint256):
     """
     assert msg.sender == self.governance
     self.managementFee = fee
+    log SetManagementFee(self.managementFee)
 
 
 @external
@@ -372,6 +439,7 @@ def setGuardian(guardian: address):
     """
     assert msg.sender in [self.guardian, self.governance]
     self.guardian = guardian
+    log SetGuardian(self.guardian)
 
 
 @external
@@ -397,6 +465,7 @@ def setEmergencyShutdown(active: bool):
     """
     assert msg.sender in [self.guardian, self.governance]
     self.emergencyShutdown = active
+    log EmergencyShutdown(self.emergencyShutdown)
 
 
 @external
@@ -431,6 +500,7 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
             break
         assert self.strategies[queue[i]].activation > 0
         self.withdrawalQueue[i] = queue[i]
+    log SetWithdrawalQueue(queue)
 
 
 @internal
