@@ -153,7 +153,7 @@ event UpdateStrategyDebtLimit:
     debtLimit: uint256 # The new debt limit for the strategy
 
 
-event UpdateRateLimit:
+event UpdateStrategyRateLimit:
     strategy: indexed(address) # Address of the strategy for the rate limit adjustment
     rateLimit: uint256 # The new rate limit for the strategy
 
@@ -1080,7 +1080,7 @@ def updateStrategyRateLimit(
     assert msg.sender == self.governance
     assert self.strategies[strategy].activation > 0
     self.strategies[strategy].rateLimit = rateLimit
-    log UpdateStrategyDebtLimit(strategy, rateLimit)
+    log UpdateStrategyRateLimit(strategy, rateLimit)
 
 
 @external
