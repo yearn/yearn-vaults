@@ -116,6 +116,10 @@ event StrategyReported:
     debtLimit: uint256
 
 
+event UpdateGovernance:
+    governance: indexed(address) # New active governance
+
+
 event UpdateGuestList:
     guestList: address # Vault guest list address
 
@@ -250,6 +254,7 @@ def __init__(
         self.symbol = symbolOverride
     self.decimals = DetailedERC20(token).decimals()
     self.governance = governance
+    log UpdateGovernance(governance)
     self.rewards = rewards
     log UpdateRewards(rewards)
     self.guardian = msg.sender
@@ -349,6 +354,7 @@ def acceptGovernance():
     """
     assert msg.sender == self.pendingGovernance
     self.governance = msg.sender
+    log UpdateGovernance(msg.sender)
 
 
 @external
