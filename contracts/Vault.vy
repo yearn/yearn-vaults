@@ -117,7 +117,7 @@ event StrategyReported:
 
 
 event UpdateGovernance:
-    governance: indexed(address) # New active governance
+    governance: address # New active governance
 
 
 event UpdateGuestList:
@@ -145,30 +145,30 @@ event UpdateGuardian:
 
 
 event EmergencyShutdown:
-    active: bool # New emergency shutdown state (if false, normal operation enable)
+    active: bool # New emergency shutdown state (if false, normal operation enabled)
 
 
 event UpdateWithdrawalQueue:
     queue: address[MAXIMUM_STRATEGIES] # New active withdrawal queue
 
 
-event UpdateStrategyDebtLimit:
+event StrategyUpdateDebtLimit:
     strategy: indexed(address) # Address of the strategy for the debt limit adjustment
     debtLimit: uint256 # The new debt limit for the strategy
 
 
-event UpdateStrategyRateLimit:
+event StrategyUpdateRateLimit:
     strategy: indexed(address) # Address of the strategy for the rate limit adjustment
     rateLimit: uint256 # The new rate limit for the strategy
 
 
-event UpdateStrategyPerformanceFee:
+event StrategyUpdatePerformanceFee:
     strategy: indexed(address) # Address of the strategy for the performance fee adjustment
     performanceFee: uint256 # The new performance fee for the strategy
 
 
-event UpdateStrategy:
-    oldVersion: indexed(address) # Old version of the strategy to be upgraded
+event StrategyMigrated:
+    oldVersion: indexed(address) # Old version of the strategy to be migrated
     newVersion: indexed(address) # New version of the strategy
 
 
@@ -176,8 +176,13 @@ event StrategyRevoked:
     strategy: indexed(address) # Address of the strategy that is revoked
 
 
-event StrategyRemoved:
-    strategy: indexed(address) # Address of the strategy that is removed
+event StrategyRemovedFromQueue:
+    strategy: indexed(address) # Address of the strategy that is removed from the withdrawal queue
+
+
+event StrategyAddedToQueue:
+    strategy: indexed(address) # Address of the strategy that is added to the withdrawal queue
+
 
 
 # NOTE: Track the total for overhead targeting purposes
@@ -1066,7 +1071,7 @@ def updateStrategyDebtLimit(
     self.debtLimit -= self.strategies[strategy].debtLimit
     self.strategies[strategy].debtLimit = debtLimit
     self.debtLimit += debtLimit
-    log UpdateStrategyDebtLimit(strategy, debtLimit)
+    log StrategyUpdateDebtLimit(strategy, debtLimit)
 
 
 @external
@@ -1086,7 +1091,7 @@ def updateStrategyRateLimit(
     assert msg.sender == self.governance
     assert self.strategies[strategy].activation > 0
     self.strategies[strategy].rateLimit = rateLimit
-    log UpdateStrategyRateLimit(strategy, rateLimit)
+    log StrategyUpdateRateLimit(strategy, rateLimit)
 
 
 @external
@@ -1106,7 +1111,7 @@ def updateStrategyPerformanceFee(
     assert msg.sender == self.governance
     assert self.strategies[strategy].activation > 0
     self.strategies[strategy].performanceFee = performanceFee
-    log UpdateStrategyPerformanceFee(strategy, performanceFee)
+    log StrategyUpdatePerformanceFee(strategy, performanceFee)
 
 
 @external
@@ -1136,14 +1141,13 @@ def migrateStrategy(oldVersion: address, newVersion: address):
     self.strategies[newVersion] = strategy
 
     Strategy(oldVersion).migrate(newVersion)
+    log StrategyMigrated(oldVersion, newVersion)
     # TODO: Ensure a smooth transition in terms of  Strategy return
 
     for idx in range(MAXIMUM_STRATEGIES):
         if self.withdrawalQueue[idx] == oldVersion:
             self.withdrawalQueue[idx] = newVersion
             return  # Don't need to reorder anything because we swapped
-    
-    log UpdateStrategy(oldVersion, newVersion)
 
 
 @external
@@ -1197,6 +1201,7 @@ def addStrategyToQueue(strategy: address):
         assert s != strategy
     self.withdrawalQueue[MAXIMUM_STRATEGIES - 1] = strategy
     self._organizeWithdrawalQueue()
+    log StrategyAddedToQueue(strategy)
 
 
 @external
@@ -1216,7 +1221,7 @@ def removeStrategyFromQueue(strategy: address):
         if self.withdrawalQueue[idx] == strategy:
             self.withdrawalQueue[idx] = ZERO_ADDRESS
             self._organizeWithdrawalQueue()
-            log StrategyRemoved(strategy)
+            log StrategyRemovedFromQueue(strategy)
             return  # We found the right location and cleared it
     raise  # We didn't find the Strategy in the queue
 
