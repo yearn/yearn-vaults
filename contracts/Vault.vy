@@ -116,44 +116,64 @@ event StrategyReported:
     debtLimit: uint256
 
 
-event SetName:
-    name: String[64] # New active Vault ERC20 name
+event UpdateGuestList:
+    guestList: address # Vault guest list address
 
 
-event SetSymbol:
-    symbol: String[32] # New active Vault ERC20 symbol
+event UpdateRewards:
+    rewards: address # New active rewards recipient 
 
 
-event SetGuestList:
-    guestList: indexed(address) # Vault guest list address
+event UpdateDepositLimit:
+    depositLimit: uint256 # New active deposit limit
 
 
-event SetRewards:
-    rewards: indexed(address) # New active rewards recipient 
+event UpdatePerformanceFee:
+    performanceFee: uint256 # New active performance fee
 
 
-event SetDepositLimit:
-    depositLimit: indexed(uint256) # New active deposit limit
+event UpdateManagementFee:
+    managementFee: uint256 # New active management fee
 
 
-event SetPerformanceFee:
-    performanceFee: indexed(uint256) # New active performance fee
-
-
-event SetManagementFee:
-    managementFee: indexed(uint256) # New active management fee
-
-
-event SetGuardian:
-    guardian: indexed(address) # Address of the active guardian
+event UpdateGuardian:
+    guardian: address # Address of the active guardian
 
 
 event EmergencyShutdown:
     active: bool # New emergency shutdown state (if false, normal operation enable)
 
 
-event SetWithdrawalQueue:
+event UpdateWithdrawalQueue:
     queue: address[MAXIMUM_STRATEGIES] # New active withdrawal queue
+
+
+event UpdateStrategyDebtLimit:
+    strategy: indexed(address) # Address of the strategy for the debt limit adjustment
+    debtLimit: uint256 # The new debt limit for the strategy
+
+
+event UpdateRateLimit:
+    strategy: indexed(address) # Address of the strategy for the rate limit adjustment
+    rateLimit: uint256 # The new rate limit for the strategy
+
+
+event UpdateStrategyPerformanceFee:
+    strategy: indexed(address) # Address of the strategy for the performance fee adjustment
+    performanceFee: uint256 # The new performance fee for the strategy
+
+
+event UpdateStrategy:
+    oldVersion: indexed(address) # Old version of the strategy to be upgraded
+    newVersion: indexed(address) # New version of the strategy
+
+
+event StrategyRevoked:
+    strategy: indexed(address) # Address of the strategy that is revoked
+
+
+event StrategyRemoved:
+    strategy: indexed(address) # Address of the strategy that is removed
 
 
 # NOTE: Track the total for overhead targeting purposes
@@ -231,10 +251,15 @@ def __init__(
     self.decimals = DetailedERC20(token).decimals()
     self.governance = governance
     self.rewards = rewards
+    log UpdateRewards(rewards)
     self.guardian = msg.sender
+    log UpdateGuardian(msg.sender)
     self.performanceFee = 1000  # 10% of yield (per Strategy)
+    log UpdatePerformanceFee(convert(1000, uint256))
     self.managementFee = 200  # 2% per year
+    log UpdateManagementFee(convert(200, uint256))
     self.depositLimit = MAX_UINT256  # Start unlimited
+    log UpdateDepositLimit(MAX_UINT256)
     self.lastReport = block.timestamp
     self.activation = block.timestamp
     # EIP-712
@@ -247,13 +272,6 @@ def __init__(
             convert(self, bytes32)
         )
     )
-    log SetName(self.name)
-    log SetSymbol(self.symbol)
-    log SetRewards(self.rewards)
-    log SetGuardian(self.guardian)
-    log SetPerformanceFee(self.performanceFee)
-    log SetManagementFee(self.managementFee)
-    log SetDepositLimit(self.depositLimit)
 
 
 @pure
@@ -283,7 +301,6 @@ def setName(name: String[42]):
     """
     assert msg.sender == self.governance
     self.name = name
-    log SetName(self.name)
 
 
 @external
@@ -297,7 +314,6 @@ def setSymbol(symbol: String[20]):
     """
     assert msg.sender == self.governance
     self.symbol = symbol
-    log SetSymbol(self.symbol)
 
 
 # 2-phase commit for a change in governance
@@ -348,7 +364,7 @@ def setGuestList(guestList: address):
     """
     assert msg.sender == self.governance
     self.guestList = GuestList(guestList)
-    log SetGuestList(self.guestList.address)
+    log UpdateGuestList(self.guestList.address)
 
 
 @external
@@ -367,7 +383,7 @@ def setRewards(rewards: address):
     """
     assert msg.sender == self.governance
     self.rewards = rewards
-    log SetRewards(self.rewards)
+    log UpdateRewards(self.rewards)
 
 
 @external
@@ -384,7 +400,7 @@ def setDepositLimit(limit: uint256):
     """
     assert msg.sender == self.governance
     self.depositLimit = limit
-    log SetDepositLimit(self.depositLimit)
+    log UpdateDepositLimit(self.depositLimit)
 
 
 @external
@@ -398,7 +414,7 @@ def setPerformanceFee(fee: uint256):
     """
     assert msg.sender == self.governance
     self.performanceFee = fee
-    log SetPerformanceFee(self.performanceFee)
+    log UpdatePerformanceFee(self.performanceFee)
 
 
 @external
@@ -412,7 +428,7 @@ def setManagementFee(fee: uint256):
     """
     assert msg.sender == self.governance
     self.managementFee = fee
-    log SetManagementFee(self.managementFee)
+    log UpdateManagementFee(self.managementFee)
 
 
 @external
@@ -426,7 +442,7 @@ def setGuardian(guardian: address):
     """
     assert msg.sender in [self.guardian, self.governance]
     self.guardian = guardian
-    log SetGuardian(self.guardian)
+    log UpdateGuardian(self.guardian)
 
 
 @external
@@ -487,7 +503,7 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
             break
         assert self.strategies[queue[i]].activation > 0
         self.withdrawalQueue[i] = queue[i]
-    log SetWithdrawalQueue(queue)
+    log UpdateWithdrawalQueue(queue)
 
 
 @internal
@@ -1044,6 +1060,7 @@ def updateStrategyDebtLimit(
     self.debtLimit -= self.strategies[strategy].debtLimit
     self.strategies[strategy].debtLimit = debtLimit
     self.debtLimit += debtLimit
+    log UpdateStrategyDebtLimit(strategy, debtLimit)
 
 
 @external
@@ -1063,6 +1080,7 @@ def updateStrategyRateLimit(
     assert msg.sender == self.governance
     assert self.strategies[strategy].activation > 0
     self.strategies[strategy].rateLimit = rateLimit
+    log UpdateStrategyDebtLimit(strategy, rateLimit)
 
 
 @external
@@ -1082,6 +1100,7 @@ def updateStrategyPerformanceFee(
     assert msg.sender == self.governance
     assert self.strategies[strategy].activation > 0
     self.strategies[strategy].performanceFee = performanceFee
+    log UpdateStrategyPerformanceFee(strategy, performanceFee)
 
 
 @external
@@ -1117,6 +1136,8 @@ def migrateStrategy(oldVersion: address, newVersion: address):
         if self.withdrawalQueue[idx] == oldVersion:
             self.withdrawalQueue[idx] = newVersion
             return  # Don't need to reorder anything because we swapped
+    
+    log UpdateStrategy(oldVersion, newVersion)
 
 
 @external
@@ -1143,6 +1164,7 @@ def revokeStrategy(strategy: address = msg.sender):
     assert msg.sender in [strategy, self.governance, self.guardian]
     self.debtLimit -= self.strategies[strategy].debtLimit
     self.strategies[strategy].debtLimit = 0
+    log StrategyRevoked(strategy)
 
 
 @external
@@ -1188,6 +1210,7 @@ def removeStrategyFromQueue(strategy: address):
         if self.withdrawalQueue[idx] == strategy:
             self.withdrawalQueue[idx] = ZERO_ADDRESS
             self._organizeWithdrawalQueue()
+            log StrategyRemoved(strategy)
             return  # We found the right location and cleared it
     raise  # We didn't find the Strategy in the queue
 
