@@ -364,7 +364,7 @@ def setGuestList(guestList: address):
     """
     assert msg.sender == self.governance
     self.guestList = GuestList(guestList)
-    log UpdateGuestList(self.guestList.address)
+    log UpdateGuestList(guestList)
 
 
 @external
@@ -383,7 +383,7 @@ def setRewards(rewards: address):
     """
     assert msg.sender == self.governance
     self.rewards = rewards
-    log UpdateRewards(self.rewards)
+    log UpdateRewards(rewards)
 
 
 @external
@@ -400,7 +400,7 @@ def setDepositLimit(limit: uint256):
     """
     assert msg.sender == self.governance
     self.depositLimit = limit
-    log UpdateDepositLimit(self.depositLimit)
+    log UpdateDepositLimit(limit)
 
 
 @external
@@ -414,7 +414,7 @@ def setPerformanceFee(fee: uint256):
     """
     assert msg.sender == self.governance
     self.performanceFee = fee
-    log UpdatePerformanceFee(self.performanceFee)
+    log UpdatePerformanceFee(fee)
 
 
 @external
@@ -428,7 +428,7 @@ def setManagementFee(fee: uint256):
     """
     assert msg.sender == self.governance
     self.managementFee = fee
-    log UpdateManagementFee(self.managementFee)
+    log UpdateManagementFee(fee)
 
 
 @external
@@ -442,7 +442,7 @@ def setGuardian(guardian: address):
     """
     assert msg.sender in [self.guardian, self.governance]
     self.guardian = guardian
-    log UpdateGuardian(self.guardian)
+    log UpdateGuardian(guardian)
 
 
 @external
@@ -468,7 +468,7 @@ def setEmergencyShutdown(active: bool):
     """
     assert msg.sender in [self.guardian, self.governance]
     self.emergencyShutdown = active
-    log EmergencyShutdown(self.emergencyShutdown)
+    log EmergencyShutdown(active)
 
 
 @external
