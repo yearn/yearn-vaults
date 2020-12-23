@@ -477,7 +477,10 @@ def setEmergencyShutdown(active: bool):
         If true, the Vault goes into Emergency Shutdown. If false, the Vault
         goes back into Normal Operation.
     """
-    assert msg.sender in [self.guardian, self.governance]
+    if active:
+        assert msg.sender in [self.guardian, self.governance]
+    else:
+        assert msg.sender == self.governance
     self.emergencyShutdown = active
     log EmergencyShutdown(active)
 
