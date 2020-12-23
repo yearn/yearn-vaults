@@ -6,14 +6,21 @@ ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 
 
 @pytest.fixture
-def vault(gov, token, Vault):
+def vault(gov, management, token, Vault):
     # NOTE: Because the fixture has tokens in it already
-    yield gov.deploy(Vault, token, gov, gov, "", "")
+    vault = gov.deploy(Vault, token, gov, gov, "", "")
+    vault.setManagement(management, {"from": gov})
+    yield vault
 
 
 @pytest.fixture
 def strategy(gov, vault, TestStrategy):
     # NOTE: Because the fixture has tokens in it already
+    yield gov.deploy(TestStrategy, vault)
+
+
+@pytest.fixture
+def other_strategy(gov, vault, TestStrategy):
     yield gov.deploy(TestStrategy, vault)
 
 
@@ -263,3 +270,53 @@ def test_reporting(vault, strategy, gov, rando):
 
     vault.addStrategy(strategy, 10000, 10, 1000, {"from": gov})
     vault.expectedReturn(strategy)  # Do this for coverage of `Vault._expectedReturn()`
+
+
+def test_strategy_limits(gov, management, vault, strategy):
+    vault.addStrategy(strategy, 10000, 10, 1000, {"from": gov})
+
+    vault.updateStrategyDebtLimit(strategy, 50, {"from": management})
+    assert vault.strategies(strategy).dict()["debtLimit"] == 50
+
+    vault.updateStrategyRateLimit(strategy, 20, {"from": management})
+    assert vault.strategies(strategy).dict()["rateLimit"] == 20
+
+
+def test_management_permission(management, vault, strategy, other_strategy):
+
+    with brownie.reverts():
+        vault.addStrategy(strategy, 10000, 10, 1000, {"from": management})
+
+    with brownie.reverts():
+        vault.updateStrategyPerformanceFee(strategy, 10, {"from": management})
+
+    with brownie.reverts():
+        vault.migrateStrategy(strategy, other_strategy, {"from": management})
+
+    with brownie.reverts():
+        vault.setDepositLimit(10, {"from": management})
+
+
+@pytest.fixture
+def test_withdrawalQueue(gov, management, vault, strategy, other_strategy):
+    vault.addStrategy(strategy, 10000, 10, 1000, {"from": gov})
+    vault.addStrategy(other_strategy, 10000, 10, 1000, {"from": gov})
+
+    assert vault.withdrawalQueue(0) == strategy
+    assert vault.withdrawalQueue(1) == other_strategy
+
+    queue = [ZERO_ADDRESS] * 20
+    queue[0] = other_strategy
+    queue[1] = strategy
+    vault.setWithdrawalQueue(queue, {"from": management})
+
+    assert vault.withdrawalQueue(1) == strategy
+    assert vault.withdrawalQueue(0) == other_strategy
+
+    vault.removeStrategyFromQueue(other_strategy, {"from": management})
+    assert vault.withdrawalQueue(0) == strategy
+    assert vault.withdrawalQueue(1) == ZERO_ADDRESS
+
+    vault.addStrategyToQueue(other_strategy, {"from": management})
+    assert vault.withdrawalQueue(0) == strategy
+    assert vault.withdrawalQueue(1) == other_strategy

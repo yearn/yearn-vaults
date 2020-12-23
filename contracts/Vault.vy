@@ -529,7 +529,7 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
         The array of addresses to use as the new withdrawal queue. This is
         order sensitive.
     """
-    assert msg.sender in [self.governance, self.management]
+    assert msg.sender in [self.management, self.governance]
     # HACK: Temporary until Vyper adds support for Dynamic arrays
     for i in range(MAXIMUM_STRATEGIES):
         if queue[i] == ZERO_ADDRESS and self.withdrawalQueue[i] == ZERO_ADDRESS:
@@ -1088,7 +1088,7 @@ def updateStrategyDebtLimit(
     @param strategy The Strategy to update.
     @param debtLimit The quantity of assets `strategy` may now manage.
     """
-    assert msg.sender in [self.governance, self.management]
+    assert msg.sender in [self.management, self.governance]
     assert self.strategies[strategy].activation > 0
     self.debtLimit -= self.strategies[strategy].debtLimit
     self.strategies[strategy].debtLimit = debtLimit
@@ -1110,7 +1110,7 @@ def updateStrategyRateLimit(
     @param strategy The Strategy to update.
     @param rateLimit The quantity of assets `strategy` may now manage.
     """
-    assert msg.sender in [self.governance, self.management]
+    assert msg.sender in [self.management, self.governance]
     assert self.strategies[strategy].activation > 0
     self.strategies[strategy].rateLimit = rateLimit
     log StrategyUpdateRateLimit(strategy, rateLimit)
@@ -1211,7 +1211,7 @@ def addStrategyToQueue(strategy: address):
         `setWithdrawalQueue` to change the order.
     @param strategy The Strategy to add.
     """
-    assert msg.sender in [self.governance, self.management]
+    assert msg.sender in [self.management, self.governance]
     # Must be a current Strategy
     assert self.strategies[strategy].activation > 0
     # Check if queue is full
@@ -1238,7 +1238,7 @@ def removeStrategyFromQueue(strategy: address):
         be possible to withdraw from the Strategy if it's unwinding.
     @param strategy The Strategy to remove.
     """
-    assert msg.sender in [self.governance, self.management]
+    assert msg.sender in [self.management, self.governance]
     for idx in range(MAXIMUM_STRATEGIES):
         if self.withdrawalQueue[idx] == strategy:
             self.withdrawalQueue[idx] = ZERO_ADDRESS
