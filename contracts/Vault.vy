@@ -89,7 +89,7 @@ guestList: public(GuestList)
 
 struct StrategyParams:
     performanceFee: uint256  # Strategist's fee (basis points)
-    activation: uint256  # Activation block.number
+    activation: uint256  # Activation block.timestamp
     debtLimit: uint256  # Maximum borrow amount
     rateLimit: uint256  # Max increase in debt per second since last harvest
     lastReport: uint256  # block.timestamp of the last time a report occured
