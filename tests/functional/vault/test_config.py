@@ -15,6 +15,7 @@ def test_vault_deployment(guardian, gov, rewards, token, Vault):
     vault = guardian.deploy(Vault, token, gov, rewards, "", "")
     # Addresses
     assert vault.governance() == gov
+    assert vault.management() == gov
     assert vault.guardian() == guardian
     assert vault.rewards() == rewards
     assert vault.token() == token
@@ -49,6 +50,7 @@ def test_vault_name_symbol_override(guardian, gov, rewards, token, Vault):
         ("emergencyShutdown", "setEmergencyShutdown", True),
         ("guardian", "setGuardian", None),
         ("rewards", "setRewards", None),
+        ("management", "setManagement", None),
         ("performanceFee", "setPerformanceFee", 1000),
         ("managementFee", "setManagementFee", 1000),
         ("depositLimit", "setDepositLimit", 1000),

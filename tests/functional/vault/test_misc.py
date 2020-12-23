@@ -63,6 +63,7 @@ def test_reject_ether(gov, vault):
     # These functions should reject any calls with value
     for func, args in [
         ("setGovernance", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
+        ("setManagement", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
         ("acceptGovernance", []),
         ("setRewards", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
         ("setGuardian", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
