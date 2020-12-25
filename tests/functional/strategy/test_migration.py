@@ -51,3 +51,16 @@ def test_bad_migration(
     # Can't migrate if you're not the Vault  or governance
     with brownie.reverts():
         strategy.migrate(new_strategy, {"from": rando})
+
+
+def test_migrated_strategy_can_call_harvest(token, strategy, vault, gov, TestStrategy):
+
+    new_strategy = gov.deploy(TestStrategy, vault)
+    vault.migrateStrategy(strategy, new_strategy, {"from": gov})
+
+    # send profit to the old strategy
+    token.transfer(strategy, 1e18, {"from": gov})
+
+    assert vault.strategies(strategy).dict()["totalGain"] == 0
+    strategy.harvest({"from": gov})
+    assert vault.strategies(strategy).dict()["totalGain"] == 1e18
