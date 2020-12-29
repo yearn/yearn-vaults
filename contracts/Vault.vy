@@ -122,7 +122,7 @@ event UpdateGovernance:
 
 
 event UpdateManagement:
-    management: address # New active governance
+    management: address # New active manager
 
 
 event UpdateGuestList:
