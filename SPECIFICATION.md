@@ -7,6 +7,7 @@
 - Vault: Only user touch-point, manages funds
 - Strategy: Complex external interactions w/ limited access to Vault
 - Strategist: original creator of strategy, is in charge of monitoring its position for adverse effects.
+- Registry: On-chain registry of deployed Vaults for tokens, indexed by API version
 
 ## Vault Specification
 
@@ -71,6 +72,18 @@ NOTE: In this mode, the Strategy defines a reversionary set of actions that seek
 1. During Emergency Exit, the Strategy cannot take new debt from the connected Vault.
 1. During Emergency Exit, the Strategy can still interact with any external system, but must be able to handle any failure(s) of each of those system(s) as well as possible.
 1. Only Governance can exit Emergency Exit Mode.
+
+## Registry Specification
+
+### Normal Operation
+
+NOTE: The Registry allows an on-chain reference for Vault deployment events, to be used with external integrations. It is also possible to reconstruct the deployment and release history via on-chain calls.
+
+NOTE: The API version of each Vault deployment for a token should increase according to [Semantic Versioning](https://semver.org/). However, this is not practically enforced.
+
+1. Only Governance can register a new release for future Vaults to use when deploying via proxy deployment.
+1. Anyone can deploy a proxy deployment Vault, using the latest release, for experimental purposes
+1. Only Governance can endorse a Vault deployment for a given token with the latest release.
 
 ## Governance Specification
 
