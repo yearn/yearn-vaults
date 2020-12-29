@@ -1139,6 +1139,13 @@ def updateStrategyPerformanceFee(
     log StrategyUpdatePerformanceFee(strategy, performanceFee)
 
 
+@internal
+def _revokeStrategy(strategy: address):
+    self.debtLimit -= self.strategies[strategy].debtLimit
+    self.strategies[strategy].debtLimit = 0
+    log StrategyRevoked(strategy)
+
+
 @external
 def migrateStrategy(oldVersion: address, newVersion: address):
     """
@@ -1162,8 +1169,21 @@ def migrateStrategy(oldVersion: address, newVersion: address):
     assert self.strategies[newVersion].activation == 0
 
     strategy: StrategyParams = self.strategies[oldVersion]
-    self.strategies[oldVersion] = empty(StrategyParams)
-    self.strategies[newVersion] = strategy
+
+    self._revokeStrategy(oldVersion)
+    # _revokeStrategy will lower the debtLimit
+    self.debtLimit += strategy.debtLimit
+
+    self.strategies[newVersion] = StrategyParams({
+        performanceFee: strategy.performanceFee,
+        activation: block.timestamp,
+        debtLimit: strategy.debtLimit,
+        rateLimit: strategy.rateLimit,
+        lastReport: block.timestamp,
+        totalDebt: strategy.totalDebt,
+        totalGain: 0,
+        totalLoss: 0,
+    })
 
     Strategy(oldVersion).migrate(newVersion)
     log StrategyMigrated(oldVersion, newVersion)
@@ -1197,9 +1217,7 @@ def revokeStrategy(strategy: address = msg.sender):
     @param strategy The Strategy to revoke.
     """
     assert msg.sender in [strategy, self.governance, self.guardian]
-    self.debtLimit -= self.strategies[strategy].debtLimit
-    self.strategies[strategy].debtLimit = 0
-    log StrategyRevoked(strategy)
+    self._revokeStrategy(strategy)
 
 
 @external

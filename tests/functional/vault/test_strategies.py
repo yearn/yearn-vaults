@@ -143,8 +143,9 @@ def test_migrateStrategy(gov, vault, strategy, rando, TestStrategy):
     new_strategy = gov.deploy(TestStrategy, vault)
     vault.migrateStrategy(strategy, new_strategy, {"from": gov})
 
-    # Can migrate back again (but it starts out fresh)
-    vault.migrateStrategy(new_strategy, strategy, {"from": gov})
+    # Can't migrate back again
+    with brownie.reverts():
+        vault.migrateStrategy(new_strategy, strategy, {"from": gov})
 
     # Can't migrate an unapproved strategy
     with brownie.reverts():
