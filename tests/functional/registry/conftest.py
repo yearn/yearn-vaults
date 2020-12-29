@@ -1,24 +1,4 @@
-from pathlib import Path
-
 import pytest
-import yaml
-
-from brownie import compile_source, Vault
-
-PACKAGE_VERSION = yaml.safe_load(
-    (Path(__file__).parents[3] / "ethpm-config.yaml").read_text()
-)["version"]
-
-
-VAULT_SOURCE_CODE = (Path(__file__).parents[3] / "contracts/Vault.vy").read_text()
-
-
-def patch_vault_version(version):
-    if version == PACKAGE_VERSION:
-        return Vault
-    else:
-        source = VAULT_SOURCE_CODE.replace(PACKAGE_VERSION, version)
-        return compile_source(source).Vyper
 
 
 @pytest.fixture
@@ -30,8 +10,8 @@ def create_token(gov, Token):
 
 
 @pytest.fixture
-def create_vault(gov, create_token):
-    def create_vault(token=None, version=PACKAGE_VERSION):
+def create_vault(gov, create_token, patch_vault_version):
+    def create_vault(token=None, version=None):
         if token is None:
             token = create_token()
         vault = patch_vault_version(version).deploy({"from": gov})
