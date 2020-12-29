@@ -1,9 +1,5 @@
 # @version 0.2.8
 
-interface DetailedERC20:
-    def name() -> String[52]: view
-    def symbol() -> String[30]: view
-
 
 interface Vault:
     def token() -> address: view
@@ -185,16 +181,8 @@ def _newProxyVault(
     # NOTE: Underflow if no releases created yet (this is okay)
     vault: address = create_forwarder_to(self.releases[self.nextRelease - 1])  # dev: no releases
 
-    nameOverride: String[64] = name
-    if nameOverride == "":
-        nameOverride = concat(DetailedERC20(token).symbol(), " yVault")
-
-    symbolOverride: String[32] = symbol
-    if symbolOverride == "":
-        symbolOverride = concat("yv", DetailedERC20(token).symbol())
-
     # NOTE: Must initialize the Vault atomically with deploying it
-    Vault(vault).initialize(token, governance, rewards, nameOverride, symbolOverride, guardian)
+    Vault(vault).initialize(token, governance, rewards, name, symbol, guardian)
 
     return vault
 

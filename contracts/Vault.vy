@@ -44,6 +44,8 @@ implements: ERC20
 
 
 interface DetailedERC20:
+    def name() -> String[42]: view
+    def symbol() -> String[20]: view
     def decimals() -> uint256: view
 
 
@@ -229,8 +231,8 @@ def initialize(
     token: address,
     governance: address,
     rewards: address,
-    name: String[64],
-    symbol: String[32],
+    nameOverride: String[64],
+    symbolOverride: String[32],
     guardian: address = msg.sender,
 ):
     """
@@ -240,17 +242,29 @@ def initialize(
         The performance fee is set to 10% of yield, per Strategy.
         The management fee is set to 2%, per year.
         There is no initial deposit limit.
+    @dev
+        If `nameOverride` is not specified, the name will be 'yearn'
+        combined with the name of `token`.
+
+        If `symbolOverride` is not specified, the symbol will be 'y'
+        combined with the symbol of `token`.
     @param token The token that may be deposited into this Vault.
     @param governance The address authorized for governance interactions.
     @param rewards The address to distribute rewards to.
-    @param name Specify a custom Vault name.
-    @param symbol Specify a custom Vault symbol name.
+    @param nameOverride Specify a custom Vault name. Leave empty for default choice.
+    @param symbolOverride Specify a custom Vault symbol name. Leave empty for default choice.
     @param guardian The address authorized for guardian interactions. Defaults to caller.
     """
     assert self.activation == 0  # dev: no devops199
     self.token = ERC20(token)
-    self.name = name
-    self.symbol = symbol
+    if nameOverride == "":
+        self.name = concat(DetailedERC20(token).symbol(), " yVault")
+    else:
+        self.name = nameOverride
+    if symbolOverride == "":
+        self.symbol = concat("yv", DetailedERC20(token).symbol())
+    else:
+        self.symbol = symbolOverride
     self.decimals = DetailedERC20(token).decimals()
     self.governance = governance
     log UpdateGovernance(governance)
