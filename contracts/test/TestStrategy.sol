@@ -58,33 +58,13 @@ contract TestStrategy is BaseStrategy {
         // Whatever we have "free", consider it "invested" now
     }
 
-    function liquidatePosition(uint256 _amountNeeded) internal override returns (uint256 _amountFreed) {
+    function liquidatePosition(uint256 _amountNeeded) internal override returns (uint256 _liquidatedAmount, uint256 _loss) {
         uint256 totalAssets = want.balanceOf(address(this));
-        if (_amountNeeded >= totalAssets) {
-            _amountFreed = totalAssets;
+        if (_amountNeeded > totalAssets) {
+            _liquidatedAmount = totalAssets;
+            _loss = _amountNeeded.sub(totalAssets);
         } else {
-            _amountFreed = _amountNeeded;
-        }
-    }
-
-    function exitPosition(uint256 _debtOutstanding)
-        internal
-        override
-        returns (
-            uint256 _profit,
-            uint256 _loss,
-            uint256 _debtPayment
-        )
-    {
-        uint256 totalAssets = want.balanceOf(address(this));
-
-        // Three possibilities, profit, breakeven, losses
-        if (totalAssets >= _debtOutstanding) {
-            _profit = totalAssets.sub(_debtOutstanding);
-            _debtPayment = _debtOutstanding;
-        } else {
-            _debtPayment = totalAssets;
-            _loss = _debtOutstanding.sub(totalAssets);
+            _liquidatedAmount = _amountNeeded;
         }
     }
 
