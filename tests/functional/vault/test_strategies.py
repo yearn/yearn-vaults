@@ -18,6 +18,12 @@ def strategy(gov, vault, TestStrategy):
 
 
 @pytest.fixture
+def other_strategy(gov, vault, TestStrategy):
+    # NOTE: Because the fixture has tokens in it already
+    yield gov.deploy(TestStrategy, vault)
+
+
+@pytest.fixture
 def wrong_strategy(gov, Vault, Token, TestStrategy):
     otherToken = gov.deploy(Token)
     otherVault = gov.deploy(Vault, otherToken, gov, gov, "", "")
@@ -263,3 +269,43 @@ def test_reporting(vault, strategy, gov, rando):
 
     vault.addStrategy(strategy, 10000, 10, 1000, {"from": gov})
     vault.expectedReturn(strategy)  # Do this for coverage of `Vault._expectedReturn()`
+
+
+@pytest.fixture
+def test_withdrawalQueue(gov, management, vault, strategy, other_strategy):
+    vault.addStrategy(strategy, 10000, 10, 1000, {"from": gov})
+    vault.addStrategy(other_strategy, 10000, 10, 1000, {"from": gov})
+
+    assert vault.withdrawalQueue(0) == strategy
+    assert vault.withdrawalQueue(1) == other_strategy
+
+    queue = [ZERO_ADDRESS] * 20
+    queue[0] = other_strategy
+    queue[1] = strategy
+
+    vault.setWithdrawalQueue(queue, {"from": management})
+    assert vault.withdrawalQueue(0) == other_strategy
+    assert vault.withdrawalQueue(1) == strategy
+    chain.undo()
+
+    vault.setWithdrawalQueue(queue, {"from": gov})
+    assert vault.withdrawalQueue(0) == other_strategy
+    assert vault.withdrawalQueue(1) == strategy
+
+    vault.removeStrategyFromQueue(other_strategy, {"from": management})
+    assert vault.withdrawalQueue(0) == strategy
+    assert vault.withdrawalQueue(1) == ZERO_ADDRESS
+    chain.undo()
+
+    vault.removeStrategyFromQueue(other_strategy, {"from": gov})
+    assert vault.withdrawalQueue(0) == strategy
+    assert vault.withdrawalQueue(1) == ZERO_ADDRESS
+
+    vault.addStrategyToQueue(other_strategy, {"from": management})
+    assert vault.withdrawalQueue(0) == strategy
+    assert vault.withdrawalQueue(1) == other_strategy
+    chain.undo()
+
+    vault.addStrategyToQueue(other_strategy, {"from": gov})
+    assert vault.withdrawalQueue(0) == strategy
+    assert vault.withdrawalQueue(1) == other_strategy

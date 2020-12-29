@@ -83,6 +83,7 @@ totalSupply: public(uint256)
 
 token: public(ERC20)
 governance: public(address)
+management: public(address)
 guardian: public(address)
 pendingGovernance: address
 guestList: public(GuestList)
@@ -120,12 +121,16 @@ event UpdateGovernance:
     governance: address # New active governance
 
 
+event UpdateManagement:
+    management: address # New active manager
+
+
 event UpdateGuestList:
     guestList: address # Vault guest list address
 
 
 event UpdateRewards:
-    rewards: address # New active rewards recipient 
+    rewards: address # New active rewards recipient
 
 
 event UpdateDepositLimit:
@@ -260,6 +265,8 @@ def __init__(
     self.decimals = DetailedERC20(token).decimals()
     self.governance = governance
     log UpdateGovernance(governance)
+    self.management = governance
+    log UpdateManagement(governance)
     self.rewards = rewards
     log UpdateRewards(rewards)
     self.guardian = msg.sender
@@ -360,6 +367,21 @@ def acceptGovernance():
     assert msg.sender == self.pendingGovernance
     self.governance = msg.sender
     log UpdateGovernance(msg.sender)
+
+
+@external
+def setManagement(management: address):
+    """
+    @notice
+        Changes the management address.
+        Management is able to make some investment decisions adjusting parameters.
+
+        This may only be called by governance.
+    @param management The address to use for managing.
+    """
+    assert msg.sender == self.governance
+    self.management = management
+    log UpdateManagement(management)
 
 
 @external
@@ -497,7 +519,7 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
         will be updated in a gas-efficient manner, assuming the input is well-
         ordered with 0x0 only at the end.
 
-        This may only be called by governance.
+        This may only be called by governance or management.
     @dev
         This is order sensitive, specify the addresses in the order in which
         funds should be withdrawn (so `queue`[0] is the first Strategy withdrawn
@@ -510,7 +532,7 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
         The array of addresses to use as the new withdrawal queue. This is
         order sensitive.
     """
-    assert msg.sender == self.governance
+    assert msg.sender in [self.management, self.governance]
     # HACK: Temporary until Vyper adds support for Dynamic arrays
     for i in range(MAXIMUM_STRATEGIES):
         if queue[i] == ZERO_ADDRESS and self.withdrawalQueue[i] == ZERO_ADDRESS:
@@ -1035,8 +1057,8 @@ def addStrategy(
 
     assert msg.sender == self.governance
     assert self.strategies[strategy].activation == 0
-    assert self == Strategy(strategy).vault() 
-    assert self.token.address == Strategy(strategy).want() 
+    assert self == Strategy(strategy).vault()
+    assert self.token.address == Strategy(strategy).want()
     self.strategies[strategy] = StrategyParams({
         performanceFee: performanceFee,
         activation: block.timestamp,
@@ -1065,11 +1087,11 @@ def updateStrategyDebtLimit(
     @notice
         Change the quantity of assets `strategy` may manage.
 
-        This may only be called by governance.
+        This may be called by governance or management.
     @param strategy The Strategy to update.
     @param debtLimit The quantity of assets `strategy` may now manage.
     """
-    assert msg.sender == self.governance
+    assert msg.sender in [self.management, self.governance]
     assert self.strategies[strategy].activation > 0
     self.debtLimit -= self.strategies[strategy].debtLimit
     self.strategies[strategy].debtLimit = debtLimit
@@ -1087,11 +1109,11 @@ def updateStrategyRateLimit(
         Change the quantity assets per block this Vault may deposit to or
         withdraw from `strategy`.
 
-        This may only be called by governance.
+        This may only be called by governance or management.
     @param strategy The Strategy to update.
     @param rateLimit The quantity of assets `strategy` may now manage.
     """
-    assert msg.sender == self.governance
+    assert msg.sender in [self.management, self.governance]
     assert self.strategies[strategy].activation > 0
     self.strategies[strategy].rateLimit = rateLimit
     log StrategyUpdateRateLimit(strategy, rateLimit)
@@ -1186,13 +1208,13 @@ def addStrategyToQueue(strategy: address):
     @notice
         Adds `strategy` to `withdrawalQueue`.
 
-        This may only be called by governance.
+        This may only be called by governance or management.
     @dev
         The Strategy will be appended to `withdrawalQueue`, call
         `setWithdrawalQueue` to change the order.
     @param strategy The Strategy to add.
     """
-    assert msg.sender == self.governance
+    assert msg.sender in [self.management, self.governance]
     # Must be a current Strategy
     assert self.strategies[strategy].activation > 0
     # Check if queue is full
@@ -1213,13 +1235,13 @@ def removeStrategyFromQueue(strategy: address):
     @notice
         Remove `strategy` from `withdrawalQueue`.
 
-        This may only be called by governance.
+        This may only be called by governance or management.
     @dev
         We don't do this with revokeStrategy because it should still
         be possible to withdraw from the Strategy if it's unwinding.
     @param strategy The Strategy to remove.
     """
-    assert msg.sender == self.governance
+    assert msg.sender in [self.management, self.governance]
     for idx in range(MAXIMUM_STRATEGIES):
         if self.withdrawalQueue[idx] == strategy:
             self.withdrawalQueue[idx] = ZERO_ADDRESS

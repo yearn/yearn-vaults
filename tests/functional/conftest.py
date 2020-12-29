@@ -17,13 +17,19 @@ def guardian(accounts):
 
 
 @pytest.fixture
+def management(accounts):
+    yield accounts[3]
+
+
+@pytest.fixture
 def token(gov, Token):
     yield gov.deploy(Token)
 
 
 @pytest.fixture
-def vault(gov, guardian, token, rewards, Vault):
+def vault(gov, guardian, management, token, rewards, Vault):
     vault = guardian.deploy(Vault, token, gov, rewards, "", "")
+    vault.setManagement(management, {"from": gov})
     # Make it so vault has some AUM to start
     token.approve(vault, token.balanceOf(gov) // 2, {"from": gov})
     vault.deposit(token.balanceOf(gov) // 2, {"from": gov})
@@ -34,12 +40,12 @@ def vault(gov, guardian, token, rewards, Vault):
 
 @pytest.fixture
 def strategist(accounts):
-    yield accounts[3]
+    yield accounts[4]
 
 
 @pytest.fixture
 def keeper(accounts):
-    yield accounts[4]
+    yield accounts[5]
 
 
 @pytest.fixture
