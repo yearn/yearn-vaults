@@ -116,4 +116,12 @@ class ReleaseTest:
 
 
 def test_releases(gov, registry, create_token, create_vault, state_machine):
-    state_machine(ReleaseTest, gov, registry, create_token, create_vault)
+    state_machine(
+        ReleaseTest,
+        gov,
+        registry,
+        create_token,
+        create_vault,
+        # NOTE: Taking too long with default settings
+        settings={"max_examples": 20, "stateful_step_count": 6},
+    )
