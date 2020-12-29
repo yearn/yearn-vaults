@@ -1169,8 +1169,21 @@ def migrateStrategy(oldVersion: address, newVersion: address):
     assert self.strategies[newVersion].activation == 0
 
     strategy: StrategyParams = self.strategies[oldVersion]
+
     self._revokeStrategy(oldVersion)
-    self.strategies[newVersion] = strategy
+    # _revokeStrategy will lower the debtLimit
+    self.debtLimit += strategy.debtLimit
+
+    self.strategies[newVersion] = StrategyParams({
+        performanceFee: strategy.performanceFee,
+        activation: block.timestamp,
+        debtLimit: strategy.debtLimit,
+        rateLimit: strategy.rateLimit,
+        lastReport: block.timestamp,
+        totalDebt: strategy.totalDebt,
+        totalGain: 0,
+        totalLoss: 0,
+    })
 
     Strategy(oldVersion).migrate(newVersion)
     log StrategyMigrated(oldVersion, newVersion)
