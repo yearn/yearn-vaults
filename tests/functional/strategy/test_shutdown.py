@@ -10,11 +10,15 @@ def test_emergency_shutdown(token, gov, vault, strategy, keeper, chain):
         strategy, token.balanceOf(strategy) // 50, {"from": gov}
     )
 
-    # Just keep doing it until we're full up
-    while (
-        vault.strategies(strategy).dict()["totalDebt"]
-        < vault.strategies(strategy).dict()["debtLimit"]
-    ):
+    # Just keep doing it until we're full up (should run at least once)
+    debt_limit_hit = lambda: (
+        vault.strategies(strategy).dict()["totalDebt"] / vault.totalAssets()
+        # NOTE: Needs to hit at least 99% of the debt ratio, because 100% is unobtainable
+        #       (Strategy increases it's absolute debt every harvest)
+        >= 0.99 * vault.strategies(strategy).dict()["debtRatio"] / 10_000
+    )
+    assert not debt_limit_hit()
+    while not debt_limit_hit():
         chain.sleep(DAY)
         add_yield()
         strategy.harvest({"from": keeper})
@@ -56,11 +60,15 @@ def test_emergency_exit(token, gov, vault, strategy, keeper, chain):
         strategy, token.balanceOf(strategy) // 50, {"from": gov}
     )
 
-    # Just keep doing it until we're full up
-    while (
-        vault.strategies(strategy).dict()["totalDebt"]
-        < vault.strategies(strategy).dict()["debtLimit"]
-    ):
+    # Just keep doing it until we're full up (should run at least once)
+    debt_limit_hit = lambda: (
+        vault.strategies(strategy).dict()["totalDebt"] / vault.totalAssets()
+        # NOTE: Needs to hit at least 99% of the debt ratio, because 100% is unobtainable
+        #       (Strategy increases it's absolute debt every harvest)
+        >= 0.99 * vault.strategies(strategy).dict()["debtRatio"] / 10_000
+    )
+    assert not debt_limit_hit()
+    while not debt_limit_hit():
         chain.sleep(DAY)
         add_yield()
         strategy.harvest({"from": keeper})

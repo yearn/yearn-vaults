@@ -30,7 +30,7 @@ def test_vault_deployment(guardian, gov, rewards, token, Vault):
     assert vault.decimals() == token.decimals()
     assert vault.apiVersion() == PACKAGE_VERSION
 
-    assert vault.debtLimit() == 0
+    assert vault.debtRatio() == 0
     assert vault.depositLimit() == 0
     assert vault.creditAvailable() == 0
     assert vault.debtOutstanding() == 0
@@ -93,7 +93,7 @@ def test_vault_setParams(
 @pytest.mark.parametrize(
     "key,setter,val",
     [
-        ("debtLimit", "updateStrategyDebtLimit", 500),
+        ("debtRatio", "updateStrategyDebtRatio", 500),
         ("rateLimit", "updateStrategyRateLimit", 10),
     ],
 )
