@@ -44,7 +44,9 @@ def wrong_strategy(gov, Vault, Token, TestStrategy):
     yield gov.deploy(TestStrategy, otherVault)
 
 
-def test_addStrategy(chain, gov, vault, strategy, wrong_strategy, rando):
+def test_addStrategy(
+    chain, gov, vault, strategy, other_strategy, wrong_strategy, rando
+):
 
     # Only governance can add a strategy
     with brownie.reverts():
@@ -82,6 +84,14 @@ def test_addStrategy(chain, gov, vault, strategy, wrong_strategy, rando):
     # Can't add a strategy with incorrect vault or want token
     with brownie.reverts():
         vault.addStrategy(wrong_strategy, 100, 10, 1000, {"from": gov})
+
+    # Can't add a strategy with a debt ratio more than the maximum
+    leftover_ratio = 10_000 - vault.debtRatio()
+    with brownie.reverts():
+        vault.addStrategy(other_strategy, leftover_ratio + 1, 10, 1000, {"from": gov})
+
+    vault.addStrategy(other_strategy, leftover_ratio, 10, 1000, {"from": gov})
+    assert vault.debtRatio() == 10_000
 
 
 def test_updateStrategy(chain, gov, vault, strategy, rando):
