@@ -12,8 +12,8 @@ import {BaseStrategy, StrategyParams} from "../BaseStrategy.sol";
 contract TestStrategy is BaseStrategy {
     constructor(address _vault) public BaseStrategy(_vault) {}
 
-    function name() external override pure returns (string memory) {
-        return "TestStrategy";
+    function name() external override view returns (string memory) {
+        return string(abi.encodePacked("TestStrategy ", apiVersion()));
     }
 
     // NOTE: This is a test-only function to simulate losses
