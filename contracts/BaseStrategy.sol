@@ -94,9 +94,9 @@ interface StrategyAPI {
 
     function isActive() external view returns (bool);
 
-    function delegatedAssets() external virtual pure returns (uint256);
+    function delegatedAssets() external virtual view returns (uint256);
 
-    function name() external pure returns (string memory);
+    function name() external view returns (string memory);
 
     function vault() external view returns (address);
 
@@ -151,7 +151,7 @@ abstract contract BaseStrategy {
      *  `apiVersion()` function above.
      * @return This Strategy's name.
      */
-    function name() external virtual pure returns (string memory);
+    function name() external virtual view returns (string memory);
 
     /**
      * @notice
@@ -166,7 +166,7 @@ abstract contract BaseStrategy {
      *  The amount of assets this strategy manages that should not be included in Yearn's Total Value
      *  Locked (TVL) calculation across it's ecosystem.
      */
-    function delegatedAssets() external virtual pure returns (uint256) {
+    function delegatedAssets() external virtual view returns (uint256) {
         return 0;
     }
 
