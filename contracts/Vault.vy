@@ -1178,6 +1178,8 @@ def migrateStrategy(oldVersion: address, newVersion: address):
     self._revokeStrategy(oldVersion)
     # _revokeStrategy will lower the debtRatio
     self.debtRatio += strategy.debtRatio
+    # Debt is migrated to new strategy
+    self.strategies[oldVersion].totalDebt = 0
 
     self.strategies[newVersion] = StrategyParams({
         performanceFee: strategy.performanceFee,
