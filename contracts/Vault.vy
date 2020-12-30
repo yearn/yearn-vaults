@@ -227,12 +227,13 @@ PERMIT_TYPE_HASH: constant(bytes32) = keccak256("Permit(address owner,address sp
 
 
 @external
-def __init__(
+def initialize(
     token: address,
     governance: address,
     rewards: address,
     nameOverride: String[64],
     symbolOverride: String[32],
+    guardian: address = msg.sender,
 ):
     """
     @notice
@@ -252,7 +253,9 @@ def __init__(
     @param rewards The address to distribute rewards to.
     @param nameOverride Specify a custom Vault name. Leave empty for default choice.
     @param symbolOverride Specify a custom Vault symbol name. Leave empty for default choice.
+    @param guardian The address authorized for guardian interactions. Defaults to caller.
     """
+    assert self.activation == 0  # dev: no devops199
     self.token = ERC20(token)
     if nameOverride == "":
         self.name = concat(DetailedERC20(token).symbol(), " yVault")
@@ -269,8 +272,8 @@ def __init__(
     log UpdateManagement(governance)
     self.rewards = rewards
     log UpdateRewards(rewards)
-    self.guardian = msg.sender
-    log UpdateGuardian(msg.sender)
+    self.guardian = guardian
+    log UpdateGuardian(guardian)
     self.performanceFee = 1000  # 10% of yield (per Strategy)
     log UpdatePerformanceFee(convert(1000, uint256))
     self.managementFee = 200  # 2% per year

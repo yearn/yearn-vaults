@@ -5,7 +5,11 @@ import brownie
 @pytest.fixture
 def vault(gov, token, Vault):
     # NOTE: Overriding the one in conftest because it has values already
-    yield gov.deploy(Vault, token, gov, gov, "", "")
+    vault = gov.deploy(Vault)
+    vault.initialize(
+        token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
+    )
+    yield vault
 
 
 @pytest.fixture

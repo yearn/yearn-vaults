@@ -8,7 +8,10 @@ def other_token(gov, Token):
 
 
 def test_regular_available_deposit_limit(Vault, token, gov):
-    vault = gov.deploy(Vault, token, gov, gov, "", "")
+    vault = gov.deploy(Vault)
+    vault.initialize(
+        token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
+    )
     token.approve(vault, 100, {"from": gov})
     vault.setDepositLimit(100)
 
@@ -20,7 +23,10 @@ def test_regular_available_deposit_limit(Vault, token, gov):
 
 
 def test_negative_available_deposit_limit(Vault, token, gov):
-    vault = gov.deploy(Vault, token, gov, gov, "", "")
+    vault = gov.deploy(Vault)
+    vault.initialize(
+        token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
+    )
     token.approve(vault, 100, {"from": gov})
     vault.setDepositLimit(100)
 

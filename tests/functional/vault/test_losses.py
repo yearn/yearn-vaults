@@ -7,7 +7,11 @@ DAY = 86400  # seconds
 @pytest.fixture
 def vault(gov, token, Vault):
     # NOTE: Because the fixture has tokens in it already
-    yield gov.deploy(Vault, token, gov, gov, "", "")
+    vault = gov.deploy(Vault)
+    vault.initialize(
+        token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
+    )
+    yield vault
 
 
 @pytest.fixture

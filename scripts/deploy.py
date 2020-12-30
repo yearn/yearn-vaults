@@ -2,8 +2,9 @@ from pathlib import Path
 import yaml
 import click
 
-from brownie import Token, Vault, accounts, network, web3
+from brownie import Token, Vault, Registry, accounts, network, web3
 from eth_utils import is_checksum_address
+from semantic_version import Version
 
 
 DEFAULT_VAULT_NAME = lambda token: f"{token.symbol()} yVault"
@@ -38,11 +39,29 @@ def main():
     dev = accounts.load(click.prompt("Account", type=click.Choice(accounts.load())))
     click.echo(f"You are using: 'dev' [{dev.address}]")
 
+    registry = Registry.at(
+        get_address("Vault Registry", default="v2.registry.ychad.eth")
+    )
+
+    latest_release = Version(registry.latestRelease())
+    use_proxy = False  # NOTE: Use a proxy to save on gas for experimental Vaults
+    if Version(PACKAGE_VERSION) < latest_release:
+        click.echo("Cannot deploy Vault for old API version")
+        return
+    elif Version(PACKAGE_VERSION) > latest_release:
+        if not click.confirm(f"Deploy {PACKAGE_VERSION} as new release"):
+            return
+    else:
+        if not click.confirm("Deploy Experimental Vault"):
+            return
+        use_proxy = True
+
     token = Token.at(get_address("ERC20 Token"))
     gov = get_address("Yearn Governance", default="ychad.eth")
     rewards = get_address(
         "Rewards contract", default="0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde"
     )
+    guardian = get_address("Vault Guardian", default=dev.address)
     name = click.prompt(f"Set description", default=DEFAULT_VAULT_NAME(token))
     symbol = click.prompt(f"Set symbol", default=DEFAULT_VAULT_SYMBOL(token))
 
@@ -54,18 +73,35 @@ def main():
      token: {token.address}
   governer: {gov}
    rewards: {rewards}
+  guardian: {guardian}
       name: '{name}'
     symbol: '{symbol}'
     """
     )
 
     if click.confirm("Deploy New Vault"):
-        vault = dev.deploy(
-            Vault,
+        args = [
             token,
             gov,
             rewards,
             # NOTE: Empty string `""` means no override (don't use click default tho)
             name if name != DEFAULT_VAULT_NAME(token) else "",
             symbol if symbol != DEFAULT_VAULT_SYMBOL(token) else "",
-        )
+        ]
+        if use_proxy:
+            # NOTE: Must always include guardian, even if default
+            args.insert(3, guardian)
+            txn_receipt = registry.newExperimentalVault(*args, {"from": dev})
+            vault = Vault.at(txn_receipt.events["NewExperimentalVault"]["vault"])
+            click.echo(f"Experimental Vault deployed [{vault.address}]")
+            click.echo("    NOTE: Vault is not registered in Registry!")
+        else:
+            if guardian != dev.address:
+                # NOTE: Only need to include if guardian is not self
+                args.push(guardian)
+            vault = dev.deploy(Vault)
+            vault.initialize(*args)
+            click.echo(f"New Vault Release deployed [{vault.address}]")
+            click.echo(
+                "    NOTE: Vault is not registered in Registry, please register!"
+            )

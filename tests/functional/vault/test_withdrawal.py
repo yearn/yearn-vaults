@@ -3,7 +3,16 @@ import brownie
 
 def test_multiple_withdrawals(chain, token, gov, Vault, TestStrategy):
     # Need a fresh vault to do this math right
-    vault = Vault.deploy(token, gov, gov, "", "", {"from": gov})
+    vault = Vault.deploy({"from": gov})
+    vault.initialize(
+        token,
+        gov,
+        gov,
+        token.symbol() + " yVault",
+        "yv" + token.symbol(),
+        gov,
+        {"from": gov},
+    )
     starting_balance = token.balanceOf(gov)
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(5)]
     [
@@ -89,7 +98,10 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
 def test_progressive_withdrawal(
     chain, token, gov, Vault, guardian, rewards, TestStrategy
 ):
-    vault = guardian.deploy(Vault, token, gov, rewards, "", "")
+    vault = guardian.deploy(Vault)
+    vault.initialize(
+        token, gov, rewards, token.symbol() + " yVault", "yv" + token.symbol(), guardian
+    )
 
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(2)]
     [vault.addStrategy(s, 1000, 10, 1000, {"from": gov}) for s in strategies]
@@ -140,7 +152,10 @@ def test_progressive_withdrawal(
 def test_withdrawal_with_empty_queue(
     chain, token, gov, Vault, guardian, rewards, TestStrategy
 ):
-    vault = guardian.deploy(Vault, token, gov, rewards, "", "")
+    vault = guardian.deploy(Vault)
+    vault.initialize(
+        token, gov, rewards, token.symbol() + " yVault", "yv" + token.symbol(), guardian
+    )
 
     strategy = gov.deploy(TestStrategy, vault)
     vault.addStrategy(strategy, 1000, 10, 1000, {"from": gov})

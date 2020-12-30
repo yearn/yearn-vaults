@@ -8,14 +8,24 @@ def andre(accounts):
 
 
 @pytest.fixture
-def token(andre, Token):
-    yield andre.deploy(Token)
+def create_token(andre, Token):
+    yield lambda: andre.deploy(Token)
+
+
+@pytest.fixture
+def token(create_token):
+    yield create_token()
 
 
 @pytest.fixture
 def gov(accounts):
     # yearn multis... I mean YFI governance. I swear!
     yield accounts[1]
+
+
+@pytest.fixture
+def registry(gov, Registry):
+    yield Registry.deploy({"from": gov})
 
 
 @pytest.fixture
@@ -30,9 +40,28 @@ def guardian(accounts):
 
 
 @pytest.fixture
-def vault(gov, rewards, guardian, token, Vault):
-    vault = guardian.deploy(Vault, token, gov, rewards, "", "")
-    yield vault
+def create_vault(gov, rewards, guardian, create_token, patch_vault_version):
+    def create_vault(token=None, version=None):
+        if token is None:
+            token = create_token()
+        vault = patch_vault_version(version).deploy({"from": guardian})
+        vault.initialize(
+            token,
+            gov,
+            rewards,
+            token.symbol() + " yVault",
+            "yv" + token.symbol(),
+            guardian,
+        )
+        assert vault.token() == token
+        return vault
+
+    yield create_vault
+
+
+@pytest.fixture
+def vault(token, create_vault):
+    yield create_vault(token)
 
 
 @pytest.fixture
