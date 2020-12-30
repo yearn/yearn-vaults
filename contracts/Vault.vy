@@ -91,7 +91,7 @@ guestList: public(GuestList)
 struct StrategyParams:
     performanceFee: uint256  # Strategist's fee (basis points)
     activation: uint256  # Activation block.timestamp
-    debtLimit: uint256  # Maximum borrow amount (in BPS of total assets)
+    debtRatio: uint256  # Maximum borrow amount (in BPS of total assets)
     rateLimit: uint256  # Max increase in debt per second since last harvest
     lastReport: uint256  # block.timestamp of the last time a report occured
     totalDebt: uint256  # Total outstanding debt that Strategy has
@@ -101,7 +101,7 @@ struct StrategyParams:
 
 event StrategyAdded:
     strategy: indexed(address)
-    debtLimit: uint256  # Maximum borrow amount (in BPS of total assets)
+    debtRatio: uint256  # Maximum borrow amount (in BPS of total assets)
     rateLimit: uint256  # Increase/decrease per block
     performanceFee: uint256  # Strategist's fee (basis points)
 
@@ -114,7 +114,7 @@ event StrategyReported:
     totalLoss: uint256
     totalDebt: uint256
     debtAdded: uint256
-    debtLimit: uint256
+    debtRatio: uint256
 
 
 event UpdateGovernance:
@@ -157,9 +157,9 @@ event UpdateWithdrawalQueue:
     queue: address[MAXIMUM_STRATEGIES] # New active withdrawal queue
 
 
-event StrategyUpdateDebtLimit:
-    strategy: indexed(address) # Address of the strategy for the debt limit adjustment
-    debtLimit: uint256 # The new debt limit for the strategy (in BPS of total assets)
+event StrategyUpdateDebtRatio:
+    strategy: indexed(address) # Address of the strategy for the debt ratio adjustment
+    debtRatio: uint256 # The new debt limit for the strategy (in BPS of total assets)
 
 
 event StrategyUpdateRateLimit:
@@ -207,7 +207,7 @@ withdrawalQueue: public(address[MAXIMUM_STRATEGIES])
 emergencyShutdown: public(bool)
 
 depositLimit: public(uint256)  # Limit for totalAssets the Vault can hold
-debtLimit: public(uint256)  # Debt limit for the Vault across all strategies (in BPS, <= 10k)
+debtRatio: public(uint256)  # Debt ratio for the Vault across all strategies (in BPS, <= 10k)
 totalDebt: public(uint256)  # Amount of tokens that all strategies have borrowed
 lastReport: public(uint256)  # block.timestamp of last report
 activation: public(uint256)  # block.timestamp of contract deployment
@@ -1036,7 +1036,7 @@ def _organizeWithdrawalQueue():
 @external
 def addStrategy(
     strategy: address,
-    debtLimit: uint256,
+    debtRatio: uint256,
     rateLimit: uint256,
     performanceFee: uint256,
 ):
@@ -1049,7 +1049,7 @@ def addStrategy(
         The Strategy will be appended to `withdrawalQueue`, call
         `setWithdrawalQueue` to change the order.
     @param strategy The address of the Strategy to add.
-    @param debtLimit The quantity of assets `strategy` can manage.
+    @param debtRatio The ratio of the total assets in the `vault that the `strategy` can manage.
     @param rateLimit
         How many assets per block this Vault may deposit to or withdraw from
         `strategy`.
@@ -1059,22 +1059,22 @@ def addStrategy(
     assert strategy != ZERO_ADDRESS
 
     assert msg.sender == self.governance
-    assert self.debtLimit + debtLimit <= MAX_BPS
+    assert self.debtRatio + debtRatio <= MAX_BPS
     assert self.strategies[strategy].activation == 0
     assert self == Strategy(strategy).vault()
     assert self.token.address == Strategy(strategy).want()
     self.strategies[strategy] = StrategyParams({
         performanceFee: performanceFee,
         activation: block.timestamp,
-        debtLimit: debtLimit,
+        debtRatio: debtRatio,
         rateLimit: rateLimit,
         lastReport: block.timestamp,
         totalDebt: 0,
         totalGain: 0,
         totalLoss: 0,
     })
-    self.debtLimit += debtLimit
-    log StrategyAdded(strategy, debtLimit, rateLimit, performanceFee)
+    self.debtRatio += debtRatio
+    log StrategyAdded(strategy, debtRatio, rateLimit, performanceFee)
 
     # queue is full
     assert self.withdrawalQueue[MAXIMUM_STRATEGIES - 1] == ZERO_ADDRESS
@@ -1083,9 +1083,9 @@ def addStrategy(
 
 
 @external
-def updateStrategyDebtLimit(
+def updateStrategyDebtRatio(
     strategy: address,
-    debtLimit: uint256,
+    debtRatio: uint256,
 ):
     """
     @notice
@@ -1093,15 +1093,15 @@ def updateStrategyDebtLimit(
 
         This may be called by governance or management.
     @param strategy The Strategy to update.
-    @param debtLimit The quantity of assets `strategy` may now manage.
+    @param debtRatio The quantity of assets `strategy` may now manage.
     """
     assert msg.sender in [self.management, self.governance]
     assert self.strategies[strategy].activation > 0
-    self.debtLimit -= self.strategies[strategy].debtLimit
-    self.strategies[strategy].debtLimit = debtLimit
-    self.debtLimit += debtLimit
-    assert self.debtLimit <= MAX_BPS
-    log StrategyUpdateDebtLimit(strategy, debtLimit)
+    self.debtRatio -= self.strategies[strategy].debtRatio
+    self.strategies[strategy].debtRatio = debtRatio
+    self.debtRatio += debtRatio
+    assert self.debtRatio <= MAX_BPS
+    log StrategyUpdateDebtRatio(strategy, debtRatio)
 
 
 @external
@@ -1146,8 +1146,8 @@ def updateStrategyPerformanceFee(
 
 @internal
 def _revokeStrategy(strategy: address):
-    self.debtLimit -= self.strategies[strategy].debtLimit
-    self.strategies[strategy].debtLimit = 0
+    self.debtRatio -= self.strategies[strategy].debtRatio
+    self.strategies[strategy].debtRatio = 0
     log StrategyRevoked(strategy)
 
 
@@ -1176,13 +1176,13 @@ def migrateStrategy(oldVersion: address, newVersion: address):
     strategy: StrategyParams = self.strategies[oldVersion]
 
     self._revokeStrategy(oldVersion)
-    # _revokeStrategy will lower the debtLimit
-    self.debtLimit += strategy.debtLimit
+    # _revokeStrategy will lower the debtRatio
+    self.debtRatio += strategy.debtRatio
 
     self.strategies[newVersion] = StrategyParams({
         performanceFee: strategy.performanceFee,
         activation: block.timestamp,
-        debtLimit: strategy.debtLimit,
+        debtRatio: strategy.debtRatio,
         rateLimit: strategy.rateLimit,
         lastReport: block.timestamp,
         totalDebt: strategy.totalDebt,
@@ -1278,7 +1278,7 @@ def removeStrategyFromQueue(strategy: address):
 @internal
 def _debtOutstanding(strategy: address) -> uint256:
     # See note on `debtOutstanding()`.
-    strategy_debtLimit: uint256 = self.strategies[strategy].debtLimit * self._totalAssets / MAX_BPS
+    strategy_debtLimit: uint256 = self.strategies[strategy].debtRatio * self._totalAssets() / MAX_BPS
     strategy_totalDebt: uint256 = self.strategies[strategy].totalDebt
 
     if self.emergencyShutdown:
@@ -1310,9 +1310,9 @@ def _creditAvailable(strategy: address) -> uint256:
         return 0
 
     vault_totalAssets: uint256 = self._totalAssets()
-    vault_debtLimit: uint256 = self.debtLimit * vault_totalAssets / MAX_BPS
+    vault_debtLimit: uint256 = self.debtRatio * vault_totalAssets / MAX_BPS
     vault_totalDebt: uint256 = self.totalDebt
-    strategy_debtLimit: uint256 = self.strategies[strategy].debtLimit * vault_totalAssets / MAX_BPS
+    strategy_debtLimit: uint256 = self.strategies[strategy].debtRatio * vault_totalAssets / MAX_BPS
     strategy_totalDebt: uint256 = self.strategies[strategy].totalDebt
     strategy_rateLimit: uint256 = self.strategies[strategy].rateLimit
     strategy_lastReport: uint256 = self.strategies[strategy].lastReport
@@ -1407,8 +1407,8 @@ def _reportLoss(strategy: address, _loss: uint256):
     self.totalDebt -= loss
 
     # Also, make sure we reduce our trust with the strategy by the same amount
-    debtLimit: uint256 = self.strategies[strategy].debtLimit
-    self.strategies[strategy].debtLimit -= min(loss * MAX_BPS / self._totalAssets(), debtLimit)
+    debtRatio: uint256 = self.strategies[strategy].debtRatio
+    self.strategies[strategy].debtRatio -= min(loss * MAX_BPS / self._totalAssets(), debtRatio)
 
 
 @internal
@@ -1547,10 +1547,10 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
         self.strategies[msg.sender].totalLoss,
         self.strategies[msg.sender].totalDebt,
         credit,
-        self.strategies[msg.sender].debtLimit,
+        self.strategies[msg.sender].debtRatio,
     )
 
-    if self.strategies[msg.sender].debtLimit == 0 or self.emergencyShutdown:
+    if self.strategies[msg.sender].debtRatio == 0 or self.emergencyShutdown:
         # Take every last penny the Strategy has (Emergency Exit/revokeStrategy)
         # NOTE: This is different than `debt` in order to extract *all* of the returns
         return self._balanceSheetOfStrategy(msg.sender)

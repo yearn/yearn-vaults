@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 struct StrategyParams {
     uint256 performanceFee;
     uint256 activation;
-    uint256 debtLimit;
+    uint256 debtRatio;
     uint256 rateLimit;
     uint256 lastReport;
     uint256 totalDebt;
@@ -384,7 +384,7 @@ abstract contract BaseStrategy {
      * @return True if the strategy is actively managing a position.
      */
     function isActive() public view returns (bool) {
-        return vault.strategies(address(this)).debtLimit > 0 || estimatedTotalAssets() > 0;
+        return vault.strategies(address(this)).debtRatio > 0 || estimatedTotalAssets() > 0;
     }
 
     /**
