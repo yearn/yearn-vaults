@@ -432,23 +432,17 @@ abstract contract BaseStrategy {
     function adjustPosition(uint256 _debtOutstanding) internal virtual;
 
     /**
-     * Make as much capital as possible "free" for the Vault to take. Some
-     * slippage is allowed, since when this method is called the strategist is
-     * no longer receiving their performance fee. The goal is for the Strategy
-     * to divest as quickly as possible while not suffering exorbitant losses.
-     * This function is used during emergency exit instead of
-     * `prepareReturn()`. This method returns any realized losses incurred,
-     * and should also return the amount of `want` tokens available to repay
-     * outstanding debt to the Vault.
+     * Liquidate up to `_amountNeeded` of `want` of this strategy's positions,
+     * irregardless of slippage. Any excess will be re-invested with `adjustPosition()`.
+     * This function should return the amount of `want` tokens made available by the
+     * liquidation. If there is a difference between them, `_loss` indicates whether the
+     * difference is due to a realized loss, or if there is some other sitution at play
+     * (e.g. locked funds). This function is used during emergency exit instead of
+     * `prepareReturn()` to liquidate all of the Strategy's positions back to the Vault.
+     *
+     * NOTE: The invariant `_amountFreed + _loss <= _amountNeeded` should always be maintained
      */
-    function exitPosition(uint256 _debtOutstanding)
-        internal
-        virtual
-        returns (
-            uint256 _profit,
-            uint256 _loss,
-            uint256 _debtPayment
-        );
+    function liquidatePosition(uint256 _amountNeeded) internal virtual returns (uint256 _liquidatedAmount, uint256 _loss);
 
     /**
      *  `Harvest()` calls this function after shares are created during
@@ -584,20 +578,27 @@ abstract contract BaseStrategy {
     function harvest() external onlyKeepers {
         uint256 profit = 0;
         uint256 loss = 0;
+        uint256 debtOutstanding = vault.debtOutstanding();
         uint256 debtPayment = 0;
         if (emergencyExit) {
             // Free up as much capital as possible
-            // NOTE: Don't take performance fee in this scenario
-            (profit, loss, debtPayment) = exitPosition(vault.debtOutstanding());
+            uint256 totalAssets = estimatedTotalAssets();
+            // NOTE: use the larger of total assets or debt outstanding to book losses properly
+            (debtPayment, loss) = liquidatePosition(totalAssets > debtOutstanding ? totalAssets : debtOutstanding);
+            // NOTE: take up any remainder here as profit
+            if (debtPayment > debtOutstanding) {
+                profit = debtPayment.sub(debtOutstanding);
+                debtPayment = debtOutstanding;
+            }
         } else {
             // Free up returns for Vault to pull
-            (profit, loss, debtPayment) = prepareReturn(vault.debtOutstanding());
+            (profit, loss, debtPayment) = prepareReturn(debtOutstanding);
         }
 
         // Allow Vault to take up to the "harvested" balance of this contract,
         // which is the amount it has earned since the last time it reported to
         // the Vault.
-        uint256 debtOutstanding = vault.report(profit, loss, debtPayment);
+        debtOutstanding = vault.report(profit, loss, debtPayment);
 
         // Distribute any reward shares earned by the strategy on this report
         distributeRewards();
@@ -609,25 +610,21 @@ abstract contract BaseStrategy {
     }
 
     /**
-     * Liquidate as many assets as possible to `want`, irregardless of
-     * slippage, up to `_amountNeeded`. Any excess should be re-invested
-     * here as well.
-     */
-    function liquidatePosition(uint256 _amountNeeded) internal virtual returns (uint256 _amountFreed);
-
-    /**
      * @notice
      *  Withdraws `_amountNeeded` to `vault`.
      *
      *  This may only be called by the Vault.
      * @param _amountNeeded How much `want` to withdraw.
+     * @return _loss Any realized losses
      */
-    function withdraw(uint256 _amountNeeded) external {
+    function withdraw(uint256 _amountNeeded) external returns (uint256 _loss) {
         require(msg.sender == address(vault), "!vault");
         // Liquidate as much as possible to `want`, up to `_amount`
-        uint256 amountFreed = liquidatePosition(_amountNeeded);
+        uint256 amountFreed;
+        (amountFreed, _loss) = liquidatePosition(_amountNeeded);
         // Send it directly back (NOTE: Using `msg.sender` saves some gas here)
         want.transfer(msg.sender, amountFreed);
+        // NOTE: Reinvest anything leftover on next `tend`/`harvest`
     }
 
     /**

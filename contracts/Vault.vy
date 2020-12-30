@@ -53,7 +53,7 @@ interface Strategy:
     def want() -> address: view
     def vault() -> address: view
     def estimatedTotalAssets() -> uint256: view
-    def withdraw(_amount: uint256): nonpayable
+    def withdraw(_amount: uint256) -> uint256: nonpayable
     def migrate(_newStrategy: address): nonpayable
 
 
@@ -977,13 +977,14 @@ def withdraw(_shares: uint256 = MAX_UINT256, recipient: address = msg.sender) ->
 
             # Force withdraw amount from each Strategy in the order set by governance
             before: uint256 = self.token.balanceOf(self)
-            Strategy(strategy).withdraw(amountNeeded)
+            loss: uint256 = Strategy(strategy).withdraw(amountNeeded)
             withdrawn: uint256 = self.token.balanceOf(self) - before
+            value -= loss  # NOTE: Withdrawer incurs any losses from liquidation
 
             # Reduce the Strategy's debt by the amount withdrawn ("realized returns")
             # NOTE: This doesn't add to returns as it's not earned by "normal means"
-            self.strategies[strategy].totalDebt -= withdrawn
-            self.totalDebt -= withdrawn
+            self.strategies[strategy].totalDebt -= withdrawn + loss
+            self.totalDebt -= withdrawn + loss
 
     # NOTE: We have withdrawn everything possible out of the withdrawal queue
     #       but we still don't have enough to fully pay them back, so adjust
