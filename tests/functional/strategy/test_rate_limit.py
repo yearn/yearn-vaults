@@ -8,25 +8,24 @@ def test_simple_limit(chain, gov, vault, token, TestStrategy):
     vault.addStrategy(strategy, 2_000, 10, 0, {"from": gov})
 
     # Mine a block in a second
-    start = chain.time()
-    chain.mine(1, start + 1)
+    chain.mine(timedelta=1)
 
     assert token.balanceOf(strategy) == 0
     strategy.harvest({"from": gov})
     # Doing this because even if set the time of the block
     # the clock keeps ticking while the code runs.
-    # a balance of 20 would mean that it took more than 2 secs
-    # to harvest
-    assert token.balanceOf(strategy) < 20
+    # a balance of 30 would mean that it took more than 1 secs
+    # to harvest (+1 for the timedelta, and potentially +1 for rollover)
+    assert token.balanceOf(strategy) < 30
 
     # After a while the strategy will be able to get up to debtLimit
-    chain.mine(1, start + 1000)
+    chain.mine(timedelta=1000)
     strategy.harvest({"from": gov})
     # Doing this because even if set the time of the block
     # the clock keeps ticking while the code runs.
-    # a balance of 10020 would mean that it took more than 2 secs
-    # to harvest
-    assert token.balanceOf(strategy) < 10020
+    # a balance of 10030 would mean that it took more than 1 secs
+    # to harvest (+1 for the timedelta, and potentially +1 for rollover)
+    assert token.balanceOf(strategy) < 10030
 
 
 def test_zero_limit(gov, vault, token, TestStrategy):
