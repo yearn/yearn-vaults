@@ -10,7 +10,8 @@ def test_withdraw(chain, gov, token, vault, strategy, rando):
 
     balance = strategy.estimatedTotalAssets()
     strategy.withdraw(balance // 2, {"from": vault.address})
-    assert strategy.estimatedTotalAssets() == balance // 2
+    # NOTE: This may be +1 more than just dividing it
+    assert strategy.estimatedTotalAssets() == balance - balance // 2
 
     # Not just anyone can call it
     with brownie.reverts():
