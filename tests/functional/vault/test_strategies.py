@@ -12,6 +12,7 @@ def vault(gov, token, Vault):
     vault.initialize(
         token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
     )
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     yield vault
 
 
@@ -39,6 +40,7 @@ def wrong_strategy(gov, Vault, Token, TestStrategy):
         "yv" + otherToken.symbol(),
         gov,
     )
+    otherVault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     yield gov.deploy(TestStrategy, otherVault)
 
 

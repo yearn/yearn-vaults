@@ -13,6 +13,7 @@ def test_multiple_withdrawals(chain, token, gov, Vault, TestStrategy):
         gov,
         {"from": gov},
     )
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     starting_balance = token.balanceOf(gov)
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(5)]
     [
@@ -102,6 +103,7 @@ def test_progressive_withdrawal(
     vault.initialize(
         token, gov, rewards, token.symbol() + " yVault", "yv" + token.symbol(), guardian
     )
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
 
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(2)]
     [vault.addStrategy(s, 1000, 10, 1000, {"from": gov}) for s in strategies]
@@ -156,6 +158,7 @@ def test_withdrawal_with_empty_queue(
     vault.initialize(
         token, gov, rewards, token.symbol() + " yVault", "yv" + token.symbol(), guardian
     )
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
 
     strategy = gov.deploy(TestStrategy, vault)
     vault.addStrategy(strategy, 1000, 10, 1000, {"from": gov})

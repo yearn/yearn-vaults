@@ -241,7 +241,8 @@ def initialize(
         deployed.
         The performance fee is set to 10% of yield, per Strategy.
         The management fee is set to 2%, per year.
-        There is no initial deposit limit.
+        There initial deposit limit is set to 0 (deposits disabled); it must be
+        updated after initialization.
     @dev
         If `nameOverride` is not specified, the name will be 'yearn'
         combined with the name of `token`.
@@ -278,8 +279,6 @@ def initialize(
     log UpdatePerformanceFee(convert(1000, uint256))
     self.managementFee = 200  # 2% per year
     log UpdateManagementFee(convert(200, uint256))
-    self.depositLimit = MAX_UINT256  # Start unlimited
-    log UpdateDepositLimit(MAX_UINT256)
     self.lastReport = block.timestamp
     self.activation = block.timestamp
     # EIP-712
