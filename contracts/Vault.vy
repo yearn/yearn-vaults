@@ -241,7 +241,7 @@ def initialize(
         deployed.
         The performance fee is set to 10% of yield, per Strategy.
         The management fee is set to 2%, per year.
-        There initial deposit limit is set to 0 (deposits disabled); it must be
+        The initial deposit limit is set to 0 (deposits disabled); it must be
         updated after initialization.
     @dev
         If `nameOverride` is not specified, the name will be 'yearn'
