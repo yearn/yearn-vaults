@@ -18,6 +18,7 @@ def create_vault(gov, create_token, patch_vault_version):
         vault.initialize(
             token, gov, gov, f"Yearn {token.name()} Vault", f"yv{token.symbol()}", gov
         )
+        vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
         assert vault.token() == token
         return vault
 

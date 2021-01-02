@@ -9,6 +9,7 @@ def vault(gov, token, Vault):
     vault.initialize(
         token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
     )
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     yield vault
 
 

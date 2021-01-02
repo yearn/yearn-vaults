@@ -53,6 +53,8 @@ def create_vault(gov, rewards, guardian, create_token, patch_vault_version):
             "yv" + token.symbol(),
             guardian,
         )
+        vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+        assert vault.depositLimit() == 2 ** 256 - 1
         assert vault.token() == token
         return vault
 
