@@ -538,11 +538,12 @@ abstract contract BaseStrategy {
         if (block.timestamp.sub(params.lastReport) >= minReportDelay) return true;
 
         // If some amount is owed, pay it back
-        // NOTE: Since debt is adjusted in step-wise fashion, it is appropriate
-        //       to always trigger here, because the resulting change should be
-        //       large (might not always be the case).
+        // NOTE: Since debt is based on deposits, it makes sense to guard against large
+        //       changes to the value from triggering a harvest directly through user
+        //       behavior. This should ensure reasonable resistance to manipulation
+        //       from user-initiated withdrawals as the outstanding debt fluctuates.
         uint256 outstanding = vault.debtOutstanding();
-        if (outstanding > 0) return true;
+        if (outstanding > debtThreshold) return true;
 
         // Check for profits and losses
         uint256 total = estimatedTotalAssets();
