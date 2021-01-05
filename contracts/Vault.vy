@@ -1176,7 +1176,7 @@ def migrateStrategy(oldVersion: address, newVersion: address):
     @param newVersion The new Strategy to migrate to.
     """
     assert msg.sender == self.governance
-
+    assert newVersion != ZERO_ADDRESS
     assert self.strategies[oldVersion].activation > 0
     assert self.strategies[newVersion].activation == 0
 

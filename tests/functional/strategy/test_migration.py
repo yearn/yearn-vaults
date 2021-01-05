@@ -1,5 +1,7 @@
 import brownie
 
+ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
+
 
 def test_good_migration(
     token, strategy, vault, gov, strategist, guardian, TestStrategy, rando
@@ -55,6 +57,10 @@ def test_bad_migration(
     # Can't migrate if you're not the Vault  or governance
     with brownie.reverts():
         strategy.migrate(new_strategy, {"from": rando})
+
+    # Can't migrate if new strategy is 0x0
+    with brownie.reverts():
+        vault.migrateStrategy(strategy, ZERO_ADDRESS, {"from": gov})
 
 
 def test_migrated_strategy_can_call_harvest(token, strategy, vault, gov, TestStrategy):
