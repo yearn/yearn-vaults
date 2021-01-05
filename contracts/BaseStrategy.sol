@@ -19,6 +19,8 @@ struct StrategyParams {
 interface VaultAPI is IERC20 {
     function apiVersion() external view returns (string memory);
 
+    function withdraw(uint256 shares, address recipient) external;
+
     function token() external view returns (address);
 
     function strategies(address _strategy) external view returns (StrategyParams memory);

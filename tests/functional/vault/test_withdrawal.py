@@ -204,3 +204,33 @@ def test_withdrawal_with_empty_queue(
         {"from": gov},
     )
     assert token.balanceOf(gov) == free_balance + strategy_balance
+
+
+def test_withdrawal_with_reentrancy(
+    chain, token, gov, Vault, guardian, rewards, TestStrategy
+):
+    vault = guardian.deploy(Vault)
+    vault.initialize(
+        token, gov, rewards, token.symbol() + " yVault", "yv" + token.symbol(), guardian
+    )
+
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+
+    strategy = gov.deploy(TestStrategy, vault)
+    vault.addStrategy(strategy, 1000, 10, 1000, {"from": gov})
+
+    strategy._toggleReentrancyExploit()
+
+    token.approve(vault, 2 ** 256 - 1, {"from": gov})
+    vault.deposit(1000, {"from": gov})
+
+    # To simulate reentrancy we need strategy to have some balance
+    vault.transfer(strategy, vault.balanceOf(gov) // 2, {"from": gov})
+
+    # move funds into strategy
+    chain.sleep(1)  # Needs to be a second ahead, at least
+    strategy.harvest({"from": gov})
+
+    # given previous setup the withdraw should revert from reentrancy guard
+    with brownie.reverts():
+        vault.withdraw(vault.balanceOf(gov), {"from": gov})
