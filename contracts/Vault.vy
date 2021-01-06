@@ -1407,10 +1407,10 @@ def expectedReturn(strategy: address = msg.sender) -> uint256:
 
 
 @internal
-def _reportLoss(strategy: address, _loss: uint256):
+def _reportLoss(strategy: address, loss: uint256):
     # Loss can only be up the amount of debt issued to strategy
     totalDebt: uint256 = self.strategies[strategy].totalDebt
-    loss: uint256 = min(_loss, totalDebt)
+    assert totalDebt >= loss
     self.strategies[strategy].totalLoss += loss
     self.strategies[strategy].totalDebt = totalDebt - loss
     self.totalDebt -= loss
