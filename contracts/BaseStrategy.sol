@@ -244,6 +244,7 @@ abstract contract BaseStrategy {
      * @param _strategist The new address to assign as `strategist`.
      */
     function setStrategist(address _strategist) external onlyAuthorized {
+        require(_strategist != address(0));
         strategist = _strategist;
         emit UpdatedStrategist(_strategist);
     }
@@ -262,6 +263,7 @@ abstract contract BaseStrategy {
      * @param _keeper The new address to assign as `keeper`.
      */
     function setKeeper(address _keeper) external onlyAuthorized {
+        require(_keeper != address(0));
         keeper = _keeper;
         emit UpdatedKeeper(_keeper);
     }
@@ -279,6 +281,7 @@ abstract contract BaseStrategy {
      * @param _rewards The address to use for collecting rewards.
      */
     function setRewards(address _rewards) external onlyStrategist {
+        require(_rewards != address(0));
         rewards = _rewards;
         emit UpdatedRewards(_rewards);
     }
