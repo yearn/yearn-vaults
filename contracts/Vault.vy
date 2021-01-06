@@ -1341,7 +1341,7 @@ def _creditAvailable(strategy: address) -> uint256:
     # NOTE: Protect against unnecessary overflow faults here
     # NOTE: Set `strategy_rateLimit` to 0 to disable the rate limit
     if strategy_rateLimit > 0 and available / strategy_rateLimit >= delta:
-        available = min(available, strategy_rateLimit * delta)
+        available = strategy_rateLimit * delta
 
     # Can only borrow up to what the contract has in reserve
     # NOTE: Running near 100% is discouraged
