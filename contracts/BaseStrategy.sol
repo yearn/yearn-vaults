@@ -59,16 +59,6 @@ interface VaultAPI is IERC20 {
     ) external returns (uint256);
 
     /**
-     * This function is used in the scenario where there is a newer Strategy
-     * that would hold the same positions as this one, and those positions are
-     * easily transferrable to the newer Strategy. These positions must be able
-     * to be transferred at the moment this call is made, if any prep is
-     * required to execute a full transfer in one transaction, that must be
-     * accounted for separately from this call.
-     */
-    function migrateStrategy(address _newStrategy) external;
-
-    /**
      * This function should only be used in the scenario where the Strategy is
      * being retired but no migration of the positions are possible, or in the
      * extreme scenario that the Strategy needs to be put into "Emergency Exit"
