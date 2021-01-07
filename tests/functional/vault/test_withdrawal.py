@@ -60,9 +60,10 @@ def test_multiple_withdrawals(chain, token, gov, Vault, TestStrategy):
 
 
 def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
+    vault.setManagementFee(0, {"from": gov})  # Just makes it easier later
     # Add strategies
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(5)]
-    [vault.addStrategy(s, 1000, 10 ** 15, 1000, {"from": gov}) for s in strategies]
+    [vault.addStrategy(s, 2_000, 10 ** 15, 1000, {"from": gov}) for s in strategies]
 
     # Send tokens to random user
     token.approve(gov, 2 ** 256 - 1, {"from": gov})
@@ -86,6 +87,38 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
         [s.harvest({"from": gov}) for s in strategies]
         with brownie.reverts():
             vault.withdraw(5000, {"from": rando})
+
+    # One of our strategies suffers a loss
+    total_assets = vault.totalAssets()
+    loss = token.balanceOf(strategies[0]) // 2  # 10% of total
+    strategies[0]._takeFunds(loss, {"from": gov})
+    # Harvest the loss
+    assert vault.strategies(strategies[0]).dict()["totalLoss"] == 0
+
+    # Throw if there is a loss on withdrawal, unless the user opts in
+    assert token.balanceOf(vault) == 0
+    with brownie.reverts():
+        vault.withdraw({"from": rando})
+    with brownie.reverts():
+        vault.withdraw(1000, rando, 9999, {"from": rando})  # Opt-in to 99.99% loss
+
+    chain.snapshot()  # For later
+
+    # Scenario 1: we panic, and try to get out as quickly as possible (total loss)
+    assert token.balanceOf(rando) == 0
+    vault.withdraw(1000, rando, 10_000, {"from": rando})  # Opt-in to 100% loss
+    assert vault.strategies(strategies[0]).dict()["totalLoss"] == 1000
+    assert token.balanceOf(rando) == 0  # 100% loss (because we didn't wait!)
+
+    chain.revert()  # Back before the withdrawal
+
+    # Scenario 2: we wait, and only suffer a minor loss
+    strategies[0].harvest({"from": gov})
+    assert vault.strategies(strategies[0]).dict()["totalLoss"] == loss
+    assert token.balanceOf(rando) == 0
+    vault.withdraw({"from": rando})  # no need for opt-in now that loss is reported
+    # much smaller loss (because we waited!)
+    assert token.balanceOf(rando) == 900  # because of 10% total loss
 
 
 def test_progressive_withdrawal(
