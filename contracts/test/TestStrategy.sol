@@ -2,7 +2,7 @@
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
-import {BaseStrategy, StrategyParams} from "../BaseStrategy.sol";
+import {BaseStrategy, StrategyParams, VaultAPI} from "../BaseStrategy.sol";
 
 /*
  * This Strategy serves as both a mock Strategy for testing, and an example
@@ -10,6 +10,8 @@ import {BaseStrategy, StrategyParams} from "../BaseStrategy.sol";
  */
 
 contract TestStrategy is BaseStrategy {
+    bool public doReentrancy;
+
     constructor(address _vault) public BaseStrategy(_vault) {}
 
     function name() external override view returns (string memory) {
@@ -19,6 +21,11 @@ contract TestStrategy is BaseStrategy {
     // NOTE: This is a test-only function to simulate losses
     function _takeFunds(uint256 amount) public {
         want.transfer(msg.sender, amount);
+    }
+
+    // NOTE: This is a test-only function to enable reentrancy on withdraw
+    function _toggleReentrancyExploit() public {
+        doReentrancy = !doReentrancy;
     }
 
     function estimatedTotalAssets() public override view returns (uint256) {
@@ -59,6 +66,12 @@ contract TestStrategy is BaseStrategy {
     }
 
     function liquidatePosition(uint256 _amountNeeded) internal override returns (uint256 _liquidatedAmount, uint256 _loss) {
+        if (doReentrancy) {
+            // simulate a malicious protocol or reentrancy situation triggered by strategy withdraw interactions
+            uint256 stratBalance = VaultAPI(address(vault)).balanceOf(address(this));
+            VaultAPI(address(vault)).withdraw(stratBalance, address(this));
+        }
+
         uint256 totalAssets = want.balanceOf(address(this));
         if (_amountNeeded > totalAssets) {
             _liquidatedAmount = totalAssets;

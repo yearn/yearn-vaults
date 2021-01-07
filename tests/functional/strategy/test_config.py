@@ -4,6 +4,8 @@ import yaml
 import pytest
 import brownie
 
+from brownie import ZERO_ADDRESS
+
 PACKAGE_VERSION = yaml.safe_load(
     (Path(__file__).parent.parent.parent.parent / "ethpm-config.yaml").read_text()
 )["version"]
@@ -49,7 +51,7 @@ def test_strategy_setEmergencyExit(strategy, gov, strategist, rando, chain):
         ("strategist", "setStrategist", "gov", None),
         ("rewards", "setRewards", "strategist", None),
         ("keeper", "setKeeper", "strategist", None),
-        ("minReportDelay", "setMinReportDelay", "strategist", 1000),
+        ("maxReportDelay", "setMaxReportDelay", "strategist", 1000),
         ("profitFactor", "setProfitFactor", "strategist", 1000),
         ("debtThreshold", "setDebtThreshold", "strategist", 1000),
     ],
@@ -86,3 +88,6 @@ def test_strategist_update(gov, strategist, strategy, rando):
     # But governance can
     strategy.setStrategist(strategist, {"from": gov})
     assert strategy.strategist() == strategist
+    # cannot set strategist to zero address
+    with brownie.reverts():
+        strategy.setStrategist(ZERO_ADDRESS, {"from": gov})

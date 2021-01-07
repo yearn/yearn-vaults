@@ -19,6 +19,8 @@ struct StrategyParams {
 interface VaultAPI is IERC20 {
     function apiVersion() external view returns (string memory);
 
+    function withdraw(uint256 shares, address recipient) external;
+
     function token() external view returns (address);
 
     function strategies(address _strategy) external view returns (StrategyParams memory);
@@ -55,16 +57,6 @@ interface VaultAPI is IERC20 {
         uint256 _loss,
         uint256 _debtPayment
     ) external returns (uint256);
-
-    /**
-     * This function is used in the scenario where there is a newer Strategy
-     * that would hold the same positions as this one, and those positions are
-     * easily transferrable to the newer Strategy. These positions must be able
-     * to be transferred at the moment this call is made, if any prep is
-     * required to execute a full transfer in one transaction, that must be
-     * accounted for separately from this call.
-     */
-    function migrateStrategy(address _newStrategy) external;
 
     /**
      * This function should only be used in the scenario where the Strategy is
@@ -192,9 +184,11 @@ abstract contract BaseStrategy {
 
     event UpdatedDebtThreshold(uint256 debtThreshold);
 
-    // The minimum number of seconds between harvest calls. See
-    // `setMinReportDelay()` for more details.
-    uint256 public minReportDelay = 86400; // ~ once a day
+    event EmergencyExitEnabled();
+
+    // The maximum number of seconds between harvest calls. See
+    // `setMaxReportDelay()` for more details.
+    uint256 public maxReportDelay = 86400; // ~ once a day
 
     // The minimum multiple that `callCost` must be above the credit/profit to
     // be "justifiable". See `setProfitFactor()` for more details.
@@ -252,6 +246,7 @@ abstract contract BaseStrategy {
      * @param _strategist The new address to assign as `strategist`.
      */
     function setStrategist(address _strategist) external onlyAuthorized {
+        require(_strategist != address(0));
         strategist = _strategist;
         emit UpdatedStrategist(_strategist);
     }
@@ -270,6 +265,7 @@ abstract contract BaseStrategy {
      * @param _keeper The new address to assign as `keeper`.
      */
     function setKeeper(address _keeper) external onlyAuthorized {
+        require(_keeper != address(0));
         keeper = _keeper;
         emit UpdatedKeeper(_keeper);
     }
@@ -280,31 +276,29 @@ abstract contract BaseStrategy {
      *  to the old address and begin flowing to this address once the change
      *  is in effect.
      *
-     *  This will not change any Strategy reports in progress, only
-     *  new reports made after this change goes into effect.
-     *
      *  This may only be called by the strategist.
      * @param _rewards The address to use for collecting rewards.
      */
     function setRewards(address _rewards) external onlyStrategist {
+        require(_rewards != address(0));
         rewards = _rewards;
         emit UpdatedRewards(_rewards);
     }
 
     /**
      * @notice
-     *  Used to change `minReportDelay`. `minReportDelay` is the minimum number
-     *  of blocks that should pass before `harvest()` is called.
+     *  Used to change `maxReportDelay`. `maxReportDelay` is the maximum number
+     *  of blocks that should pass for `harvest()` to be called.
      *
-     *  For external keepers (such as the Keep3r network), this is the minimum
-     *  time between jobs, to prevent excessive costs. (see `harvestTrigger()`
+     *  For external keepers (such as the Keep3r network), this is the maximum
+     *  time between jobs to wait. (see `harvestTrigger()`
      *  for more details.)
      *
      *  This may only be called by governance or the strategist.
-     * @param _delay The minimum number of blocks to wait between harvests.
+     * @param _delay The maximum number of seconds to wait between harvests.
      */
-    function setMinReportDelay(uint256 _delay) external onlyAuthorized {
-        minReportDelay = _delay;
+    function setMaxReportDelay(uint256 _delay) external onlyAuthorized {
+        maxReportDelay = _delay;
         emit UpdatedReportDelay(_delay);
     }
 
@@ -514,7 +508,7 @@ abstract contract BaseStrategy {
      *  This call and `tendTrigger` should never return `true` at the
      *  same time.
      *
-     *  See `minReportDelay`, `profitFactor`, `debtThreshold` to adjust the
+     *  See `maxReportDelay`, `profitFactor`, `debtThreshold` to adjust the
      *  strategist-controlled parameters that will influence whether this call
      *  returns `true` or not. These parameters will be used in conjunction
      *  with the parameters reported to the Vault (see `params`) to determine
@@ -535,7 +529,7 @@ abstract contract BaseStrategy {
         if (params.activation == 0) return false;
 
         // Should trigger if hasn't been called in a while
-        if (block.timestamp.sub(params.lastReport) >= minReportDelay) return true;
+        if (block.timestamp.sub(params.lastReport) >= maxReportDelay) return true;
 
         // If some amount is owed, pay it back
         // NOTE: Since debt is based on deposits, it makes sense to guard against large
@@ -664,6 +658,8 @@ abstract contract BaseStrategy {
     function setEmergencyExit() external onlyAuthorized {
         emergencyExit = true;
         vault.revokeStrategy();
+
+        emit EmergencyExitEnabled();
     }
 
     /**

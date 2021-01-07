@@ -92,7 +92,7 @@ struct StrategyParams:
     performanceFee: uint256  # Strategist's fee (basis points)
     activation: uint256  # Activation block.timestamp
     debtRatio: uint256  # Maximum borrow amount (in BPS of total assets)
-    rateLimit: uint256  # Max increase in debt per second since last harvest
+    rateLimit: uint256  # Limit on the increase of debt per unit time since last harvest
     lastReport: uint256  # block.timestamp of the last time a report occured
     totalDebt: uint256  # Total outstanding debt that Strategy has
     totalGain: uint256  # Total returns that Strategy has realized for Vault
@@ -102,7 +102,7 @@ struct StrategyParams:
 event StrategyAdded:
     strategy: indexed(address)
     debtRatio: uint256  # Maximum borrow amount (in BPS of total assets)
-    rateLimit: uint256  # Increase/decrease per block
+    rateLimit: uint256  # Limit on the increase of debt per unit time since last harvest
     performanceFee: uint256  # Strategist's fee (basis points)
 
 
@@ -444,10 +444,13 @@ def setPerformanceFee(fee: uint256):
     @notice
         Used to change the value of `performanceFee`.
 
+        Should set this value below the maximum strategist performance fee.
+
         This may only be called by governance.
-    @param fee The new performance fee to use.
+    @param fee The new performance fee to use. 
     """
     assert msg.sender == self.governance
+    assert fee <= MAX_BPS 
     self.performanceFee = fee
     log UpdatePerformanceFee(fee)
 
@@ -462,6 +465,7 @@ def setManagementFee(fee: uint256):
     @param fee The new management fee to use.
     """
     assert msg.sender == self.governance
+    assert fee <= MAX_BPS 
     self.managementFee = fee
     log UpdateManagementFee(fee)
 
@@ -849,6 +853,7 @@ def maxAvailableShares() -> uint256:
 
 
 @external
+@nonreentrant("withdraw")
 def withdraw(_shares: uint256 = MAX_UINT256, recipient: address = msg.sender) -> uint256:
     """
     @notice
@@ -995,15 +1000,16 @@ def addStrategy(
     @param strategy The address of the Strategy to add.
     @param debtRatio The ratio of the total assets in the `vault that the `strategy` can manage.
     @param rateLimit
-        How many assets per block this Vault may deposit to or withdraw from
-        `strategy`.
+        Limit on the increase of debt per unit time since last harvest
     @param performanceFee
         The fee the strategist will receive based on this Vault's performance.
     """
     assert strategy != ZERO_ADDRESS
+    assert not self.emergencyShutdown
 
     assert msg.sender == self.governance
     assert self.debtRatio + debtRatio <= MAX_BPS
+    assert performanceFee <= MAX_BPS - self.performanceFee
     assert self.strategies[strategy].activation == 0
     assert self == Strategy(strategy).vault()
     assert self.token.address == Strategy(strategy).want()
@@ -1060,7 +1066,7 @@ def updateStrategyRateLimit(
 
         This may only be called by governance or management.
     @param strategy The Strategy to update.
-    @param rateLimit The quantity of assets `strategy` may now manage.
+    @param rateLimit Limit on the increase of debt per unit time since last harvest
     """
     assert msg.sender in [self.management, self.governance]
     assert self.strategies[strategy].activation > 0
@@ -1083,6 +1089,7 @@ def updateStrategyPerformanceFee(
     @param performanceFee The new fee the strategist will receive.
     """
     assert msg.sender == self.governance
+    assert performanceFee <= MAX_BPS - self.performanceFee
     assert self.strategies[strategy].activation > 0
     self.strategies[strategy].performanceFee = performanceFee
     log StrategyUpdatePerformanceFee(strategy, performanceFee)
@@ -1113,7 +1120,7 @@ def migrateStrategy(oldVersion: address, newVersion: address):
     @param newVersion The new Strategy to migrate to.
     """
     assert msg.sender == self.governance
-
+    assert newVersion != ZERO_ADDRESS
     assert self.strategies[oldVersion].activation > 0
     assert self.strategies[newVersion].activation == 0
 
@@ -1278,7 +1285,7 @@ def _creditAvailable(strategy: address) -> uint256:
     # NOTE: Protect against unnecessary overflow faults here
     # NOTE: Set `strategy_rateLimit` to 0 to disable the rate limit
     if strategy_rateLimit > 0 and available / strategy_rateLimit >= delta:
-        available = min(available, strategy_rateLimit * delta)
+        available = strategy_rateLimit * delta
 
     # Can only borrow up to what the contract has in reserve
     # NOTE: Running near 100% is discouraged
@@ -1344,10 +1351,10 @@ def expectedReturn(strategy: address = msg.sender) -> uint256:
 
 
 @internal
-def _reportLoss(strategy: address, _loss: uint256):
+def _reportLoss(strategy: address, loss: uint256):
     # Loss can only be up the amount of debt issued to strategy
     totalDebt: uint256 = self.strategies[strategy].totalDebt
-    loss: uint256 = min(_loss, totalDebt)
+    assert totalDebt >= loss
     self.strategies[strategy].totalLoss += loss
     self.strategies[strategy].totalDebt = totalDebt - loss
     self.totalDebt -= loss

@@ -272,6 +272,10 @@ def test_ordering(gov, vault, TestStrategy, rando):
     with brownie.reverts():
         vault.addStrategyToQueue(rando, {"from": gov})
 
+    # Can't add a strategy 0x0 to queue
+    with brownie.reverts():
+        vault.addStrategyToQueue(ZERO_ADDRESS, {"from": gov})
+
     vault.addStrategyToQueue(removed_strategy, {"from": gov})
     strategies.append(removed_strategy)
 
