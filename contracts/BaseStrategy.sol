@@ -276,9 +276,6 @@ abstract contract BaseStrategy {
      *  to the old address and begin flowing to this address once the change
      *  is in effect.
      *
-     *  This will not change any Strategy reports in progress, only
-     *  new reports made after this change goes into effect.
-     *
      *  This may only be called by the strategist.
      * @param _rewards The address to use for collecting rewards.
      */
