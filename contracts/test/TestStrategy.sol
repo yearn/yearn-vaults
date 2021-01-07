@@ -72,11 +72,17 @@ contract TestStrategy is BaseStrategy {
             VaultAPI(address(vault)).withdraw(stratBalance, address(this));
         }
 
+        uint256 totalDebt = vault.strategies(address(this)).totalDebt;
         uint256 totalAssets = want.balanceOf(address(this));
         if (_amountNeeded > totalAssets) {
             _liquidatedAmount = totalAssets;
             _loss = _amountNeeded.sub(totalAssets);
         } else {
+            // NOTE: Just in case something was stolen from this contract
+            if (totalDebt > totalAssets) {
+                _loss = totalDebt.sub(totalAssets);
+                if (_loss > _amountNeeded) _loss = _amountNeeded;
+            }
             _liquidatedAmount = _amountNeeded;
         }
     }
