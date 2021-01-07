@@ -712,62 +712,6 @@ def totalAssets() -> uint256:
     return self._totalAssets()
 
 
-@view
-@internal
-def _balanceSheetOfStrategy(strategy: address) -> uint256:
-    # See note on `balanceSheetOfStrategy()`.
-    return Strategy(strategy).estimatedTotalAssets()
-
-
-@view
-@external
-def balanceSheetOfStrategy(strategy: address) -> uint256:
-    """
-    @notice
-        Provide an accurate estimate for the total amount of assets
-        (principle + return) that `strategy` is currently managing,
-        denominated in terms of `token`.
-
-        This total is the total realizable value that could *actually* be
-        obtained from this Strategy if it were to divest its entire position
-        based on current on-chain conditions.
-    @param strategy The Strategy to estimate the realizable assets of.
-    @return An estimate of the total realizable assets in `strategy`.
-    """
-    return self._balanceSheetOfStrategy(strategy)
-
-
-@view
-@external
-def totalBalanceSheet(strategies: address[2 * MAXIMUM_STRATEGIES]) -> uint256:
-    """
-    @notice
-        Measure the total balance sheet of this Vault, using the list of
-        strategies given above.
-        (2x the expected maximum is used to ensure completeness.)
-        NOTE: The safety of this function depends *entirely* on the list of
-            strategies given as the function argument. Care should be taken to
-            choose this list to ensure that the estimate is accurate. No
-            additional checking is used.
-        NOTE: Guardian should use this value vs. `totalAssets()` to determine
-            if a condition exists where the Vault is experiencing a dangerous
-            'balance sheet' attack, leading Vault shares to be worth less than
-            what their price on paper is (based on their debt)
-    @param strategies
-        A list of strategies managed by this Vault, which will be included in
-        the balance sheet calculation.
-    @return The total balance sheet of this Vault.
-    """
-    balanceSheet: uint256 = self.token.balanceOf(self)
-
-    for strategy in strategies:
-        if strategy == ZERO_ADDRESS:
-            break
-        balanceSheet += self._balanceSheetOfStrategy(strategy)
-
-    return balanceSheet
-
-
 @internal
 def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
     # Issues `amount` Vault shares to `to`.
@@ -1555,7 +1499,7 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     if self.strategies[msg.sender].debtRatio == 0 or self.emergencyShutdown:
         # Take every last penny the Strategy has (Emergency Exit/revokeStrategy)
         # NOTE: This is different than `debt` in order to extract *all* of the returns
-        return self._balanceSheetOfStrategy(msg.sender)
+        return Strategy(msg.sender).estimatedTotalAssets()
     else:
         # Otherwise, just return what we have as debt outstanding
         return debt
