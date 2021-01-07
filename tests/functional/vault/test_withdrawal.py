@@ -19,7 +19,7 @@ def test_multiple_withdrawals(chain, token, gov, Vault, TestStrategy):
     [
         vault.addStrategy(
             s,
-            token.balanceOf(gov) // 10,  # 10% of all tokens
+            1_000,  # 10% of all tokens in Vault
             2 ** 256 - 1,  # No rate limit
             0,  # No fee
             {"from": gov},
@@ -70,7 +70,7 @@ def test_multiple_withdrawals(chain, token, gov, Vault, TestStrategy):
 def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
     # Add strategies
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(5)]
-    [vault.addStrategy(s, 1000, 10, 1000, {"from": gov}) for s in strategies]
+    [vault.addStrategy(s, 1000, 10 ** 15, 1000, {"from": gov}) for s in strategies]
 
     # Send tokens to random user
     token.approve(gov, 2 ** 256 - 1, {"from": gov})
@@ -89,7 +89,7 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
 
     # Withdrawal should fail, no matter the distribution of tokens between
     # the vault and the strategies
-    while vault.totalDebt() < vault.debtLimit():
+    while vault.totalDebt() / vault.totalAssets() < vault.debtRatio() / 10_000:
         chain.sleep(86400)  # wait a day
         [s.harvest({"from": gov}) for s in strategies]
         with brownie.reverts():

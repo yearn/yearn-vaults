@@ -75,8 +75,10 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
 
     # Ramp up debt (Should execute at least once)
     debt_limit_hit = lambda: (
-        vault.strategies(strategy).dict()["totalDebt"]
-        == vault.strategies(strategy).dict()["debtLimit"]
+        vault.strategies(strategy).dict()["totalDebt"] / vault.totalAssets()
+        # NOTE: Needs to hit at least 99% of the debt ratio, because 100% is unobtainable
+        #       (Strategy increases it's absolute debt every harvest)
+        >= 0.99 * vault.strategies(strategy).dict()["debtRatio"] / 10_000
     )
     assert not debt_limit_hit()
     while not debt_limit_hit():

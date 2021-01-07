@@ -56,8 +56,8 @@ def strategy(gov, strategist, keeper, token, vault, TestStrategy):
     strategy.setKeeper(keeper, {"from": strategist})
     vault.addStrategy(
         strategy,
-        token.totalSupply() // 5,  # Debt limit of 20% of token supply (40% of Vault)
-        token.totalSupply() // 8640000,  # Rate limit of 1% of token supply per day
+        4_000,  # 40% of Vault
+        vault.totalAssets() // 8640000,  # Rate limit of 1% of vault's assets per day
         1000,  # 10% performance fee for Strategist
         {"from": gov},
     )

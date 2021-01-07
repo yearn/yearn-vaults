@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 struct StrategyParams {
     uint256 performanceFee;
     uint256 activation;
-    uint256 debtLimit;
+    uint256 debtRatio;
     uint256 rateLimit;
     uint256 lastReport;
     uint256 totalDebt;
@@ -384,7 +384,7 @@ abstract contract BaseStrategy {
      * @return True if the strategy is actively managing a position.
      */
     function isActive() public view returns (bool) {
-        return vault.strategies(address(this)).debtLimit > 0 || estimatedTotalAssets() > 0;
+        return vault.strategies(address(this)).debtRatio > 0 || estimatedTotalAssets() > 0;
     }
 
     /**
@@ -538,11 +538,12 @@ abstract contract BaseStrategy {
         if (block.timestamp.sub(params.lastReport) >= minReportDelay) return true;
 
         // If some amount is owed, pay it back
-        // NOTE: Since debt is adjusted in step-wise fashion, it is appropriate
-        //       to always trigger here, because the resulting change should be
-        //       large (might not always be the case).
+        // NOTE: Since debt is based on deposits, it makes sense to guard against large
+        //       changes to the value from triggering a harvest directly through user
+        //       behavior. This should ensure reasonable resistance to manipulation
+        //       from user-initiated withdrawals as the outstanding debt fluctuates.
         uint256 outstanding = vault.debtOutstanding();
-        if (outstanding > 0) return true;
+        if (outstanding > debtThreshold) return true;
 
         // Check for profits and losses
         uint256 total = estimatedTotalAssets();

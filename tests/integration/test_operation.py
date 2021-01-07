@@ -42,8 +42,8 @@ def test_normal_operation(
 ):
     vault.addStrategy(
         strategy,
-        token.balanceOf(vault),  # Go up to 100% of Vault AUM
-        token.balanceOf(vault),  # 100% of Vault AUM per block (no rate limit)
+        10_000,  # 100% of Vault AUM
+        2 ** 256 - 1,  # no rate limit
         1000,  # 10% performance fee for Strategist
         {"from": gov},
     )
