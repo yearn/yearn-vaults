@@ -10,10 +10,7 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
 
     # Check accounting is maintained everywhere
     assert token.balanceOf(vault) > 0
-    assert (
-        vault.totalAssets()
-        == token.balanceOf(vault)
-    )
+    assert vault.totalAssets() == token.balanceOf(vault)
     assert (
         vault.totalDebt()
         == vault.strategies(strategy).dict()["totalDebt"]
@@ -32,10 +29,7 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
     balance = token.balanceOf(strategy)
 
     # Check accounting is maintained everywhere
-    assert (
-        vault.totalAssets()
-        == token.balanceOf(vault) + balance
-    )
+    assert vault.totalAssets() == token.balanceOf(vault) + balance
     assert (
         vault.totalDebt()
         == vault.strategies(strategy).dict()["totalDebt"]
@@ -58,10 +52,7 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
     balance = token.balanceOf(strategy)
 
     # Check accounting is maintained everywhere
-    assert (
-        vault.totalAssets()
-        == token.balanceOf(vault) + balance
-    )
+    assert vault.totalAssets() == token.balanceOf(vault) + balance
     assert (
         vault.totalDebt()
         == vault.strategies(strategy).dict()["totalDebt"]
@@ -89,10 +80,7 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
         balance = token.balanceOf(strategy)
 
         # Check accounting is maintained everywhere
-        assert (
-            vault.totalAssets()
-            == token.balanceOf(vault) + balance
-        )
+        assert vault.totalAssets() == token.balanceOf(vault) + balance
         assert (
             vault.totalDebt()
             == vault.strategies(strategy).dict()["totalDebt"]

@@ -63,7 +63,16 @@ def test_vault_name_symbol_override(guardian, gov, rewards, token, Vault):
     ],
 )
 def test_vault_setParams(
-    chain, gov, guardian, management, vault, rando, getter, setter, val, guard_allowed,
+    chain,
+    gov,
+    guardian,
+    management,
+    vault,
+    rando,
+    getter,
+    setter,
+    val,
+    guard_allowed,
 ):
     if not val:
         # Can't access fixtures, so use None to mean any random address

@@ -38,11 +38,7 @@ def test_multiple_withdrawals(chain, token, gov, Vault, TestStrategy):
 
     assert token.balanceOf(vault) == starting_balance // 2
     for s in strategies:  # All of them have debt
-        assert (
-            s.estimatedTotalAssets()
-            == token.balanceOf(s)
-            == starting_balance // 10
-        )
+        assert s.estimatedTotalAssets() == token.balanceOf(s) == starting_balance // 10
 
     # Withdraw only from Vault
     before = token.balanceOf(vault)
@@ -50,11 +46,7 @@ def test_multiple_withdrawals(chain, token, gov, Vault, TestStrategy):
     assert token.balanceOf(vault) == 0
     assert token.balanceOf(gov) == before
     for s in strategies:
-        assert (
-            s.estimatedTotalAssets()
-            == token.balanceOf(s)
-            == starting_balance // 10
-        )
+        assert s.estimatedTotalAssets() == token.balanceOf(s) == starting_balance // 10
 
     # We've drained all the debt
     vault.withdraw(vault.balanceOf(gov), {"from": gov})
