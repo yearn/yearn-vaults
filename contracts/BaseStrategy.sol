@@ -186,9 +186,9 @@ abstract contract BaseStrategy {
 
     event EmergencyExitEnabled();
 
-    // The minimum number of seconds between harvest calls. See
-    // `setMinReportDelay()` for more details.
-    uint256 public minReportDelay = 86400; // ~ once a day
+    // The maximum number of seconds between harvest calls. See
+    // `setMaxReportDelay()` for more details.
+    uint256 public maxReportDelay = 86400; // ~ once a day
 
     // The minimum multiple that `callCost` must be above the credit/profit to
     // be "justifiable". See `setProfitFactor()` for more details.
@@ -287,18 +287,18 @@ abstract contract BaseStrategy {
 
     /**
      * @notice
-     *  Used to change `minReportDelay`. `minReportDelay` is the minimum number
-     *  of blocks that should pass before `harvest()` is called.
+     *  Used to change `maxReportDelay`. `maxReportDelay` is the maximum number
+     *  of blocks that should pass for `harvest()` to be called.
      *
-     *  For external keepers (such as the Keep3r network), this is the minimum
-     *  time between jobs, to prevent excessive costs. (see `harvestTrigger()`
+     *  For external keepers (such as the Keep3r network), this is the maximum
+     *  time between jobs to wait. (see `harvestTrigger()`
      *  for more details.)
      *
      *  This may only be called by governance or the strategist.
-     * @param _delay The minimum number of blocks to wait between harvests.
+     * @param _delay The maximum number of seconds to wait between harvests.
      */
-    function setMinReportDelay(uint256 _delay) external onlyAuthorized {
-        minReportDelay = _delay;
+    function setMaxReportDelay(uint256 _delay) external onlyAuthorized {
+        maxReportDelay = _delay;
         emit UpdatedReportDelay(_delay);
     }
 
@@ -508,7 +508,7 @@ abstract contract BaseStrategy {
      *  This call and `tendTrigger` should never return `true` at the
      *  same time.
      *
-     *  See `minReportDelay`, `profitFactor`, `debtThreshold` to adjust the
+     *  See `maxReportDelay`, `profitFactor`, `debtThreshold` to adjust the
      *  strategist-controlled parameters that will influence whether this call
      *  returns `true` or not. These parameters will be used in conjunction
      *  with the parameters reported to the Vault (see `params`) to determine
@@ -529,7 +529,7 @@ abstract contract BaseStrategy {
         if (params.activation == 0) return false;
 
         // Should trigger if hasn't been called in a while
-        if (block.timestamp.sub(params.lastReport) >= minReportDelay) return true;
+        if (block.timestamp.sub(params.lastReport) >= maxReportDelay) return true;
 
         // If some amount is owed, pay it back
         // NOTE: Since debt is based on deposits, it makes sense to guard against large

@@ -27,7 +27,7 @@ def test_harvest_tend_trigger(chain, gov, vault, token, TestStrategy):
 
     # Check that trigger works when it goes over time
     assert not strategy.harvestTrigger(0)
-    chain.mine(timestamp=chain.time() + strategy.minReportDelay())
+    chain.mine(timestamp=chain.time() + strategy.maxReportDelay())
     assert strategy.harvestTrigger(0)
     strategy.harvest({"from": gov})
 
