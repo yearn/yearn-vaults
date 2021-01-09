@@ -434,7 +434,7 @@ abstract contract BaseStrategy {
      * (e.g. locked funds). This function is used during emergency exit instead of
      * `prepareReturn()` to liquidate all of the Strategy's positions back to the Vault.
      *
-     * NOTE: The invariant `_amountFreed + _loss <= _amountNeeded` should always be maintained
+     * NOTE: The invariant `_liquidatedAmount + _loss <= _amountNeeded` should always be maintained
      */
     function liquidatePosition(uint256 _amountNeeded) internal virtual returns (uint256 _liquidatedAmount, uint256 _loss);
 
