@@ -336,3 +336,23 @@ def test_withdrawalQueue(gov, management, vault, strategy, other_strategy):
     vault.addStrategyToQueue(other_strategy, {"from": gov})
     assert vault.withdrawalQueue(0) == strategy
     assert vault.withdrawalQueue(1) == other_strategy
+
+
+def test_update_debtRatio_to_add_second_strategy(
+    chain, gov, vault, strategy, other_strategy
+):
+
+    vault.addStrategy(strategy, 10_000, 0, 0, {"from": gov})
+
+    # Can't add a second strategy if first one is taking 100%
+    with brownie.reverts():
+        vault.addStrategy(other_strategy, 5_000, 0, 0, {"from": gov})
+
+    vault.updateStrategyDebtRatio(strategy, 5_000, {"from": gov})
+
+    # Can't add the second strategy going over 100%
+    with brownie.reverts():
+        vault.addStrategy(other_strategy, 5_001, 0, 0, {"from": gov})
+
+    # But 50% should work
+    vault.addStrategy(other_strategy, 5_000, 0, 0, {"from": gov})
