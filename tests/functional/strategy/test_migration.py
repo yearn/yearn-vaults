@@ -74,3 +74,8 @@ def test_migrated_strategy_can_call_harvest(token, strategy, vault, gov, TestStr
     assert vault.strategies(strategy).dict()["totalGain"] == 0
     strategy.harvest({"from": gov})
     assert vault.strategies(strategy).dict()["totalGain"] == 1e18
+
+    # But after migrated it cannot be added back
+    vault.updateStrategyDebtRatio(new_strategy, 5_000, {"from": gov})
+    with brownie.reverts():
+        vault.addStrategy(strategy, 5_000, 0, 0, {"from": gov})
