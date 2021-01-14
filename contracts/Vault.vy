@@ -109,6 +109,7 @@ event StrategyReported:
     strategy: indexed(address)
     gain: uint256
     loss: uint256
+    debtPaid: uint256
     totalGain: uint256
     totalLoss: uint256
     totalDebt: uint256
@@ -1531,6 +1532,7 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
         msg.sender,
         gain,
         loss,
+        debtPayment,
         self.strategies[msg.sender].totalGain,
         self.strategies[msg.sender].totalLoss,
         self.strategies[msg.sender].totalDebt,
