@@ -65,7 +65,7 @@ NOTE: Updates must not trigger an instability in the Vault, especially when cons
 1. The Strategy can interact with any external system required to turn the capital borrowed into returns for the Vault
 1. The Strategy defines triggers for either Governance, the Strategist, or the Keeper to use as a signal to update or adjust its position(s).
 1. The Strategy defines triggers for either Governance, the Strategist, or the Keeper to use as a signal to take profits and report to the Vault.
-1. The Vault can migrate the debt and positions of the Strategy to a newer version of that strategy.
+1. Either Governance or the Vault can migrate the positions of the Strategy to another Strategy.
 1. Either Governance or the Strategist can trigger the Strategy to enter into Emergency Exit Mode.
 
 ### Emergency Exit Mode
