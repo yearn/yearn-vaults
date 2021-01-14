@@ -22,7 +22,7 @@ NOTE: Users should only withdraw "free" assets as some strategies need to divest
 
 NOTE: "free" assets in the Vault means the amount the Vault has freely available (e.g. not invested in Strategies)
 
-1. A User is able to deposit any amount of the single asset the Vault accepts in exchange for shares of the Vault's underlying assets.
+1. A User is able to deposit an amount of the single asset the Vault accepts in exchange for shares of the Vault's underlying assets, depending on the Vault's deposit configuration.
 1. A User is able to withdraw an amount of their shares up to the total available amount that can be withdrawn from the combination of the Vault's overhead, and what can be forcibly withdrawn from all the strategies with debt to the Vault that have been pre-authorized in the Vault's withdrawal queue.
 1. A User is able to transfer any amount of Vault shares to anyone else.
 1. Only Governance can approve Strategies to interact with Vaults and take on debt.
