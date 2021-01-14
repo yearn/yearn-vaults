@@ -831,14 +831,18 @@ def _sharesForAmount(amount: uint256) -> uint256:
 def maxAvailableShares() -> uint256:
     """
     @notice
-        Determines the total quantity of shares this Vault can provide,
-        factoring in assets currently residing in the Vault, as well as
-        those deployed to strategies.
+        Determines the maximum quantity of shares this Vault can facilitate a
+        withdrawal for, factoring in assets currently residing in the Vault,
+        as well as those deployed to strategies on the Vault's balance sheet.
     @dev
         Regarding how shares are calculated, see dev note on `deposit`.
 
         If you want to calculated the maximum a user could withdraw up to,
         you want to use this function.
+
+        Note that the amount provided by this function is the theoretical
+        maximum possible from withdrawing, the real amount depends on the
+        realized losses incurred during withdrawal.
     @return The total quantity of shares this Vault can provide.
     """
     shares: uint256 = self._sharesForAmount(self.token.balanceOf(self))

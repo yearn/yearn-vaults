@@ -18,7 +18,7 @@
 
 ### Normal Operation
 
-NOTE: Users should only withdraw "free" assets as some strategies need to divest "gracefully", and a large withdrawal could negatively affect the position of connected strategies.
+NOTE: Users should only withdraw "free" assets as some strategies need to divest "gracefully", and a large withdrawal could incur a loss, which will get passed back to the withdrawer.
 
 NOTE: "free" assets in the Vault means the amount the Vault has freely available (e.g. not invested in Strategies)
 

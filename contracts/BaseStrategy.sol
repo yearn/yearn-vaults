@@ -431,8 +431,9 @@ abstract contract BaseStrategy {
      * This function should return the amount of `want` tokens made available by the
      * liquidation. If there is a difference between them, `_loss` indicates whether the
      * difference is due to a realized loss, or if there is some other sitution at play
-     * (e.g. locked funds). This function is used during emergency exit instead of
-     * `prepareReturn()` to liquidate all of the Strategy's positions back to the Vault.
+     * (e.g. locked funds) where the amount made available is less than what is needed.
+     * This function is used during emergency exit instead of `prepareReturn()` to
+     * liquidate all of the Strategy's positions back to the Vault.
      *
      * NOTE: The invariant `_liquidatedAmount + _loss <= _amountNeeded` should always be maintained
      */
