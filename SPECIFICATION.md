@@ -13,6 +13,7 @@
 
 ### Definitions
 
+- Management: Trusted with privledged access for limited operations (ensuring performance of Vaults)
 - Guardian: Trusted with privileged access for limited operations (ensuring safety of Vaults)
 
 ### Normal Operation
@@ -25,7 +26,9 @@ NOTE: "free" assets in the Vault means the amount the Vault has freely available
 1. A User is able to withdraw an amount of their shares up to the total available amount that can be withdrawn from the combination of the Vault's overhead, and what can be forcibly withdrawn from all the strategies with debt to the Vault that have been pre-authorized in the Vault's withdrawal queue.
 1. A User is able to transfer any amount of Vault shares to anyone else.
 1. Only Governance can approve Strategies to interact with Vaults and take on debt.
-1. Only Governance can increase the parameters of a Strategy's borrowing limit.
+1. Governance can set the Management role to another account, without their permission.
+1. Either Governance or Management can modify the parameters of a Strategy's borrowing capabilities.
+1. Either Governance or Management can reconfigure the strategies in the withdrawal queue.
 1. Only Governance can migrate a Strategy, and their current capital and debt, to a newer version of the Strategy.
 1. Governance can set the Guardian role to another account, without their permission.
 1. Either the Guardian or Governance can revoke a Strategy from borrowing any more assets from the Vault and trigger a divestment of that Strategy.
