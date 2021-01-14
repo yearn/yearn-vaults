@@ -1025,15 +1025,24 @@ def addStrategy(
     @param performanceFee
         The fee the strategist will receive based on this Vault's performance.
     """
-    assert strategy != ZERO_ADDRESS
-    assert not self.emergencyShutdown
+    # Check if queue is full
+    assert self.withdrawalQueue[MAXIMUM_STRATEGIES - 1] == ZERO_ADDRESS
 
+    # Check calling conditions
+    assert not self.emergencyShutdown
     assert msg.sender == self.governance
-    assert self.debtRatio + debtRatio <= MAX_BPS
-    assert performanceFee <= MAX_BPS - self.performanceFee
+
+    # Check strategy configuration
+    assert strategy != ZERO_ADDRESS
     assert self.strategies[strategy].activation == 0
     assert self == Strategy(strategy).vault()
     assert self.token.address == Strategy(strategy).want()
+
+    # Check strategy parameters
+    assert self.debtRatio + debtRatio <= MAX_BPS
+    assert performanceFee <= MAX_BPS - self.performanceFee
+
+    # Add strategy to approved strategies
     self.strategies[strategy] = StrategyParams({
         performanceFee: performanceFee,
         activation: block.timestamp,
@@ -1044,11 +1053,12 @@ def addStrategy(
         totalGain: 0,
         totalLoss: 0,
     })
-    self.debtRatio += debtRatio
     log StrategyAdded(strategy, debtRatio, rateLimit, performanceFee)
 
-    # queue is full
-    assert self.withdrawalQueue[MAXIMUM_STRATEGIES - 1] == ZERO_ADDRESS
+    # Update Vault parameters
+    self.debtRatio += debtRatio
+
+    # Add strategy to the end of the withdrawal queue
     self.withdrawalQueue[MAXIMUM_STRATEGIES - 1] = strategy
     self._organizeWithdrawalQueue()
 
