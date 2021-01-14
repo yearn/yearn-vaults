@@ -37,7 +37,6 @@
 
 API_VERSION: constant(String[28]) = "0.3.0"
 
-# TODO: Add ETH Configuration
 from vyper.interfaces import ERC20
 
 implements: ERC20
@@ -1167,7 +1166,6 @@ def migrateStrategy(oldVersion: address, newVersion: address):
 
     Strategy(oldVersion).migrate(newVersion)
     log StrategyMigrated(oldVersion, newVersion)
-    # TODO: Ensure a smooth transition in terms of  Strategy return
 
     for idx in range(MAXIMUM_STRATEGIES):
         if self.withdrawalQueue[idx] == oldVersion:
