@@ -35,7 +35,7 @@ NOTE: "free" assets in the Vault means the amount the Vault has freely available
 
 1. The Treasury (which benefits Governance) collects a "management fee" based on the total assets the Vault has over a period of time, assessed each time the Strategy interacts with the Vault, and is provided as newly minted shares to the Treasury.
 1. The Treasury (which benefits Governance) collects a "performance fee" based on the amount of returns a Strategy produces during Normal Operation, assessed each time the Strategy interacts with the Vault, and is provided as newly minted shares to the Treasury.
-1. Each Strategist collects a "performance fee" based on the amount of returns their Strategy produces during Normal Operation, assessed each time the Strategy interacts with the Vault, and is provided as newly minted shares to the Strategist.
+1. Each Strategist collects a "performance fee" based on the amount of positive returns their Strategy produces during Normal Operation, assessed each time the Strategy interacts with the Vault, and is provided as newly minted shares to the Strategist.
 
 ### Emergency Shutdown Mode
 
