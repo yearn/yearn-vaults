@@ -12,6 +12,10 @@ PACKAGE_VERSION = yaml.safe_load(
 ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 
 
+def test_api_adherrance(check_api_adherrance, Vault, interface):
+    check_api_adherrance(Vault, interface.VaultAPI)
+
+
 def test_vault_deployment(guardian, gov, rewards, token, Vault):
     # Deploy the Vault without any name/symbol overrides
     vault = guardian.deploy(Vault)

@@ -37,7 +37,6 @@
 
 API_VERSION: constant(String[28]) = "0.3.0"
 
-# TODO: Add ETH Configuration
 from vyper.interfaces import ERC20
 
 implements: ERC20
@@ -110,6 +109,7 @@ event StrategyReported:
     strategy: indexed(address)
     gain: uint256
     loss: uint256
+    debtPaid: uint256
     totalGain: uint256
     totalLoss: uint256
     totalDebt: uint256
@@ -832,14 +832,18 @@ def _sharesForAmount(amount: uint256) -> uint256:
 def maxAvailableShares() -> uint256:
     """
     @notice
-        Determines the total quantity of shares this Vault can provide,
-        factoring in assets currently residing in the Vault, as well as
-        those deployed to strategies.
+        Determines the maximum quantity of shares this Vault can facilitate a
+        withdrawal for, factoring in assets currently residing in the Vault,
+        as well as those deployed to strategies on the Vault's balance sheet.
     @dev
         Regarding how shares are calculated, see dev note on `deposit`.
 
         If you want to calculated the maximum a user could withdraw up to,
         you want to use this function.
+
+        Note that the amount provided by this function is the theoretical
+        maximum possible from withdrawing, the real amount depends on the
+        realized losses incurred during withdrawal.
     @return The total quantity of shares this Vault can provide.
     """
     shares: uint256 = self._sharesForAmount(self.token.balanceOf(self))
@@ -923,10 +927,11 @@ def withdraw(
             if strategy == ZERO_ADDRESS:
                 break  # We've exhausted the queue
 
-            if value <= self.token.balanceOf(self):
+            vault_balance: uint256 = self.token.balanceOf(self)
+            if value <= vault_balance:
                 break  # We're done withdrawing
 
-            amountNeeded: uint256 = value - self.token.balanceOf(self)
+            amountNeeded: uint256 = value - vault_balance
 
             # NOTE: Don't withdraw more than the debt so that Strategy can still
             #       continue to work based on the profits it has
@@ -937,9 +942,8 @@ def withdraw(
                 continue  # Nothing to withdraw from this Strategy, try the next one
 
             # Force withdraw amount from each Strategy in the order set by governance
-            before: uint256 = self.token.balanceOf(self)
             loss: uint256 = Strategy(strategy).withdraw(amountNeeded)
-            withdrawn: uint256 = self.token.balanceOf(self) - before
+            withdrawn: uint256 = self.token.balanceOf(self) - vault_balance
 
             # NOTE: Withdrawer incurs any losses from liquidation
             if loss > 0:
@@ -959,8 +963,9 @@ def withdraw(
     # NOTE: We have withdrawn everything possible out of the withdrawal queue
     #       but we still don't have enough to fully pay them back, so adjust
     #       to the total amount we've freed up through forced withdrawals
-    if value > self.token.balanceOf(self):
-        value = self.token.balanceOf(self)
+    vault_balance: uint256 = self.token.balanceOf(self)
+    if value > vault_balance:
+        value = vault_balance
         shares = self._sharesForAmount(value)
 
     # Burn shares (full value of what is being withdrawn)
@@ -1026,15 +1031,24 @@ def addStrategy(
     @param performanceFee
         The fee the strategist will receive based on this Vault's performance.
     """
-    assert strategy != ZERO_ADDRESS
-    assert not self.emergencyShutdown
+    # Check if queue is full
+    assert self.withdrawalQueue[MAXIMUM_STRATEGIES - 1] == ZERO_ADDRESS
 
+    # Check calling conditions
+    assert not self.emergencyShutdown
     assert msg.sender == self.governance
-    assert self.debtRatio + debtRatio <= MAX_BPS
-    assert performanceFee <= MAX_BPS - self.performanceFee
+
+    # Check strategy configuration
+    assert strategy != ZERO_ADDRESS
     assert self.strategies[strategy].activation == 0
     assert self == Strategy(strategy).vault()
     assert self.token.address == Strategy(strategy).want()
+
+    # Check strategy parameters
+    assert self.debtRatio + debtRatio <= MAX_BPS
+    assert performanceFee <= MAX_BPS - self.performanceFee
+
+    # Add strategy to approved strategies
     self.strategies[strategy] = StrategyParams({
         performanceFee: performanceFee,
         activation: block.timestamp,
@@ -1045,11 +1059,12 @@ def addStrategy(
         totalGain: 0,
         totalLoss: 0,
     })
-    self.debtRatio += debtRatio
     log StrategyAdded(strategy, debtRatio, rateLimit, performanceFee)
 
-    # queue is full
-    assert self.withdrawalQueue[MAXIMUM_STRATEGIES - 1] == ZERO_ADDRESS
+    # Update Vault parameters
+    self.debtRatio += debtRatio
+
+    # Add strategy to the end of the withdrawal queue
     self.withdrawalQueue[MAXIMUM_STRATEGIES - 1] = strategy
     self._organizeWithdrawalQueue()
 
@@ -1167,7 +1182,6 @@ def migrateStrategy(oldVersion: address, newVersion: address):
 
     Strategy(oldVersion).migrate(newVersion)
     log StrategyMigrated(oldVersion, newVersion)
-    # TODO: Ensure a smooth transition in terms of  Strategy return
 
     for idx in range(MAXIMUM_STRATEGIES):
         if self.withdrawalQueue[idx] == oldVersion:
@@ -1518,6 +1532,7 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
         msg.sender,
         gain,
         loss,
+        debtPayment,
         self.strategies[msg.sender].totalGain,
         self.strategies[msg.sender].totalLoss,
         self.strategies[msg.sender].totalDebt,

@@ -11,6 +11,10 @@ PACKAGE_VERSION = yaml.safe_load(
 )["version"]
 
 
+def test_api_adherrance(check_api_adherrance, TestStrategy, interface):
+    check_api_adherrance(TestStrategy, interface.StrategyAPI)
+
+
 def test_strategy_deployment(strategist, vault, TestStrategy):
     strategy = strategist.deploy(TestStrategy, vault)
     # Addresses
