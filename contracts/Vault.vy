@@ -225,6 +225,12 @@ DOMAIN_SEPARATOR: public(bytes32)
 DOMAIN_TYPE_HASH: constant(bytes32) = keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)')
 PERMIT_TYPE_HASH: constant(bytes32) = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
 
+# Custom logic for reward distribution
+claimToken: public(ERC20)  # Address of the ERC20 token you can claim
+index: public(uint256)
+claimBalance: public(uint256)
+supplyIndex: public(HashMap[address, uint256])
+claimable: public(HashMap[address, uint256])
 
 @external
 def initialize(
@@ -547,6 +553,55 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
         self.withdrawalQueue[i] = queue[i]
     log UpdateWithdrawalQueue(queue)
 
+# Custom functions for claiming tokens
+@internal
+def _update():
+    if self.totalSupply > 0:
+        bal: uint256 = self.claimToken.balanceOf(self)
+        if bal > self.claimBalance:
+            diff: uint256 = bal - self.claimBalance
+            if diff > 0:
+                ratio: uint256 = diff * 10**18 / self.totalSupply
+                if ratio > 0:
+                    self.index += ratio
+                    self.claimBalance = bal
+
+@external
+def update():
+    self._update()
+
+@internal
+def _updateFor(recipient: address):
+    self._update()
+    supplied: uint256 = self.balanceOf[recipient]
+    if supplied > 0:
+        supplyIndex: uint256 = self.supplyIndex[recipient]
+        self.supplyIndex[recipient] = self.index
+        delta: uint256 = self.index - supplyIndex
+        if delta > 0:
+            share: uint256 = supplied * delta / 10**18
+            self.claimable[recipient] += share
+    else:
+        self.supplyIndex[recipient] = self.index
+
+@external
+def updateFor(recipient: address):
+    self._updateFor(recipient)
+
+@internal
+def _claimFor(recipient: address):
+    self._updateFor(recipient)
+    self.claimToken.transfer(recipient, self.claimable[recipient])
+    self.claimable[recipient] = 0
+    self.claimBalance = self.claimToken.balanceOf(self)
+
+@external
+def claim():
+    self._claimFor(msg.sender)
+
+@external
+def claimFor(recipient: address):
+    self._claimFor(recipient)
 
 @internal
 def _transfer(sender: address, receiver: address, amount: uint256):
@@ -554,6 +609,10 @@ def _transfer(sender: address, receiver: address, amount: uint256):
 
     # Protect people from accidentally sending their shares to bad places
     assert not (receiver in [self, ZERO_ADDRESS])
+
+    self._updateFor(sender)
+    self._updateFor(receiver)
+
     self.balanceOf[sender] -= amount
     self.balanceOf[receiver] += amount
     log Transfer(sender, receiver, amount)
@@ -723,6 +782,9 @@ def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
     # calculation will be wrong. This means that only *trusted* tokens
     # (with no capability for exploitative behavior) can be used.
     shares: uint256 = 0
+
+    self._updateFor(to)
+
     # HACK: Saves 2 SLOADs (~4000 gas)
     totalSupply: uint256 = self.totalSupply
     if totalSupply > 0:
@@ -1523,6 +1585,9 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     elif totalAvail > credit:  # credit deficit, take from Strategy
         assert self.token.transferFrom(msg.sender, self, totalAvail - credit)
     # else, don't do anything because it is balanced
+
+    # we check that the strategy gave us more claimTokens
+    self._update()
 
     # Update reporting time
     self.strategies[msg.sender].lastReport = block.timestamp
