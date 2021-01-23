@@ -5,11 +5,11 @@ DAY = 86400  # seconds
 
 
 @pytest.fixture
-def vault(gov, token, Vault):
+def vault(gov, token, claimToken, Vault):
     # NOTE: Because the fixture has tokens in it already
     vault = gov.deploy(Vault)
     vault.initialize(
-        token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
+        token, claimToken, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
     )
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     yield vault

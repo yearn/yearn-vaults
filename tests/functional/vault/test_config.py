@@ -16,11 +16,11 @@ def test_api_adherrance(check_api_adherrance, Vault, interface):
     check_api_adherrance(Vault, interface.VaultAPI)
 
 
-def test_vault_deployment(guardian, gov, rewards, token, Vault):
+def test_vault_deployment(guardian, gov, rewards, token, claimToken, Vault):
     # Deploy the Vault without any name/symbol overrides
     vault = guardian.deploy(Vault)
     vault.initialize(
-        token, gov, rewards, token.symbol() + " yVault", "yv" + token.symbol(), guardian
+        token, claimToken, gov, rewards, token.symbol() + " yVault", "yv" + token.symbol(), guardian
     )
     # Addresses
     assert vault.governance() == gov
@@ -43,10 +43,10 @@ def test_vault_deployment(guardian, gov, rewards, token, Vault):
     assert vault.pricePerShare() / (10 ** vault.decimals()) == 1.0
 
 
-def test_vault_name_symbol_override(guardian, gov, rewards, token, Vault):
+def test_vault_name_symbol_override(guardian, gov, rewards, token, claimToken, Vault):
     # Deploy the Vault with name/symbol overrides
     vault = guardian.deploy(Vault)
-    vault.initialize(token, gov, rewards, "crvY yVault", "yvcrvY", guardian)
+    vault.initialize(token, claimToken, gov, rewards, "crvY yVault", "yvcrvY", guardian)
     # Assert that the overrides worked
     assert vault.name() == "crvY yVault"
     assert vault.symbol() == "yvcrvY"

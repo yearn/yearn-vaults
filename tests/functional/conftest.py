@@ -25,11 +25,14 @@ def management(accounts):
 def token(gov, Token):
     yield gov.deploy(Token)
 
+@pytest.fixture
+def claimToken(gov, Token):
+    yield gov.deploy(Token)
 
 @pytest.fixture
-def vault(gov, guardian, management, token, rewards, Vault):
+def vault(gov, guardian, management, token, claimToken, rewards, Vault):
     vault = guardian.deploy(Vault)
-    vault.initialize(token, gov, rewards, "", "", guardian)
+    vault.initialize(token, claimToken, gov, rewards, "", "", guardian)
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     vault.setManagement(management, {"from": gov})
     # Make it so vault has some AUM to start
@@ -38,7 +41,6 @@ def vault(gov, guardian, management, token, rewards, Vault):
     assert token.balanceOf(vault) == token.balanceOf(gov)
     assert vault.totalDebt() == 0  # No connected strategies yet
     yield vault
-
 
 @pytest.fixture
 def strategist(accounts):

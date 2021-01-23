@@ -235,6 +235,7 @@ claimable: public(HashMap[address, uint256])
 @external
 def initialize(
     token: address,
+    claimToken: address,
     governance: address,
     rewards: address,
     nameOverride: String[64],
@@ -281,6 +282,7 @@ def initialize(
     log UpdateRewards(rewards)
     self.guardian = guardian
     log UpdateGuardian(guardian)
+    self.claimToken = ERC20(claimToken)
     self.performanceFee = 1000  # 10% of yield (per Strategy)
     log UpdatePerformanceFee(convert(1000, uint256))
     self.managementFee = 200  # 2% per year
@@ -561,7 +563,7 @@ def _update():
         if bal > self.claimBalance:
             diff: uint256 = bal - self.claimBalance
             if diff > 0:
-                ratio: uint256 = diff * 10**18 / self.totalSupply
+                ratio: uint256 = diff * 10 ** self.decimals / self.totalSupply
                 if ratio > 0:
                     self.index += ratio
                     self.claimBalance = bal
@@ -579,7 +581,7 @@ def _updateFor(recipient: address):
         self.supplyIndex[recipient] = self.index
         delta: uint256 = self.index - supplyIndex
         if delta > 0:
-            share: uint256 = supplied * delta / 10**18
+            share: uint256 = supplied * delta / 10 ** self.decimals
             self.claimable[recipient] += share
     else:
         self.supplyIndex[recipient] = self.index

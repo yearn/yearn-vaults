@@ -1,11 +1,12 @@
 import brownie
 
 
-def test_multiple_withdrawals(chain, token, gov, Vault, TestStrategy):
+def test_multiple_withdrawals(chain, token, claimToken, gov, Vault, TestStrategy):
     # Need a fresh vault to do this math right
     vault = Vault.deploy({"from": gov})
     vault.initialize(
         token,
+        claimToken,
         gov,
         gov,
         token.symbol() + " yVault",
@@ -122,11 +123,11 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
 
 
 def test_progressive_withdrawal(
-    chain, token, gov, Vault, guardian, rewards, TestStrategy
+    chain, token, claimToken, gov, Vault, guardian, rewards, TestStrategy
 ):
     vault = guardian.deploy(Vault)
     vault.initialize(
-        token, gov, rewards, token.symbol() + " yVault", "yv" + token.symbol(), guardian
+        token, claimToken, gov, rewards, token.symbol() + " yVault", "yv" + token.symbol(), guardian
     )
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
 
@@ -177,11 +178,11 @@ def test_progressive_withdrawal(
 
 
 def test_withdrawal_with_empty_queue(
-    chain, token, gov, Vault, guardian, rewards, TestStrategy
+    chain, token, claimToken, gov, Vault, guardian, rewards, TestStrategy
 ):
     vault = guardian.deploy(Vault)
     vault.initialize(
-        token, gov, rewards, token.symbol() + " yVault", "yv" + token.symbol(), guardian
+        token, claimToken, gov, rewards, token.symbol() + " yVault", "yv" + token.symbol(), guardian
     )
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
 
@@ -232,11 +233,11 @@ def test_withdrawal_with_empty_queue(
 
 
 def test_withdrawal_with_reentrancy(
-    chain, token, gov, Vault, guardian, rewards, TestStrategy
+    chain, token, claimToken, gov, Vault, guardian, rewards, TestStrategy
 ):
     vault = guardian.deploy(Vault)
     vault.initialize(
-        token, gov, rewards, token.symbol() + " yVault", "yv" + token.symbol(), guardian
+        token, claimToken, gov, rewards, token.symbol() + " yVault", "yv" + token.symbol(), guardian
     )
 
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})

@@ -7,10 +7,10 @@ def other_token(gov, Token):
     yield gov.deploy(Token)
 
 
-def test_regular_available_deposit_limit(Vault, token, gov):
+def test_regular_available_deposit_limit(Vault, token, claimToken, gov):
     vault = gov.deploy(Vault)
     vault.initialize(
-        token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
+        token, claimToken, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
     )
     token.approve(vault, 100, {"from": gov})
     vault.setDepositLimit(100)
@@ -22,10 +22,10 @@ def test_regular_available_deposit_limit(Vault, token, gov):
     assert vault.availableDepositLimit() == 0
 
 
-def test_negative_available_deposit_limit(Vault, token, gov):
+def test_negative_available_deposit_limit(Vault, token, claimToken, gov):
     vault = gov.deploy(Vault)
     vault.initialize(
-        token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
+        token, claimToken, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
     )
     token.approve(vault, 100, {"from": gov})
     vault.setDepositLimit(100)
