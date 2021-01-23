@@ -124,3 +124,23 @@ def test_reject_ether(gov, vault):
     # NOTE: Just for coverage
     with brownie.reverts():
         gov.transfer(vault, 0)
+
+
+def test_deposit_faillure(token, gov, Vault):
+    # Need a fresh vault to do this math right
+    vault = Vault.deploy({"from": gov})
+    vault.initialize(
+        token,
+        gov,
+        gov,
+        token.symbol() + " yVault",
+        "yv" + token.symbol(),
+        gov,
+        {"from": gov},
+    )
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    token.approve(vault, 2 ** 256 - 1, {"from": gov})
+    token._setBlocked(vault.address, True, {"from": gov})
+
+    with brownie.reverts():
+        vault.deposit({"from": gov})

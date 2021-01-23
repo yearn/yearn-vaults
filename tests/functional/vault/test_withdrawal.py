@@ -259,3 +259,25 @@ def test_withdrawal_with_reentrancy(
     # given previous setup the withdraw should revert from reentrancy guard
     with brownie.reverts():
         vault.withdraw(vault.balanceOf(gov), {"from": gov})
+
+
+def test_token_transfer_fail(token, gov, Vault):
+    # Need a fresh vault to do this math right
+    vault = Vault.deploy({"from": gov})
+    vault.initialize(
+        token,
+        gov,
+        gov,
+        token.symbol() + " yVault",
+        "yv" + token.symbol(),
+        gov,
+        {"from": gov},
+    )
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    token.approve(vault, 2 ** 256 - 1, {"from": gov})
+    vault.deposit({"from": gov})
+
+    token._setBlocked(gov, True, {"from": gov})
+
+    with brownie.reverts():
+        vault.withdraw(vault.balanceOf(gov), {"from": gov})
