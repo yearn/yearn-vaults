@@ -14,16 +14,12 @@ contract Token is ERC20 {
         _blocked[user] = value;
     }
 
-    function isBlocked(address user) public view returns (bool) {
-        return _blocked[user];
-    }
-
     function _beforeTokenTransfer(
         address from,
         address to,
         uint256 amount
     ) internal virtual override(ERC20) {
-        require(!isBlocked(to), "Token transfer refused. Receiver is on blacklist");
+        require(!_blocked[to], "Token transfer refused. Receiver is on blacklist");
         super._beforeTokenTransfer(from, to, amount);
     }
 }

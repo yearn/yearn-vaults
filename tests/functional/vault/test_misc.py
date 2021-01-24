@@ -126,21 +126,15 @@ def test_reject_ether(gov, vault):
         gov.transfer(vault, 0)
 
 
-def test_deposit_faillure(token, gov, Vault):
-    # Need a fresh vault to do this math right
-    vault = Vault.deploy({"from": gov})
-    vault.initialize(
-        token,
-        gov,
-        gov,
-        token.symbol() + " yVault",
-        "yv" + token.symbol(),
-        gov,
-        {"from": gov},
-    )
-    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
-    token.approve(vault, 2 ** 256 - 1, {"from": gov})
+def test_deposit_withdraw_faillure(token, gov, vault):
     token._setBlocked(vault.address, True, {"from": gov})
 
     with brownie.reverts():
         vault.deposit({"from": gov})
+
+    token._setBlocked(gov, False, {"from": gov})
+    vault.deposit({"from": gov})
+    token._setBlocked(gov, True, {"from": gov})
+
+    with brownie.reverts():
+        vault.withdraw(vault.balanceOf(gov), {"from": gov})
