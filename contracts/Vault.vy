@@ -1406,7 +1406,7 @@ def _assessFees(strategy: address, gain: uint256):
     # NOTE: In effect, this reduces overall share price by the combined fee
     # NOTE: may throw if Vault.totalAssets() > 1e64, or not called for more than a year
     governance_fee: uint256 = (
-        (self._totalAssets() * (block.timestamp - self.lastReport) * self.managementFee)
+        (self.totalDebt * (block.timestamp - self.lastReport) * self.managementFee)
         / MAX_BPS
         / SECS_PER_YEAR
     )
