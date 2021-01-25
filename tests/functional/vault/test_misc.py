@@ -128,11 +128,11 @@ def test_reject_ether(gov, vault):
 
 def test_deposit_withdraw_faillure(token, gov, vault):
     token._setBlocked(vault.address, True, {"from": gov})
-
     with brownie.reverts():
         vault.deposit({"from": gov})
 
-    token._setBlocked(gov, False, {"from": gov})
+    token._setBlocked(vault.address, False, {"from": gov})
+    token.approve(vault, 2 ** 256 - 1, {"from": gov})
     vault.deposit({"from": gov})
     token._setBlocked(gov, True, {"from": gov})
 
