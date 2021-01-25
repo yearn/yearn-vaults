@@ -298,6 +298,15 @@ def test_reporting(vault, strategy, gov, rando):
     vault.expectedReturn(strategy)  # Do this for coverage of `Vault._expectedReturn()`
 
 
+def test_reporting_gains_without_fee(vault, token, strategy, gov, rando):
+    vault.setManagementFee(0, {"from": gov})
+    vault.setPerformanceFee(0, {"from": gov})
+    vault.addStrategy(strategy, 100, 10, 1000, {"from": gov})
+    gain = 1000000
+    token.transfer(strategy, gain, {"from": gov})
+    vault.report(gain, 0, 0, {"from": strategy})
+
+
 @pytest.fixture
 def test_withdrawalQueue(gov, management, vault, strategy, other_strategy):
     vault.addStrategy(strategy, 100, 10, 1000, {"from": gov})
