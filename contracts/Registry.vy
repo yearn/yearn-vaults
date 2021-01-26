@@ -7,6 +7,7 @@ interface Vault:
     def governance() -> address: view
     def initialize(
         token: address,
+        claimToken: address,
         governance: address,
         rewards: address,
         name: String[64],
@@ -172,6 +173,7 @@ def newRelease(vault: address):
 @internal
 def _newProxyVault(
     token: address,
+    claimToken: address,
     governance: address,
     rewards: address,
     guardian: address,
@@ -182,7 +184,7 @@ def _newProxyVault(
     vault: address = create_forwarder_to(self.releases[self.nextRelease - 1])  # dev: no releases
 
     # NOTE: Must initialize the Vault atomically with deploying it
-    Vault(vault).initialize(token, governance, rewards, name, symbol, guardian)
+    Vault(vault).initialize(token, claimToken, governance, rewards, name, symbol, guardian)
 
     return vault
 
@@ -190,6 +192,7 @@ def _newProxyVault(
 @external
 def newVault(
     token: address,
+    claimToken: address,
     guardian: address,
     rewards: address,
     name: String[64],
@@ -215,7 +218,7 @@ def newVault(
     """
     assert msg.sender == self.governance  # dev: unauthorized
 
-    vault: address = self._newProxyVault(token, msg.sender, rewards, guardian, name, symbol)
+    vault: address = self._newProxyVault(token, claimToken, msg.sender, rewards, guardian, name, symbol)
 
     self._registerDeployment(token, vault)
 
@@ -225,6 +228,7 @@ def newVault(
 @external
 def newExperimentalVault(
     token: address,
+    claimToken: address,
     governance: address,
     guardian: address,
     rewards: address,
@@ -248,7 +252,7 @@ def newExperimentalVault(
     @return The address of the newly-deployed vault
     """
     # NOTE: Anyone can call this method, as a convenience to Strategist' experiments
-    vault: address = self._newProxyVault(token, governance, rewards, guardian, name, symbol)
+    vault: address = self._newProxyVault(token, claimToken, governance, rewards, guardian, name, symbol)
 
     # NOTE: Not registered, so emit an "experiment" event here instead
     log NewExperimentalVault(token, msg.sender, vault, Vault(vault).apiVersion())

@@ -5,6 +5,7 @@ def test_deployment_management(
     gov, guardian, rewards, registry, Vault, create_token, create_vault
 ):
     token = create_token()
+    claimToken = create_token()
 
     # No deployments yet for token
     with brownie.reverts():
@@ -18,7 +19,7 @@ def test_deployment_management(
 
     # Can't deploy the same vault api version twice, proxy or not
     with brownie.reverts():
-        registry.newVault(token, guardian, rewards, "", "", {"from": gov})
+        registry.newVault(token, claimToken, guardian, rewards, "", "", {"from": gov})
 
     # New release overrides previous release
     v2_vault = create_vault(version="2.0.0")  # Uses different token
@@ -28,7 +29,7 @@ def test_deployment_management(
 
     # You can deploy proxy Vaults, linked to the latest release
     proxy_vault = Vault.at(
-        registry.newVault(token, guardian, rewards, "", "", {"from": gov}).return_value
+        registry.newVault(token, claimToken, guardian, rewards, "", "", {"from": gov}).return_value
     )
     assert proxy_vault.apiVersion() == v2_vault.apiVersion() == "2.0.0"
     assert proxy_vault.rewards() == rewards
@@ -44,12 +45,13 @@ def test_experimental_deployments(
 
     # Anyone can make an experiment
     token = create_token()
-    registry.newExperimentalVault(token, rando, rando, rando, "", "", {"from": rando})
+    claimToken = create_token()
+    registry.newExperimentalVault(token, claimToken, rando, rando, rando, "", "", {"from": rando})
 
     # You can make as many experiments as you want with same api version
     experimental_vault = Vault.at(
         registry.newExperimentalVault(
-            token, rando, rando, rando, "", "", {"from": rando}
+            token, claimToken, rando, rando, rando, "", "", {"from": rando}
         ).return_value
     )
 
@@ -71,7 +73,7 @@ def test_experimental_deployments(
     # You can't endorse a vault if it would overwrite a current deployment
     experimental_vault = Vault.at(
         registry.newExperimentalVault(
-            token, gov, gov, gov, "", "", {"from": rando}
+            token, claimToken, gov, gov, gov, "", "", {"from": rando}
         ).return_value
     )
     with brownie.reverts():
@@ -83,7 +85,7 @@ def test_experimental_deployments(
 
     experimental_vault = Vault.at(
         registry.newExperimentalVault(
-            token, gov, gov, gov, "", "", {"from": rando}
+            token, claimToken, gov, gov, gov, "", "", {"from": rando}
         ).return_value
     )
     registry.endorseVault(experimental_vault, {"from": gov})
