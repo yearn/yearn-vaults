@@ -57,7 +57,13 @@ def main():
         use_proxy = True
 
     token = Token.at(get_address("ERC20 Token"))
-    gov = get_address("Yearn Governance", default="ychad.eth")
+
+    if use_proxy:
+        gov_default = dev.address
+    else:
+        gov_default = "ychad.eth"
+    gov = get_address("Yearn Governance", default=gov_default)
+
     rewards = get_address(
         "Rewards contract", default="0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde"
     )
@@ -90,7 +96,7 @@ def main():
         ]
         if use_proxy:
             # NOTE: Must always include guardian, even if default
-            args.insert(3, guardian)
+            args.insert(2, guardian)
             txn_receipt = registry.newExperimentalVault(*args, {"from": dev})
             vault = Vault.at(txn_receipt.events["NewExperimentalVault"]["vault"])
             click.echo(f"Experimental Vault deployed [{vault.address}]")
