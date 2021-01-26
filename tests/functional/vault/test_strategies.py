@@ -6,13 +6,14 @@ ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 
 
 @pytest.fixture
-def vault(gov, token, Vault):
+def vault(gov, management, token, Vault):
     # NOTE: Because the fixture has tokens in it already
     vault = gov.deploy(Vault)
     vault.initialize(
         token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
     )
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    vault.setManagement(management, {"from": gov})
     yield vault
 
 
