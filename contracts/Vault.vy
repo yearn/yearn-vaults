@@ -591,19 +591,15 @@ def updateFor(recipient: address):
     self._updateFor(recipient)
 
 @internal
-def _claimFor(recipient: address):
+def _claim(recipient: address):
     self._updateFor(recipient)
     self.claimToken.transfer(recipient, self.claimable[recipient])
     self.claimable[recipient] = 0
     self.claimBalance = self.claimToken.balanceOf(self)
 
 @external
-def claim():
-    self._claimFor(msg.sender)
-
-@external
-def claimFor(recipient: address):
-    self._claimFor(recipient)
+def claim(recipient: address = msg.sender):
+    self._claim(recipient)
 
 @internal
 def _transfer(sender: address, receiver: address, amount: uint256):
@@ -1031,6 +1027,8 @@ def withdraw(
     if value > vault_balance:
         value = vault_balance
         shares = self._sharesForAmount(value)
+
+    self._updateFor(msg.sender)
 
     # Burn shares (full value of what is being withdrawn)
     self.totalSupply -= shares
