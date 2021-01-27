@@ -812,8 +812,9 @@ def deposit(_amount: uint256 = MAX_UINT256, recipient: address = msg.sender) -> 
 @internal
 def _shareValue(shares: uint256) -> uint256:
     # Determines the current value of `shares`.
-        # NOTE: if sqrt(Vault.totalAssets()) >>> 1e39, this could potentially revert
-    return (shares * (self._totalAssets())) / self.totalSupply
+    # NOTE: if sqrt(Vault.totalAssets()) > 1e37, this could potentially revert
+    # NOTE: using 1e3 for extra precision here, when decimals is low
+    return ((10 ** 3 * (shares * self._totalAssets())) / self.totalSupply) / 10 ** 3
 
 
 @view
@@ -822,8 +823,8 @@ def _sharesForAmount(amount: uint256) -> uint256:
     # Determines how many shares `amount` of token would receive.
     # See dev note on `deposit`.
     if self._totalAssets() > 0:
-        # NOTE: if sqrt(token.totalSupply()) > 1e39, this could potentially revert
-        return (amount * self.totalSupply) / self._totalAssets()
+        # NOTE: if sqrt(token.totalSupply()) > 1e37, this could potentially revert
+        return ((10 ** 3 * (amount * self.totalSupply)) / self._totalAssets()) / 10 ** 3
     else:
         return 0
 
