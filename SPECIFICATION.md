@@ -22,6 +22,8 @@ NOTE: Users should only withdraw "free" assets as some strategies need to divest
 
 NOTE: "free" assets in the Vault means the amount the Vault has freely available (e.g. not invested in Strategies)
 
+NOTE: The strategy can also revoke itself during normal operation of the Vault, but this behavior only occurs during "Emergency Exit" mode.
+
 1. A User is able to deposit an amount of the single asset the Vault accepts in exchange for shares of the Vault's underlying assets, depending on the Vault's deposit configuration.
 1. A User is able to withdraw an amount of tokens represented by their shares up to the total available amount that can be withdrawn from the combination of the Vault's overhead, and what can be forcibly withdrawn from all the strategies with debt to the Vault that have been pre-authorized for withdrawals in the Vault's withdrawal queue.
 1. A User is able to transfer any amount of their Vault shares to anyone else.
