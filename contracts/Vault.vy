@@ -51,6 +51,7 @@ interface DetailedERC20:
 interface Strategy:
     def want() -> address: view
     def vault() -> address: view
+    def isActive() -> bool: view
     def estimatedTotalAssets() -> uint256: view
     def withdraw(_amount: uint256) -> uint256: nonpayable
     def migrate(_newStrategy: address): nonpayable
@@ -1353,7 +1354,7 @@ def creditAvailable(strategy: address = msg.sender) -> uint256:
 def _expectedReturn(strategy: address) -> uint256:
     # See note on `expectedReturn()`.
     delta: uint256 = block.timestamp - self.strategies[strategy].lastReport
-    if delta > 0:
+    if delta > 0 and Strategy(strategy).isActive():
         # NOTE: Unlikely to throw unless strategy accumalates >1e68 returns
         # NOTE: Will not throw for DIV/0 because activation <= lastReport
         return (self.strategies[strategy].totalGain * delta) / (
