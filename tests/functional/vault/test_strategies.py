@@ -6,13 +6,14 @@ ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 
 
 @pytest.fixture
-def vault(gov, token, Vault):
+def vault(gov, management, token, Vault):
     # NOTE: Because the fixture has tokens in it already
     vault = gov.deploy(Vault)
     vault.initialize(
         token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
     )
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    vault.setManagement(management, {"from": gov})
     yield vault
 
 
@@ -307,8 +308,7 @@ def test_reporting_gains_without_fee(vault, token, strategy, gov, rando):
     vault.report(gain, 0, 0, {"from": strategy})
 
 
-@pytest.fixture
-def test_withdrawalQueue(gov, management, vault, strategy, other_strategy):
+def test_withdrawalQueue(chain, gov, management, vault, strategy, other_strategy):
     vault.addStrategy(strategy, 100, 10, 1000, {"from": gov})
     vault.addStrategy(other_strategy, 100, 10, 1000, {"from": gov})
 
@@ -347,9 +347,7 @@ def test_withdrawalQueue(gov, management, vault, strategy, other_strategy):
     assert vault.withdrawalQueue(1) == other_strategy
 
 
-def test_update_debtRatio_to_add_second_strategy(
-    chain, gov, vault, strategy, other_strategy
-):
+def test_update_debtRatio_to_add_second_strategy(gov, vault, strategy, other_strategy):
 
     vault.addStrategy(strategy, 10_000, 0, 0, {"from": gov})
 
