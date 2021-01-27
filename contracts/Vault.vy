@@ -956,10 +956,6 @@ def withdraw(
             self.strategies[strategy].totalDebt -= withdrawn + loss
             self.totalDebt -= withdrawn + loss
 
-        # NOTE: This loss protection is put in place to revert if losses from
-        #       withdrawing are more than what is considered acceptable.
-        assert totalLoss <= maxLoss * (value + totalLoss) / MAX_BPS
-
     # NOTE: We have withdrawn everything possible out of the withdrawal queue
     #       but we still don't have enough to fully pay them back, so adjust
     #       to the total amount we've freed up through forced withdrawals
@@ -969,6 +965,10 @@ def withdraw(
         # NOTE: Burn # of shares that corresponds to what Vault has on-hand,
         #       including the losses that were incurred above during withdrawals
         shares = self._sharesForAmount(value + totalLoss)
+
+    # NOTE: This loss protection is put in place to revert if losses from
+    #       withdrawing are more than what is considered acceptable.
+    assert totalLoss <= maxLoss * (value + totalLoss) / MAX_BPS
 
     # Burn shares (full value of what is being withdrawn)
     self.totalSupply -= shares
