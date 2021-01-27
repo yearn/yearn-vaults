@@ -1174,10 +1174,11 @@ def migrateStrategy(oldVersion: address, newVersion: address):
 
     self.strategies[newVersion] = StrategyParams({
         performanceFee: strategy.performanceFee,
-        activation: block.timestamp,
+        # NOTE: use last report for activation time, so E[R] calc works
+        activation: strategy.lastReport,
         debtRatio: strategy.debtRatio,
         rateLimit: strategy.rateLimit,
-        lastReport: block.timestamp,
+        lastReport: strategy.lastReport,
         totalDebt: strategy.totalDebt,
         totalGain: 0,
         totalLoss: 0,
