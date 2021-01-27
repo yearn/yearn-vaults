@@ -219,7 +219,9 @@ debtRatio: public(uint256)  # Debt ratio for the Vault across all strategies (in
 totalDebt: public(uint256)  # Amount of tokens that all strategies have borrowed
 lastReport: public(uint256)  # block.timestamp of last report
 activation: public(uint256)  # block.timestamp of contract deployment
+lockedProfit: public(uint256) # how much profit is locked and cant be withdrawn
 
+lockedProfitDegration: public(uint256) # rate per block of degration. 1e18 is 100% per block
 rewards: public(address)  # Rewards contract where Governance fees are sent to
 # Governance Fee for management of Vault (given to `rewards`)
 managementFee: public(uint256)
@@ -289,6 +291,7 @@ def initialize(
     log UpdateManagementFee(convert(200, uint256))
     self.lastReport = block.timestamp
     self.activation = block.timestamp
+    self.lockedProfitDegration = convert(0.000046 * 1e18, uint256) # 6 hours in blocks
     # EIP-712
     self.DOMAIN_SEPARATOR = keccak256(
         concat(
@@ -428,6 +431,15 @@ def setRewards(rewards: address):
     self.rewards = rewards
     log UpdateRewards(rewards)
 
+@external
+def setLockedProfitDegration(degration: uint256):
+    """
+    @notice
+        Changes the locked profit degration. 
+    @param degration The rate of degration in percent per second scaled to 1e18.
+    """
+    assert msg.sender == self.governance
+    self.lockedProfitDegration = degration
 
 @external
 def setDepositLimit(limit: uint256):
@@ -444,7 +456,6 @@ def setDepositLimit(limit: uint256):
     assert msg.sender == self.governance
     self.depositLimit = limit
     log UpdateDepositLimit(limit)
-
 
 @external
 def setPerformanceFee(fee: uint256):
@@ -855,9 +866,13 @@ def deposit(_amount: uint256 = MAX_UINT256, recipient: address = msg.sender) -> 
 @internal
 def _shareValue(shares: uint256) -> uint256:
     # Determines the current value of `shares`.
-    # NOTE: if sqrt(Vault.totalAssets()) > 1e37, this could potentially revert
-    # NOTE: using 1e3 for extra precision here, when decimals is low
-    return ((10 ** 3 * (shares * self._totalAssets())) / self.totalSupply) / 10 ** 3
+        # NOTE: if sqrt(Vault.totalAssets()) >>> 1e39, this could potentially revert
+    lockedFundsRatio: uint256 = (block.timestamp - self.lastReport) * self.lockedProfitDegration
+    freeFunds: uint256 = self._totalAssets() 
+    if(lockedFundsRatio < convert(1e18, uint256)):
+        freeFunds = freeFunds - (self.lockedProfit - (lockedFundsRatio * self.lockedProfit / convert(1e18, uint256)))
+    
+    return (shares * freeFunds) / self.totalSupply
 
 
 @view
@@ -1613,6 +1628,7 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     # Update reporting time
     self.strategies[msg.sender].lastReport = block.timestamp
     self.lastReport = block.timestamp
+    self.lockedProfit = gain # profit is locked and gradually released per block
 
     log StrategyReported(
         msg.sender,
