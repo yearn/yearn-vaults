@@ -69,3 +69,7 @@ def strategy(gov, strategist, keeper, token, vault, TestStrategy):
 @pytest.fixture
 def rando(accounts):
     yield accounts[9]
+
+@pytest.fixture
+def rando2(accounts):
+    yield accounts[8]
