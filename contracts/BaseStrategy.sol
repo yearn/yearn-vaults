@@ -82,17 +82,21 @@ interface VaultAPI is IERC20 {
  * This interface is here for the keeper bot to use.
  */
 interface StrategyAPI {
+    function name() external view returns (string memory);
+
+    function vault() external view returns (address);
+
+    function want() external view returns (address);
+
     function apiVersion() external pure returns (string memory);
+
+    function keeper() external view returns (address);
 
     function isActive() external view returns (bool);
 
     function delegatedAssets() external virtual view returns (uint256);
 
-    function name() external view returns (string memory);
-
-    function vault() external view returns (address);
-
-    function keeper() external view returns (address);
+    function estimatedTotalAssets() external virtual view returns (uint256);
 
     function tendTrigger(uint256 callCost) external view returns (bool);
 
@@ -615,7 +619,7 @@ abstract contract BaseStrategy {
      */
     function withdraw(uint256 _amountNeeded) external returns (uint256 _loss) {
         require(msg.sender == address(vault), "!vault");
-        // Liquidate as much as possible to `want`, up to `_amount`
+        // Liquidate as much as possible to `want`, up to `_amountNeeded`
         uint256 amountFreed;
         (amountFreed, _loss) = liquidatePosition(_amountNeeded);
         // Send it directly back (NOTE: Using `msg.sender` saves some gas here)

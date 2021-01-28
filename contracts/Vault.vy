@@ -51,6 +51,7 @@ interface DetailedERC20:
 interface Strategy:
     def want() -> address: view
     def vault() -> address: view
+    def isActive() -> bool: view
     def estimatedTotalAssets() -> uint256: view
     def withdraw(_amount: uint256) -> uint256: nonpayable
     def migrate(_newStrategy: address): nonpayable
@@ -742,6 +743,7 @@ def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
 
 
 @external
+@nonreentrant("withdraw")
 def deposit(_amount: uint256 = MAX_UINT256, recipient: address = msg.sender) -> uint256:
     """
     @notice
@@ -811,8 +813,9 @@ def deposit(_amount: uint256 = MAX_UINT256, recipient: address = msg.sender) -> 
 @internal
 def _shareValue(shares: uint256) -> uint256:
     # Determines the current value of `shares`.
-        # NOTE: if sqrt(Vault.totalAssets()) >>> 1e39, this could potentially revert
-    return (shares * (self._totalAssets())) / self.totalSupply
+    # NOTE: if sqrt(Vault.totalAssets()) > 1e37, this could potentially revert
+    # NOTE: using 1e3 for extra precision here, when decimals is low
+    return ((10 ** 3 * (shares * self._totalAssets())) / self.totalSupply) / 10 ** 3
 
 
 @view
@@ -821,8 +824,8 @@ def _sharesForAmount(amount: uint256) -> uint256:
     # Determines how many shares `amount` of token would receive.
     # See dev note on `deposit`.
     if self._totalAssets() > 0:
-        # NOTE: if sqrt(token.totalSupply()) > 1e39, this could potentially revert
-        return (amount * self.totalSupply) / self._totalAssets()
+        # NOTE: if sqrt(token.totalSupply()) > 1e37, this could potentially revert
+        return ((10 ** 3 * (amount * self.totalSupply)) / self._totalAssets()) / 10 ** 3
     else:
         return 0
 
@@ -898,7 +901,7 @@ def withdraw(
         The address to issue the shares in this Vault to. Defaults to the
         caller's address.
     @param maxLoss
-        The maximum acceptable loss to sustain on withdrawal. Defaults to 0%.
+        The maximum acceptable loss to sustain on withdrawal. Defaults to 0.01%.
     @return The quantity of tokens redeemed for `_shares`.
     """
     shares: uint256 = maxShares  # May reduce this number below
@@ -913,6 +916,7 @@ def withdraw(
     # See @dev note, above.
     value: uint256 = self._shareValue(shares)
 
+    totalLoss: uint256 = 0
     if value > self.token.balanceOf(self):
         # We need to go get some from our strategies in the withdrawal queue
         # NOTE: This performs forced withdrawals from each Strategy. During
@@ -922,7 +926,6 @@ def withdraw(
         #       can optionally specify the maximum acceptable loss (in BPS)
         #       to prevent excessive losses on their withdrawals (which may
         #       happen in certain edge cases where Strategies realize a loss)
-        totalLoss: uint256 = 0
         for strategy in self.withdrawalQueue:
             if strategy == ZERO_ADDRESS:
                 break  # We've exhausted the queue
@@ -956,17 +959,19 @@ def withdraw(
             self.strategies[strategy].totalDebt -= withdrawn + loss
             self.totalDebt -= withdrawn + loss
 
-        # NOTE: This loss protection is put in place to revert if losses from
-        #       withdrawing are more than what is considered acceptable.
-        assert totalLoss <= maxLoss * (value + totalLoss) / MAX_BPS
-
     # NOTE: We have withdrawn everything possible out of the withdrawal queue
     #       but we still don't have enough to fully pay them back, so adjust
     #       to the total amount we've freed up through forced withdrawals
     vault_balance: uint256 = self.token.balanceOf(self)
     if value > vault_balance:
         value = vault_balance
-        shares = self._sharesForAmount(value)
+        # NOTE: Burn # of shares that corresponds to what Vault has on-hand,
+        #       including the losses that were incurred above during withdrawals
+        shares = self._sharesForAmount(value + totalLoss)
+
+    # NOTE: This loss protection is put in place to revert if losses from
+    #       withdrawing are more than what is considered acceptable.
+    assert totalLoss <= maxLoss * (value + totalLoss) / MAX_BPS
 
     # Burn shares (full value of what is being withdrawn)
     self.totalSupply -= shares
@@ -1025,7 +1030,8 @@ def addStrategy(
         The Strategy will be appended to `withdrawalQueue`, call
         `setWithdrawalQueue` to change the order.
     @param strategy The address of the Strategy to add.
-    @param debtRatio The ratio of the total assets in the `vault that the `strategy` can manage.
+    @param debtRatio
+        The share of the total assets in the `vault that the `strategy` has access to.
     @param rateLimit
         Limit on the increase of debt per unit time since last harvest
     @param performanceFee
@@ -1171,10 +1177,11 @@ def migrateStrategy(oldVersion: address, newVersion: address):
 
     self.strategies[newVersion] = StrategyParams({
         performanceFee: strategy.performanceFee,
-        activation: block.timestamp,
+        # NOTE: use last report for activation time, so E[R] calc works
+        activation: strategy.lastReport,
         debtRatio: strategy.debtRatio,
         rateLimit: strategy.rateLimit,
-        lastReport: block.timestamp,
+        lastReport: strategy.lastReport,
         totalDebt: strategy.totalDebt,
         totalGain: 0,
         totalLoss: 0,
@@ -1350,13 +1357,15 @@ def creditAvailable(strategy: address = msg.sender) -> uint256:
 @internal
 def _expectedReturn(strategy: address) -> uint256:
     # See note on `expectedReturn()`.
-    delta: uint256 = block.timestamp - self.strategies[strategy].lastReport
-    if delta > 0:
+    strategy_lastReport: uint256 = self.strategies[strategy].lastReport
+    timeSinceLastHarvest: uint256 = block.timestamp - strategy_lastReport
+    totalHarvestTime: uint256 = strategy_lastReport - self.strategies[strategy].activation
+
+    # NOTE: If either `timeSinceLastHarvest` or `totalHarvestTime` is 0, we can short-circuit to `0`
+    if timeSinceLastHarvest > 0 and totalHarvestTime > 0 and Strategy(strategy).isActive():
         # NOTE: Unlikely to throw unless strategy accumalates >1e68 returns
-        # NOTE: Will not throw for DIV/0 because activation <= lastReport
-        return (self.strategies[strategy].totalGain * delta) / (
-            block.timestamp - self.strategies[strategy].activation
-        )
+        # NOTE: Calculate average over period of time where harvests have occured in the past
+        return (self.strategies[strategy].totalGain * timeSinceLastHarvest) / totalHarvestTime
     else:
         return 0  # Covers the scenario when block.timestamp == activation
 

@@ -22,6 +22,8 @@ NOTE: Users should only withdraw "free" assets as some strategies need to divest
 
 NOTE: "free" assets in the Vault means the amount the Vault has freely available (e.g. not invested in Strategies)
 
+NOTE: The strategy can also revoke itself during normal operation of the Vault, but this behavior only occurs during "Emergency Exit" mode.
+
 1. A User is able to deposit an amount of the single asset the Vault accepts in exchange for shares of the Vault's underlying assets, depending on the Vault's deposit configuration.
 1. A User is able to withdraw an amount of tokens represented by their shares up to the total available amount that can be withdrawn from the combination of the Vault's overhead, and what can be forcibly withdrawn from all the strategies with debt to the Vault that have been pre-authorized for withdrawals in the Vault's withdrawal queue.
 1. A User is able to transfer any amount of their Vault shares to anyone else.
@@ -46,7 +48,7 @@ NOTE: During Emergency Shutdown mode of the Vault, the intention is for the Vaul
 
 1. During Emergency Shutdown, no Users may deposit into the Vault.
 1. During Emergency Shutdown, Governance cannot add new Strategies.
-1. During Emergency Shutdown, each Strategy must pay back their debt as quickly as reasonable, with minimally impact to their positions.
+1. During Emergency Shutdown, the Vault should communicate to each Strategy to return their entire position as quickly as reasonable, with minimal impact to their positions (Normal Operation).
 1. Only Governance can exit Emergency Shutdown Mode.
 
 ## Strategy Specification
@@ -74,7 +76,7 @@ NOTE: In this mode, the Strategy defines a reversionary set of actions that seek
 
 1. During Emergency Exit, the Strategy cannot take new debt from the connected Vault.
 1. During Emergency Exit, the Strategy can still interact with any external system, but must be able to handle any failure(s) of each of those system(s) as well as possible.
-1. Only Governance can exit Emergency Exit Mode.
+1. There is no condition that can revert Emergency Exit Mode once it is entered.
 
 ## Registry Specification
 
