@@ -76,7 +76,7 @@ NOTE: In this mode, the Strategy defines a reversionary set of actions that seek
 
 1. During Emergency Exit, the Strategy cannot take new debt from the connected Vault.
 1. During Emergency Exit, the Strategy can still interact with any external system, but must be able to handle any failure(s) of each of those system(s) as well as possible.
-1. Only Governance can exit Emergency Exit Mode.
+1. There is no condition that can revert Emergency Exit Mode once it is entered.
 
 ## Registry Specification
 
