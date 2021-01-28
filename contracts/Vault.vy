@@ -743,6 +743,7 @@ def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
 
 
 @external
+@nonreentrant("withdraw")
 def deposit(_amount: uint256 = MAX_UINT256, recipient: address = msg.sender) -> uint256:
     """
     @notice
