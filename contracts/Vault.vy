@@ -1356,13 +1356,15 @@ def creditAvailable(strategy: address = msg.sender) -> uint256:
 @internal
 def _expectedReturn(strategy: address) -> uint256:
     # See note on `expectedReturn()`.
-    delta: uint256 = block.timestamp - self.strategies[strategy].lastReport
-    if delta > 0 and Strategy(strategy).isActive():
+    strategy_lastReport: uint256 = self.strategies[strategy].lastReport
+    timeSinceLastHarvest: uint256 = block.timestamp - strategy_lastReport
+    totalHarvestTime: uint256 = strategy_lastReport - self.strategies[strategy].activation
+
+    # NOTE: If either `timeSinceLastHarvest` or `totalHarvestTime` is 0, we can short-circuit to `0`
+    if timeSinceLastHarvest > 0 and totalHarvestTime > 0 and Strategy(strategy).isActive():
         # NOTE: Unlikely to throw unless strategy accumalates >1e68 returns
-        # NOTE: Will not throw for DIV/0 because activation <= lastReport
-        return (self.strategies[strategy].totalGain * delta) / (
-            block.timestamp - self.strategies[strategy].activation
-        )
+        # NOTE: Calculate average over period of time where harvests have occured in the past
+        return (self.strategies[strategy].totalGain * timeSinceLastHarvest) / totalHarvestTime
     else:
         return 0  # Covers the scenario when block.timestamp == activation
 
