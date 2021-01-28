@@ -48,7 +48,7 @@ NOTE: During Emergency Shutdown mode of the Vault, the intention is for the Vaul
 
 1. During Emergency Shutdown, no Users may deposit into the Vault.
 1. During Emergency Shutdown, Governance cannot add new Strategies.
-1. During Emergency Shutdown, each Strategy must pay back their debt as quickly as reasonable, with minimally impact to their positions.
+1. During Emergency Shutdown, the Vault should communicate to each Strategy to return their entire position as quickly as reasonable, with minimal impact to their positions (Normal Operation).
 1. Only Governance can exit Emergency Shutdown Mode.
 
 ## Strategy Specification
