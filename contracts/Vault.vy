@@ -900,7 +900,7 @@ def withdraw(
         The address to issue the shares in this Vault to. Defaults to the
         caller's address.
     @param maxLoss
-        The maximum acceptable loss to sustain on withdrawal. Defaults to 0%.
+        The maximum acceptable loss to sustain on withdrawal. Defaults to 0.01%.
     @return The quantity of tokens redeemed for `_shares`.
     """
     shares: uint256 = maxShares  # May reduce this number below
@@ -1029,7 +1029,8 @@ def addStrategy(
         The Strategy will be appended to `withdrawalQueue`, call
         `setWithdrawalQueue` to change the order.
     @param strategy The address of the Strategy to add.
-    @param debtRatio The ratio of the total assets in the `vault that the `strategy` can manage.
+    @param debtRatio
+        The share of the total assets in the `vault that the `strategy` has access to.
     @param rateLimit
         Limit on the increase of debt per unit time since last harvest
     @param performanceFee
