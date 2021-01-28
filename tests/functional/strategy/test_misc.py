@@ -101,3 +101,13 @@ def test_reject_ether(gov, strategy):
     # Fallback fails too
     with brownie.reverts("Cannot send ether to nonpayable function"):
         gov.transfer(strategy, 1)
+
+
+def test_set_metadataURI(gov, strategy, rando):
+    assert strategy.metadataURL() == ""  # Empty by default
+    strategy.setMetadataURI("ipfs://test", {"from": gov})
+    assert strategy.metadataURL() == "ipfs://test"
+    strategy.setMetadataURI("ipfs://test2", {"from": gov})
+    assert strategy.metadataURL() == "ipfs://test2"
+    with brownie.reverts():
+        strategy.setMetadataURI("ipfs://fake", {"from": rando})

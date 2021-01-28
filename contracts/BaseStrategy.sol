@@ -123,6 +123,7 @@ interface StrategyAPI {
  */
 abstract contract BaseStrategy {
     using SafeMath for uint256;
+    string public metadataURI;
 
     /**
      * @notice
@@ -186,6 +187,8 @@ abstract contract BaseStrategy {
 
     event EmergencyExitEnabled();
 
+    event UpdatedMetaDataUri(string metadataURI);
+
     // The maximum number of seconds between harvest calls. See
     // `setMaxReportDelay()` for more details.
     uint256 public maxReportDelay = 86400; // ~ once a day
@@ -228,14 +231,16 @@ abstract contract BaseStrategy {
      *  contract is deployed.
      * @dev `_vault` should implement `VaultAPI`.
      * @param _vault The address of the Vault responsible for this Strategy.
+     * @param _metadataURI The URI that describe the strategy.
      */
-    constructor(address _vault) public {
+    constructor(address _vault, string memory _metadataURI) public {
         vault = VaultAPI(_vault);
         want = IERC20(vault.token());
         want.approve(_vault, uint256(-1)); // Give Vault unlimited access (might save gas)
         strategist = msg.sender;
         rewards = msg.sender;
         keeper = msg.sender;
+        metadataURI = _metadataURI;
     }
 
     /**
@@ -333,6 +338,19 @@ abstract contract BaseStrategy {
     function setDebtThreshold(uint256 _debtThreshold) external onlyAuthorized {
         debtThreshold = _debtThreshold;
         emit UpdatedDebtThreshold(_debtThreshold);
+    }
+
+    /**
+     * @notice
+     *  Used to change `metadataURI`. `metadataURI` is used to store the URI
+     * of the file describing the strategy.
+     *
+     *  This may only be called by governance or the strategist.
+     * @param _metadataURI The URI that describe the strategy.
+     */
+    function setMetadataURI(string calldata _metadataURI) external onlyAuthorized {
+        metadataURI = _metadataURI;
+        emit UpdatedMetaDataUri(_metadataURI);
     }
 
     /**
