@@ -41,7 +41,7 @@ def test_zero_fees(gov, vault, token, TestStrategy, rewards, strategist):
     assert vault.balanceOf(strategy) == 0
 
 
-def test_max_fees(gov, vault, token, TestStrategy, rewards, strategist, chiToken):
+def test_max_fees(gov, vault, token, TestStrategy, rewards, strategist):
     # performance fee should not be higher than MAX
     vault.setPerformanceFee(FEE_MAX, {"from": gov})
     with brownie.reverts():
