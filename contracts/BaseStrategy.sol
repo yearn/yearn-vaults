@@ -127,6 +127,7 @@ interface StrategyAPI {
  */
 abstract contract BaseStrategy {
     using SafeMath for uint256;
+    string public metadataURI;
 
     /**
      * @notice
@@ -189,6 +190,8 @@ abstract contract BaseStrategy {
     event UpdatedDebtThreshold(uint256 debtThreshold);
 
     event EmergencyExitEnabled();
+
+    event UpdatedMetadataURI(string metadataURI);
 
     // The maximum number of seconds between harvest calls. See
     // `setMaxReportDelay()` for more details.
@@ -337,6 +340,19 @@ abstract contract BaseStrategy {
     function setDebtThreshold(uint256 _debtThreshold) external onlyAuthorized {
         debtThreshold = _debtThreshold;
         emit UpdatedDebtThreshold(_debtThreshold);
+    }
+
+    /**
+     * @notice
+     *  Used to change `metadataURI`. `metadataURI` is used to store the URI
+     * of the file describing the strategy.
+     *
+     *  This may only be called by governance or the strategist.
+     * @param _metadataURI The URI that describe the strategy.
+     */
+    function setMetadataURI(string calldata _metadataURI) external onlyAuthorized {
+        metadataURI = _metadataURI;
+        emit UpdatedMetadataURI(_metadataURI);
     }
 
     /**
