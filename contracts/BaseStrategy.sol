@@ -18,6 +18,13 @@ struct StrategyParams {
     uint256 totalLoss;
 }
 
+interface RegistryAPI {
+    function latestVault(address token) external view returns (address);
+
+    function nextDeployment(address token) external view returns (uint256);
+
+    function vaults(address token, uint256 deploymentId) external view returns (address);
+}
 
 interface VaultAPI is IERC20 {
     function name() external view returns (string calldata);
