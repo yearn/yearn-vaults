@@ -16,6 +16,7 @@ compiler:
 reports:
   exclude_paths:
     - contracts/test/Token.sol
+    - contracts/test/ChiToken.sol
     - contracts/test/TestGuestList.sol
   exclude_contracts:
     - SafeMath

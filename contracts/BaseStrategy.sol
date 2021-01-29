@@ -135,7 +135,7 @@ interface IFreeFromUpTo {
 abstract contract BaseStrategy {
     using SafeMath for uint256;
     string public metadataURI;
-    IFreeFromUpTo public constant chi = IFreeFromUpTo(0x0000000000004946c0e9F43F4Dee607b0eF1fA1c);
+    IFreeFromUpTo public chiToken;
 
     /**
      * @notice
@@ -237,10 +237,14 @@ abstract contract BaseStrategy {
         _;
     }
     modifier useChi() {
+        if (address(chiToken) == address(0)) {
+            _;
+            return;
+        }
         uint256 gasStart = gasleft();
         _;
         uint256 gasSpent = 21000 + gasStart - gasleft() + 16 * msg.data.length;
-        chi.freeFromUpTo(msg.sender, (gasSpent + 14154) / 41130);
+        chiToken.freeFromUpTo(msg.sender, (gasSpent + 14154) / 41130);
     }
 
     /**
@@ -369,6 +373,16 @@ abstract contract BaseStrategy {
     function setMetadataURI(string calldata _metadataURI) external onlyAuthorized {
         metadataURI = _metadataURI;
         emit UpdatedMetadataURI(_metadataURI);
+    }
+
+    /**
+     * @notice
+     *  Sets the chi token address, that contract must be compliant with the IFreeFromUpTo interface.
+     *
+     * @param _address Address of the chi contract.
+     */
+    function setChiToken(address _address) external onlyAuthorized {
+        chiToken = IFreeFromUpTo(_address);
     }
 
     /**
