@@ -18,14 +18,45 @@ struct StrategyParams {
     uint256 totalLoss;
 }
 
+
 interface VaultAPI is IERC20 {
+    function name() external view returns (string calldata);
+
+    function symbol() external view returns (string calldata);
+
+    function decimals() external view returns (uint256);
+
     function apiVersion() external pure returns (string memory);
 
-    function withdraw(uint256 shares, address recipient) external returns (uint256);
+    function permit(
+        address owner,
+        address spender,
+        uint256 amount,
+        uint256 expiry,
+        bytes calldata signature
+    ) external returns (bool);
+
+    // NOTE: Vyper produces multiple signatures for a given function with "default" args
+    function deposit(uint256 amount) external returns (uint256);
+
+    function deposit(uint256 amount, address recipient) external returns (uint256);
+
+    // NOTE: Vyper produces multiple signatures for a given function with "default" args
+    function withdraw(uint256 maxShares) external returns (uint256);
+
+    function withdraw(uint256 maxShares, address recipient) external returns (uint256);
 
     function token() external view returns (address);
 
     function strategies(address _strategy) external view returns (StrategyParams memory);
+
+    function pricePerShare() external view returns (uint256);
+
+    function totalAssets() external view returns (uint256);
+
+    function depositLimit() external view returns (uint256);
+
+    function maxAvailableShares() external view returns (uint256);
 
     /**
      * View how much the Vault would increase this Strategy's borrow limit,
