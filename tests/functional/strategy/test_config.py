@@ -55,6 +55,7 @@ def test_strategy_setEmergencyExit(strategy, gov, strategist, rando, chain):
         ("strategist", "setStrategist", "gov", None),
         ("rewards", "setRewards", "strategist", None),
         ("keeper", "setKeeper", "strategist", None),
+        ("minReportDelay", "setMinReportDelay", "strategist", 1000),
         ("maxReportDelay", "setMaxReportDelay", "strategist", 1000),
         ("profitFactor", "setProfitFactor", "strategist", 1000),
         ("debtThreshold", "setDebtThreshold", "strategist", 1000),
