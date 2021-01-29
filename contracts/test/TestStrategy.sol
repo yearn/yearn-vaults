@@ -12,7 +12,7 @@ import {BaseStrategy, StrategyParams, VaultAPI} from "../BaseStrategy.sol";
 contract TestStrategy is BaseStrategy {
     bool public doReentrancy;
 
-    constructor(address _vault) public BaseStrategy(_vault, "") {}
+    constructor(address _vault) public BaseStrategy(_vault) {}
 
     function name() external override view returns (string memory) {
         return string(abi.encodePacked("TestStrategy ", apiVersion()));

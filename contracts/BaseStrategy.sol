@@ -187,7 +187,7 @@ abstract contract BaseStrategy {
 
     event EmergencyExitEnabled();
 
-    event UpdatedMetaDataUri(string metadataURI);
+    event UpdatedMetadataURI(string metadataURI);
 
     // The maximum number of seconds between harvest calls. See
     // `setMaxReportDelay()` for more details.
@@ -231,16 +231,14 @@ abstract contract BaseStrategy {
      *  contract is deployed.
      * @dev `_vault` should implement `VaultAPI`.
      * @param _vault The address of the Vault responsible for this Strategy.
-     * @param _metadataURI The URI that describe the strategy.
      */
-    constructor(address _vault, string memory _metadataURI) public {
+    constructor(address _vault) public {
         vault = VaultAPI(_vault);
         want = IERC20(vault.token());
         want.approve(_vault, uint256(-1)); // Give Vault unlimited access (might save gas)
         strategist = msg.sender;
         rewards = msg.sender;
         keeper = msg.sender;
-        metadataURI = _metadataURI;
     }
 
     /**
@@ -350,7 +348,7 @@ abstract contract BaseStrategy {
      */
     function setMetadataURI(string calldata _metadataURI) external onlyAuthorized {
         metadataURI = _metadataURI;
-        emit UpdatedMetaDataUri(_metadataURI);
+        emit UpdatedMetadataURI(_metadataURI);
     }
 
     /**
