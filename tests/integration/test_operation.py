@@ -43,6 +43,7 @@ def test_normal_operation(
     vault.addStrategy(
         strategy,
         10_000,  # 100% of Vault AUM
+        0,
         2 ** 256 - 1,  # no rate limit
         1000,  # 10% performance fee for Strategist
         {"from": gov},

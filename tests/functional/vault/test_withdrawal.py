@@ -1,7 +1,7 @@
 import brownie
 
 
-def test_multiple_withdrawals(chain, token, gov, Vault, TestStrategy):
+def test_multiple_withdrawals(token, gov, Vault, TestStrategy):
     # Need a fresh vault to do this math right
     vault = Vault.deploy({"from": gov})
     vault.initialize(
@@ -14,56 +14,49 @@ def test_multiple_withdrawals(chain, token, gov, Vault, TestStrategy):
         {"from": gov},
     )
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
-    starting_balance = token.balanceOf(gov)
+
+    token.approve(vault, 2 ** 256 - 1, {"from": gov})
+    vault.deposit(1_000_000, {"from": gov})
+
+    starting_balance = token.balanceOf(vault)
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(5)]
     [
         vault.addStrategy(
             s,
             1_000,  # 10% of all tokens in Vault
-            2 ** 256 - 1,  # No rate limit
+            0,
+            2 ** 256 - 1,  # No harvest limit
             0,  # No fee
             {"from": gov},
         )
         for s in strategies
     ]
 
-    token.approve(vault, 2 ** 256 - 1, {"from": gov})
-    vault.deposit({"from": gov})
-
-    assert token.balanceOf(gov) == 0
-    assert token.balanceOf(vault) == starting_balance
-
-    chain.sleep(8640)
     [s.harvest({"from": gov}) for s in strategies]  # Seed all the strategies with debt
 
-    assert token.balanceOf(vault) == starting_balance // 2
-    for s in strategies:  # All of them have debt
+    assert token.balanceOf(vault) == starting_balance // 2  # 50% in strategies
+    for s in strategies:  # All of them have debt (10% each)
         assert s.estimatedTotalAssets() == token.balanceOf(s) == starting_balance // 10
 
     # Withdraw only from Vault
-    before = token.balanceOf(vault)
-    vault.withdraw(vault.balanceOf(gov) // 2 + 1, {"from": gov})
+    vault.withdraw(vault.balanceOf(gov) // 2, {"from": gov})
     assert token.balanceOf(vault) == 0
-    assert token.balanceOf(gov) == before
-    for s in strategies:
+    for s in strategies:  # No change
         assert s.estimatedTotalAssets() == token.balanceOf(s) == starting_balance // 10
 
     # We've drained all the debt
     vault.withdraw(vault.balanceOf(gov), {"from": gov})
+    assert vault.totalDebt() == 0
     for s in strategies:
         assert s.estimatedTotalAssets() == 0
         assert token.balanceOf(s) == 0
-
-    assert vault.totalDebt() == 0
-    for s in strategies:
-        assert s.estimatedTotalAssets() == token.balanceOf(s) == 0
 
 
 def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
     vault.setManagementFee(0, {"from": gov})  # Just makes it easier later
     # Add strategies
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(5)]
-    [vault.addStrategy(s, 2_000, 10 ** 15, 1000, {"from": gov}) for s in strategies]
+    [vault.addStrategy(s, 2_000, 0, 10 ** 21, 1000, {"from": gov}) for s in strategies]
 
     # Send tokens to random user
     token.approve(gov, 2 ** 256 - 1, {"from": gov})
@@ -82,11 +75,13 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
 
     # Withdrawal should fail, no matter the distribution of tokens between
     # the vault and the strategies
-    while vault.totalDebt() / vault.totalAssets() < vault.debtRatio() / 10_000:
-        chain.sleep(86400)  # wait a day
+    while vault.totalDebt() < vault.totalAssets():
         [s.harvest({"from": gov}) for s in strategies]
         with brownie.reverts():
             vault.withdraw(5000, {"from": rando})
+
+    # Everything is invested
+    assert token.balanceOf(vault) == 0
 
     # One of our strategies suffers a loss
     total_assets = vault.totalAssets()
@@ -131,7 +126,7 @@ def test_progressive_withdrawal(
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
 
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(2)]
-    [vault.addStrategy(s, 1000, 10, 1000, {"from": gov}) for s in strategies]
+    [vault.addStrategy(s, 1000, 0, 10, 1000, {"from": gov}) for s in strategies]
 
     token.approve(vault, 2 ** 256 - 1, {"from": gov})
     vault.deposit(1000, {"from": gov})
@@ -186,7 +181,7 @@ def test_withdrawal_with_empty_queue(
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
 
     strategy = gov.deploy(TestStrategy, vault)
-    vault.addStrategy(strategy, 1000, 10, 1000, {"from": gov})
+    vault.addStrategy(strategy, 1000, 0, 10, 1000, {"from": gov})
 
     token.approve(vault, 2 ** 256 - 1, {"from": gov})
     vault.deposit(1000, {"from": gov})
@@ -242,7 +237,7 @@ def test_withdrawal_with_reentrancy(
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
 
     strategy = gov.deploy(TestStrategy, vault)
-    vault.addStrategy(strategy, 10_000, 0, 1000, {"from": gov})
+    vault.addStrategy(strategy, 10_000, 0, 2 ** 256 - 1, 1000, {"from": gov})
 
     strategy._toggleReentrancyExploit()
 

@@ -98,7 +98,8 @@ def test_vault_setParams(
     "key,setter,val,max",
     [
         ("debtRatio", "updateStrategyDebtRatio", 500, 10000),
-        ("rateLimit", "updateStrategyRateLimit", 10, None),
+        ("minDebtIncrease", "updateStrategyMinDebtIncrease", 10, None),
+        ("maxDebtIncrease", "updateStrategyMaxDebtIncrease", 10, None),
     ],
 )
 def test_vault_updateStrategy(

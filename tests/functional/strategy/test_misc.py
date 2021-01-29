@@ -23,7 +23,7 @@ def test_harvest_tend_trigger(chain, gov, vault, token, TestStrategy):
     # Trigger doesn't work until strategy is added
     assert not strategy.harvestTrigger(0)
 
-    vault.addStrategy(strategy, 2_000, 2 ** 256 - 1, 50, {"from": gov})
+    vault.addStrategy(strategy, 2_000, 0, 2 ** 256 - 1, 50, {"from": gov})
 
     # Check that trigger works when it goes over time
     assert not strategy.harvestTrigger(0)

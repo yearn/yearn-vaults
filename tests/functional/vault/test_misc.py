@@ -92,11 +92,18 @@ def test_reject_ether(gov, vault):
         ("withdraw", [1]),
         ("deposit", [1, "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
         ("withdraw", [1, "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
-        ("addStrategy", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1, 1, 1]),
+        ("addStrategy", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1, 1, 1, 1]),
         ("addStrategyToQueue", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
         ("removeStrategyFromQueue", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
         ("updateStrategyDebtRatio", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1]),
-        ("updateStrategyRateLimit", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1]),
+        (
+            "updateStrategyMinDebtIncrease",
+            ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1],
+        ),
+        (
+            "updateStrategyMaxDebtIncrease",
+            ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1],
+        ),
         (
             "updateStrategyPerformanceFee",
             ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1],

@@ -4,6 +4,12 @@ DAY = 86400  # seconds
 def test_emergency_shutdown(token, gov, vault, strategy, keeper, chain):
     # NOTE: totalSupply matches total investment at t = 0
     initial_investment = vault.totalSupply()
+    vault.updateStrategyMaxDebtIncrease(
+        strategy,
+        (initial_investment * vault.strategies(strategy).dict()["debtRatio"] / 10_000)
+        // 10,  # Run 10 times
+        {"from": gov},
+    )
     # Do it once to seed it with debt
     strategy.harvest({"from": keeper})
     add_yield = lambda: token.transfer(
@@ -54,6 +60,13 @@ def test_emergency_shutdown(token, gov, vault, strategy, keeper, chain):
 def test_emergency_exit(token, gov, vault, strategy, keeper, chain):
     # NOTE: totalSupply matches total investment at t = 0
     initial_investment = vault.totalSupply()
+    vault.updateStrategyMaxDebtIncrease(
+        strategy,
+        (initial_investment * vault.strategies(strategy).dict()["debtRatio"] / 10_000)
+        // 10,  # Run 10 times
+        {"from": gov},
+    )
+
     # Do it once to seed it with debt
     strategy.harvest({"from": keeper})
     add_yield = lambda: token.transfer(
