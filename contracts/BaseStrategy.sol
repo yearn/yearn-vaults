@@ -110,6 +110,13 @@ interface StrategyAPI {
 }
 
 /**
+ * This interface is for the chi gas token
+ */
+interface IFreeFromUpTo {
+    function freeFromUpTo(address from, uint256 value) external returns (uint256 freed);
+}
+
+/**
  * @title Yearn Base Strategy
  * @author yearn.finance
  * @notice
@@ -128,6 +135,7 @@ interface StrategyAPI {
 abstract contract BaseStrategy {
     using SafeMath for uint256;
     string public metadataURI;
+    IFreeFromUpTo public constant chi = IFreeFromUpTo(0x0000000000004946c0e9F43F4Dee607b0eF1fA1c);
 
     /**
      * @notice
@@ -227,6 +235,12 @@ abstract contract BaseStrategy {
     modifier onlyKeepers() {
         require(msg.sender == keeper || msg.sender == strategist || msg.sender == governance(), "!authorized");
         _;
+    }
+    modifier useChi() {
+        uint256 gasStart = gasleft();
+        _;
+        uint256 gasSpent = 21000 + gasStart - gasleft() + 16 * msg.data.length;
+        chi.freeFromUpTo(msg.sender, (gasSpent + 14154) / 41130);
     }
 
     /**
@@ -495,7 +509,7 @@ abstract contract BaseStrategy {
      *
      *  This may only be called by governance, the strategist, or the keeper.
      */
-    function tend() external onlyKeepers {
+    function tend() external onlyKeepers useChi {
         // Don't take profits with this call, but adjust for better gains
         adjustPosition(vault.debtOutstanding());
     }
@@ -578,7 +592,7 @@ abstract contract BaseStrategy {
      *  called to report to the Vault on the Strategy's position, especially if
      *  any losses have occurred.
      */
-    function harvest() external onlyKeepers {
+    function harvest() external onlyKeepers useChi {
         uint256 profit = 0;
         uint256 loss = 0;
         uint256 debtOutstanding = vault.debtOutstanding();
