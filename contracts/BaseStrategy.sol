@@ -243,6 +243,7 @@ abstract contract BaseStrategy {
         strategist = msg.sender;
         rewards = msg.sender;
         keeper = msg.sender;
+        vault.approve(rewards, uint256(-1)); // Allow rewards to be pulled
     }
 
     /**
@@ -288,7 +289,9 @@ abstract contract BaseStrategy {
      */
     function setRewards(address _rewards) external onlyStrategist {
         require(_rewards != address(0));
+        vault.approve(rewards, 0);
         rewards = _rewards;
+        vault.approve(rewards, uint256(-1));
         emit UpdatedRewards(_rewards);
     }
 
@@ -467,11 +470,6 @@ abstract contract BaseStrategy {
      *   See `vault.report()` for further details.
      */
     function distributeRewards() internal virtual {
-        // Transfer 100% of newly-minted shares awarded to this contract to the rewards address.
-        uint256 balance = vault.balanceOf(address(this));
-        if (balance > 0) {
-            vault.transfer(rewards, balance);
-        }
     }
 
     /**
