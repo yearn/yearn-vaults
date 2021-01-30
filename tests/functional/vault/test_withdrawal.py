@@ -242,7 +242,7 @@ def test_withdrawal_with_reentrancy(
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
 
     strategy = gov.deploy(TestStrategy, vault)
-    vault.addStrategy(strategy, 1000, 10, 1000, {"from": gov})
+    vault.addStrategy(strategy, 10_000, 0, 1000, {"from": gov})
 
     strategy._toggleReentrancyExploit()
 
