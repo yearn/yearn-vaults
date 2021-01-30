@@ -249,12 +249,14 @@ def test_withdrawal_with_reentrancy(
     token.approve(vault, 2 ** 256 - 1, {"from": gov})
     vault.deposit(1000, {"from": gov})
 
-    # To simulate reentrancy we need strategy to have some balance
-    vault.transfer(strategy, vault.balanceOf(gov) // 2, {"from": gov})
-
     # move funds into strategy
     chain.sleep(1)  # Needs to be a second ahead, at least
     strategy.harvest({"from": gov})
+
+    # To simulate reentrancy we need strategy to have some balance
+    vault.transfer(strategy, vault.balanceOf(gov) // 2, {"from": gov})
+
+    assert vault.balanceOf(strategy) > 0
 
     # given previous setup the withdraw should revert from reentrancy guard
     with brownie.reverts():
