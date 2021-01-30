@@ -457,6 +457,7 @@ def setDepositLimit(limit: uint256):
     self.depositLimit = limit
     log UpdateDepositLimit(limit)
 
+
 @external
 def setPerformanceFee(fee: uint256):
     """
