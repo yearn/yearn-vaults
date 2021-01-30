@@ -1062,6 +1062,7 @@ def addStrategy(
 
     # Check strategy parameters
     assert self.debtRatio + debtRatio <= MAX_BPS
+    assert minDebtIncrease <= maxDebtIncrease
     assert performanceFee <= MAX_BPS - self.performanceFee
 
     # Add strategy to approved strategies
@@ -1125,6 +1126,7 @@ def updateStrategyMinDebtIncrease(
     """
     assert msg.sender in [self.management, self.governance]
     assert self.strategies[strategy].activation > 0
+    assert self.strategies[strategy].maxDebtIncrease >= minDebtIncrease
     self.strategies[strategy].minDebtIncrease = minDebtIncrease
     log StrategyUpdateMinDebtIncrease(strategy, minDebtIncrease)
 
@@ -1146,6 +1148,7 @@ def updateStrategyMaxDebtIncrease(
     """
     assert msg.sender in [self.management, self.governance]
     assert self.strategies[strategy].activation > 0
+    assert self.strategies[strategy].minDebtIncrease <= maxDebtIncrease
     self.strategies[strategy].maxDebtIncrease = maxDebtIncrease
     log StrategyUpdateMaxDebtIncrease(strategy, maxDebtIncrease)
 
