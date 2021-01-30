@@ -243,6 +243,7 @@ abstract contract BaseStrategy {
         strategist = msg.sender;
         rewards = msg.sender;
         keeper = msg.sender;
+        vault.approve(rewards, uint256(-1)); // Allow rewards to be pulled
     }
 
     /**
@@ -279,16 +280,17 @@ abstract contract BaseStrategy {
 
     /**
      * @notice
-     *  Used to change `rewards`. Any distributed rewards will cease flowing
-     *  to the old address and begin flowing to this address once the change
-     *  is in effect.
+     *  Used to change `rewards`. EOA or smart contract which has the permission
+     *  to pull rewards from the vault.
      *
      *  This may only be called by the strategist.
-     * @param _rewards The address to use for collecting rewards.
+     * @param _rewards The address to use for pulling rewards.
      */
     function setRewards(address _rewards) external onlyStrategist {
         require(_rewards != address(0));
+        vault.approve(rewards, 0);
         rewards = _rewards;
+        vault.approve(rewards, uint256(-1));
         emit UpdatedRewards(_rewards);
     }
 
@@ -460,21 +462,6 @@ abstract contract BaseStrategy {
     function liquidatePosition(uint256 _amountNeeded) internal virtual returns (uint256 _liquidatedAmount, uint256 _loss);
 
     /**
-     *  `Harvest()` calls this function after shares are created during
-     *  `vault.report()`. You can customize this function to any share
-     *  distribution mechanism you want.
-     *
-     *   See `vault.report()` for further details.
-     */
-    function distributeRewards() internal virtual {
-        // Transfer 100% of newly-minted shares awarded to this contract to the rewards address.
-        uint256 balance = vault.balanceOf(address(this));
-        if (balance > 0) {
-            vault.transfer(rewards, balance);
-        }
-    }
-
-    /**
      * @notice
      *  Provide a signal to the keeper that `tend()` should be called. The
      *  keeper will provide the estimated gas cost that they would pay to call
@@ -615,9 +602,6 @@ abstract contract BaseStrategy {
         // which is the amount it has earned since the last time it reported to
         // the Vault.
         debtOutstanding = vault.report(profit, loss, debtPayment);
-
-        // Distribute any reward shares earned by the strategy on this report
-        distributeRewards();
 
         // Check if free returns are left, and re-invest them
         adjustPosition(debtOutstanding);
