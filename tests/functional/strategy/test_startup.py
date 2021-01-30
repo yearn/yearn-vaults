@@ -5,7 +5,7 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
     debt_per_harvest = (
         (vault.totalAssets() - vault.totalDebt()) * (vault.debtRatio() / 10_000)
     ) // 10  # 10 harvests, or about 8 loop iterations
-    vault.updateStrategyMaxDebtIncrease(strategy, debt_per_harvest, {"from": gov})
+    vault.updateStrategyMaxDebtPerHarvest(strategy, debt_per_harvest, {"from": gov})
     expectedReturn = lambda: vault.expectedReturn(strategy)
 
     # Never reported yet (no data points)

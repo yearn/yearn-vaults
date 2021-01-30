@@ -9,8 +9,8 @@ struct StrategyParams {
     uint256 performanceFee;
     uint256 activation;
     uint256 debtRatio;
-    uint256 minDebtIncrease;
-    uint256 maxDebtIncrease;
+    uint256 minDebtPerHarvest;
+    uint256 maxDebtPerHarvest;
     uint256 lastReport;
     uint256 totalDebt;
     uint256 totalGain;

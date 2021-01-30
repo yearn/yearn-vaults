@@ -97,11 +97,11 @@ def test_reject_ether(gov, vault):
         ("removeStrategyFromQueue", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
         ("updateStrategyDebtRatio", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1]),
         (
-            "updateStrategyMinDebtIncrease",
+            "updateStrategyMinDebtPerHarvest",
             ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1],
         ),
         (
-            "updateStrategyMaxDebtIncrease",
+            "updateStrategyMaxDebtPerHarvest",
             ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1],
         ),
         (

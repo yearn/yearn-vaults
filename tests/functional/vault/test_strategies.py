@@ -57,8 +57,8 @@ def test_addStrategy(
         "performanceFee": 0,
         "activation": 0,
         "debtRatio": 0,
-        "minDebtIncrease": 0,
-        "maxDebtIncrease": 0,
+        "minDebtPerHarvest": 0,
+        "maxDebtPerHarvest": 0,
         "lastReport": 0,
         "totalGain": 0,
         "totalLoss": 0,
@@ -71,8 +71,8 @@ def test_addStrategy(
         "performanceFee": 1000,
         "activation": activation_timestamp,
         "debtRatio": 100,
-        "minDebtIncrease": 10,
-        "maxDebtIncrease": 20,
+        "minDebtPerHarvest": 10,
+        "maxDebtPerHarvest": 20,
         "lastReport": activation_timestamp,
         "totalGain": 0,
         "totalLoss": 0,
@@ -104,9 +104,9 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
     with brownie.reverts():
         vault.updateStrategyDebtRatio(strategy, 500, {"from": gov})
     with brownie.reverts():
-        vault.updateStrategyMinDebtIncrease(strategy, 15, {"from": gov})
+        vault.updateStrategyMinDebtPerHarvest(strategy, 15, {"from": gov})
     with brownie.reverts():
-        vault.updateStrategyMaxDebtIncrease(strategy, 15, {"from": gov})
+        vault.updateStrategyMaxDebtPerHarvest(strategy, 15, {"from": gov})
     with brownie.reverts():
         vault.updateStrategyPerformanceFee(strategy, 75, {"from": gov})
 
@@ -117,9 +117,9 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
     with brownie.reverts():
         vault.updateStrategyDebtRatio(strategy, 500, {"from": rando})
     with brownie.reverts():
-        vault.updateStrategyMinDebtIncrease(strategy, 15, {"from": rando})
+        vault.updateStrategyMinDebtPerHarvest(strategy, 15, {"from": rando})
     with brownie.reverts():
-        vault.updateStrategyMaxDebtIncrease(strategy, 15, {"from": rando})
+        vault.updateStrategyMaxDebtPerHarvest(strategy, 15, {"from": rando})
     with brownie.reverts():
         vault.updateStrategyPerformanceFee(strategy, 75, {"from": rando})
 
@@ -128,34 +128,34 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
         "performanceFee": 1000,
         "activation": activation_timestamp,
         "debtRatio": 500,  # This changed
-        "minDebtIncrease": 10,
-        "maxDebtIncrease": 20,
+        "minDebtPerHarvest": 10,
+        "maxDebtPerHarvest": 20,
         "lastReport": activation_timestamp,
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
     }
 
-    vault.updateStrategyMinDebtIncrease(strategy, 15, {"from": gov})
+    vault.updateStrategyMinDebtPerHarvest(strategy, 15, {"from": gov})
     assert vault.strategies(strategy).dict() == {
         "performanceFee": 1000,
         "activation": activation_timestamp,
         "debtRatio": 500,
-        "minDebtIncrease": 15,  # This changed
-        "maxDebtIncrease": 20,
+        "minDebtPerHarvest": 15,  # This changed
+        "maxDebtPerHarvest": 20,
         "lastReport": activation_timestamp,
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
     }
 
-    vault.updateStrategyMaxDebtIncrease(strategy, 15, {"from": gov})
+    vault.updateStrategyMaxDebtPerHarvest(strategy, 15, {"from": gov})
     assert vault.strategies(strategy).dict() == {
         "performanceFee": 1000,
         "activation": activation_timestamp,
         "debtRatio": 500,
-        "minDebtIncrease": 15,
-        "maxDebtIncrease": 15,  # This changed
+        "minDebtPerHarvest": 15,
+        "maxDebtPerHarvest": 15,  # This changed
         "lastReport": activation_timestamp,
         "totalGain": 0,
         "totalLoss": 0,
@@ -167,8 +167,8 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
         "performanceFee": 75,  # This changed
         "activation": activation_timestamp,
         "debtRatio": 500,
-        "minDebtIncrease": 15,
-        "maxDebtIncrease": 15,
+        "minDebtPerHarvest": 15,
+        "maxDebtPerHarvest": 15,
         "lastReport": activation_timestamp,
         "totalGain": 0,
         "totalLoss": 0,
@@ -220,8 +220,8 @@ def test_revokeStrategy(chain, gov, vault, strategy, rando):
         "performanceFee": 1000,
         "activation": activation_timestamp,
         "debtRatio": 0,  # This changed
-        "minDebtIncrease": 10,
-        "maxDebtIncrease": 20,
+        "minDebtPerHarvest": 10,
+        "maxDebtPerHarvest": 20,
         "lastReport": activation_timestamp,
         "totalGain": 0,
         "totalLoss": 0,

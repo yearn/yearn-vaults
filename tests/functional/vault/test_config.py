@@ -98,8 +98,8 @@ def test_vault_setParams(
     "key,setter,val,max",
     [
         ("debtRatio", "updateStrategyDebtRatio", 500, 10000),
-        ("minDebtIncrease", "updateStrategyMinDebtIncrease", 10, None),
-        ("maxDebtIncrease", "updateStrategyMaxDebtIncrease", 10, None),
+        ("minDebtPerHarvest", "updateStrategyMinDebtPerHarvest", 10, None),
+        ("maxDebtPerHarvest", "updateStrategyMaxDebtPerHarvest", 10, None),
     ],
 )
 def test_vault_updateStrategy(
@@ -143,16 +143,16 @@ def test_min_max_debtIncrease(gov, vault, TestStrategy):
     vault.addStrategy(strategy, 1_000, 10_000, 10_000, 1_000, {"from": gov})
     # Can't set min > max
     with brownie.reverts():
-        vault.updateStrategyMaxDebtIncrease(
+        vault.updateStrategyMaxDebtPerHarvest(
             strategy,
-            vault.strategies(strategy).dict()["minDebtIncrease"] - 1,
+            vault.strategies(strategy).dict()["minDebtPerHarvest"] - 1,
             {"from": gov},
         )
     # Can't set max > min
     with brownie.reverts():
-        vault.updateStrategyMinDebtIncrease(
+        vault.updateStrategyMinDebtPerHarvest(
             strategy,
-            vault.strategies(strategy).dict()["maxDebtIncrease"] + 1,
+            vault.strategies(strategy).dict()["maxDebtPerHarvest"] + 1,
             {"from": gov},
         )
 
