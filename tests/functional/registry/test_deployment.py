@@ -2,13 +2,20 @@ import brownie
 
 
 def test_deployment_management(
-    gov, guardian, rewards, registry, Vault, create_token, create_vault
+    gov, guardian, rewards, registry, Vault, create_token, create_vault, rando
 ):
     token = create_token()
 
     # No deployments yet for token
     with brownie.reverts():
         registry.latestVault(token)
+
+    # Check that newRelease raises if vault governance is a rando
+    bad_vault = create_vault()
+    bad_vault.setGovernance(rando)
+    bad_vault.acceptGovernance({"from": rando})
+    with brownie.reverts():
+        registry.newRelease(bad_vault, {"from": gov})
 
     # Creating the first deployment makes `latestVault()` work
     v1_vault = create_vault(token, version="1.0.0")

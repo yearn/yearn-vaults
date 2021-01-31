@@ -19,3 +19,7 @@ def test_release_management(gov, registry, create_vault):
     v2_vault = create_vault(version="2.0.0")
     registry.newRelease(v2_vault, {"from": gov})
     assert registry.latestRelease() == v2_vault.apiVersion() == "2.0.0"
+
+    # Can only endorse the latest release.
+    with brownie.reverts():
+        registry.endorseVault(v1_vault)
