@@ -104,7 +104,7 @@ def main():
         else:
             if guardian != dev.address:
                 # NOTE: Only need to include if guardian is not self
-                args.push(guardian)
+                args.append(guardian)
             vault = dev.deploy(Vault)
             vault.initialize(*args)
             click.echo(f"New Vault Release deployed [{vault.address}]")
