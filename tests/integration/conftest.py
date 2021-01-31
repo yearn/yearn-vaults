@@ -84,9 +84,8 @@ def chiToken(gov, ChiToken):
 
 
 @pytest.fixture
-def strategy(gov, strategist, keeper, vault, TestStrategy, chiToken):
+def strategy(gov, strategist, keeper, vault, TestStrategy):
     strategy = strategist.deploy(TestStrategy, vault)
-    strategy.setChiToken(chiToken.address, {"from": gov})
     strategy.setKeeper(keeper)
     yield strategy
 

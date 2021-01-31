@@ -111,3 +111,10 @@ def test_set_metadataURI(gov, strategy, rando):
     assert strategy.metadataURI() == "ipfs://test2"
     with brownie.reverts():
         strategy.setMetadataURI("ipfs://fake", {"from": rando})
+
+
+def test_set_ChiToken(gov, strategy, rando, chiToken):
+    strategy.setChiToken(chiToken.address, {"from": gov})
+    assert strategy.chiToken() == chiToken.address
+    with brownie.reverts():
+        strategy.setChiToken(chiToken.address, {"from": rando})
