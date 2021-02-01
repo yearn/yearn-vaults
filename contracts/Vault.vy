@@ -226,6 +226,27 @@ DOMAIN_SEPARATOR: public(bytes32)
 DOMAIN_TYPE_HASH: constant(bytes32) = keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)')
 PERMIT_TYPE_HASH: constant(bytes32) = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
 
+# Keep track of this for search purposes
+deploymentBlock: uint256
+
+struct SupplySnapshot:
+    blockNumber: uint256
+    finalSupply: uint256
+
+# len(supplySnapshot)
+nextSupplySnapshotID: uint256
+# snapshotID => Snapshot
+supplySnapshots: HashMap[uint256, SupplySnapshot]
+
+struct BalanceSnapshot:
+    blockNumber: uint256
+    finalBalance: uint256
+
+# user => len(balanceSnapshot[user])
+nextBalanceSnapshotID: HashMap[address, uint256]
+# user => snapshotID => Snapshot
+balanceSnapshots: HashMap[address, HashMap[uint256, BalanceSnapshot]]
+
 
 @external
 def initialize(
@@ -282,6 +303,10 @@ def initialize(
     log UpdateManagementFee(convert(200, uint256))
     self.lastReport = block.timestamp
     self.activation = block.timestamp
+
+    # Record block for tracking supply/balance changes
+    self.deploymentBlock = block.number
+
     # EIP-712
     self.DOMAIN_SEPARATOR = keccak256(
         concat(
@@ -549,14 +574,125 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
     log UpdateWithdrawalQueue(queue)
 
 
+@view
+@external
+def totalSupplyAt(targetBlockNumber: uint256) -> uint256:
+    if targetBlockNumber < self.deploymentBlock:
+        return 0  # Before recorded events are possible
+
+    maxEventId: uint256 = self.nextSupplySnapshotID
+    if maxEventId == 0:
+        return 0  # No events yet
+
+    maxEventId -= 1  # At least one event has happened
+    if self.supplySnapshots[maxEventId].blockNumber <= targetBlockNumber:
+        return self.totalSupply  # After the last event, so return current
+
+    minEventId: uint256 = 0
+    if self.supplySnapshots[minEventId].blockNumber > targetBlockNumber:
+        return 0  # Before the first event
+
+    # Binary search for block.number (maxiumum `log_2(MAX_UINT256)` iterations)
+    for lvl in range(256):
+
+        if minEventId >= maxEventId:
+            break
+
+        # NOTE: This is the `ceil` variant of this algorithm, so add 1 here
+        selectedEventId: uint256 = (minEventId + maxEventId + 1) / 2
+        blockNumber: uint256 = self.supplySnapshots[selectedEventId].blockNumber
+
+        if blockNumber > targetBlockNumber:
+            # Move search range downwards
+            # NOTE: This is the `ceil` variant of this algorithm, so only deduct 1 here
+            maxEventId = selectedEventId - 1
+
+        else:
+            # Move search range upwards
+            # NOTE: Always move up so we snag the last event in a series where a
+            #       bunch of transfer events occured within the same block (e.g. flashmint)
+            minEventId = selectedEventId
+
+    return self.supplySnapshots[maxEventId].finalSupply
+
+
+@view
+@external
+def balanceOfAt(owner: address, targetBlockNumber: uint256) -> uint256:
+    if targetBlockNumber < self.deploymentBlock:
+        return 0
+
+    maxEventId: uint256 = self.nextBalanceSnapshotID[owner]  # Guaranteed to be empty
+    if maxEventId == 0:
+        return 0
+
+    maxEventId -= 1
+    if self.balanceSnapshots[owner][maxEventId].blockNumber <= targetBlockNumber:
+        return self.balanceOf[owner]
+
+    minEventId: uint256 = 0
+    if self.balanceSnapshots[owner][minEventId].blockNumber > targetBlockNumber:
+        return 0
+
+    # Binary search for block.number (maxiumum `log_2(MAX_UINT256)` iterations)
+    for lvl in range(256):
+
+        if minEventId >= maxEventId:
+            break
+
+        # NOTE: This is the `ceil` variant of this algorithm, so add 1 here
+        selectedEventId: uint256 = (minEventId + maxEventId + 1) / 2
+        blockNumber: uint256 = self.balanceSnapshots[owner][selectedEventId].blockNumber
+
+        if blockNumber > targetBlockNumber:
+            # Move search range downwards
+            # NOTE: This is the `ceil` variant of this algorithm, so only deduct 1 here
+            maxEventId = selectedEventId - 1
+
+        else:
+            # Move search range upwards
+            # NOTE: Always move up so we snag the last event in a series where a
+            #       bunch of transfer events occured within the same block (e.g. flashmint)
+            minEventId = selectedEventId
+
+    return self.balanceSnapshots[owner][maxEventId].finalBalance
+
+
+@internal
+def _updateSupply(supply: uint256):
+    eventId: uint256 = self.nextSupplySnapshotID
+
+    self.supplySnapshots[eventId] = SupplySnapshot({
+        blockNumber: block.number,
+        finalSupply: supply,
+    })
+
+    self.nextSupplySnapshotID = eventId + 1
+    self.totalSupply = supply
+
+
+@internal
+def _updateBalance(account: address, accountBalance: uint256):
+    eventId: uint256 = self.nextBalanceSnapshotID[account]
+
+    self.balanceSnapshots[account][eventId] = BalanceSnapshot({
+        blockNumber: block.number,
+        finalBalance: accountBalance,
+    })
+
+    self.nextBalanceSnapshotID[account] = eventId + 1
+    self.balanceOf[account] = accountBalance
+
+
 @internal
 def _transfer(sender: address, receiver: address, amount: uint256):
     # See note on `transfer()`.
 
     # Protect people from accidentally sending their shares to bad places
     assert not (receiver in [self, ZERO_ADDRESS])
-    self.balanceOf[sender] -= amount
-    self.balanceOf[receiver] += amount
+
+    self._updateBalance(sender, self.balanceOf[sender] - amount)
+    self._updateBalance(receiver, self.balanceOf[receiver] + amount)
     log Transfer(sender, receiver, amount)
 
 
@@ -735,8 +871,8 @@ def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
         shares = amount
 
     # Mint new shares
-    self.totalSupply = totalSupply + shares
-    self.balanceOf[to] += shares
+    self._updateBalance(to, self.balanceOf[to] + shares)
+    self._updateSupply(self.totalSupply + shares)
     log Transfer(ZERO_ADDRESS, to, shares)
 
     return shares
@@ -974,8 +1110,8 @@ def withdraw(
     assert totalLoss <= maxLoss * (value + totalLoss) / MAX_BPS
 
     # Burn shares (full value of what is being withdrawn)
-    self.totalSupply -= shares
-    self.balanceOf[msg.sender] -= shares
+    self._updateBalance(msg.sender, self.balanceOf[msg.sender] - shares)
+    self._updateSupply(self.totalSupply - shares)
     log Transfer(msg.sender, ZERO_ADDRESS, shares)
 
     # Withdraw remaining balance to _recipient (may be different to msg.sender) (minus fee)
