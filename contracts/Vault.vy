@@ -1369,7 +1369,7 @@ def _creditAvailable(strategy: address) -> uint256:
     #       amount of capital needed to purchase a position, it's not given capital
     #       it can't make use of yet.
     # NOTE: max increase is used to make sure each harvest isn't bigger than what
-    #       is authoirized. This combined with adjusting min and max periods in
+    #       is authorized. This combined with adjusting min and max periods in
     #       `BaseStrategy` can be used to effect a "rate limit" on capital increase.
     if available < strategy_minDebtPerHarvest:
         return 0
