@@ -951,7 +951,11 @@ def _shareValue(shares: uint256) -> uint256:
     # Determines the current value of `shares`.
     # NOTE: if sqrt(Vault.totalAssets()) > 1e37, this could potentially revert
     # NOTE: using 1e3 for extra precision here, when decimals is low
-    return ((10 ** 3 * (shares * self._totalAssets())) / self.totalSupply) / 10 ** 3
+    totalSupply: uint256 = self.totalSupply
+    if totalSupply == 0:
+        return 0
+    else:
+        return ((10 ** 3 * (shares * self._totalAssets())) / totalSupply) / 10 ** 3
 
 
 @view
