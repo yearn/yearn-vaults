@@ -90,5 +90,11 @@ class SnapshotHistory:
 
 def test_snapshots(chain, accounts, token, vault, state_machine):
     state_machine(
-        SnapshotHistory, chain, accounts, token, vault,
+        SnapshotHistory,
+        chain,
+        accounts,
+        token,
+        vault,
+        # NOTE: Taking too long with default settings
+        settings={"max_examples": 20, "stateful_step_count": 6},
     )
