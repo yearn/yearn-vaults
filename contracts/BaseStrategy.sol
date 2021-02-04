@@ -243,7 +243,7 @@ abstract contract BaseStrategy {
         }
         uint256 gasStart = gasleft();
         _;
-        uint256 gasSpent = 21000 + gasStart - gasleft() + 16 * msg.data.length;
+        uint256 gasSpent = (gasStart - gasleft()) + 21000 + (16 * msg.data.length);
         chiToken.freeFromUpTo(msg.sender, (gasSpent + 14154) / 41130);
     }
 
