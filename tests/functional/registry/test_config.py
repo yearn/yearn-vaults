@@ -29,28 +29,14 @@ def test_registry_setGovernance(gov, registry, rando):
         registry.acceptGovernance({"from": gov})
 
 
-def test_banksy(gov, guardian, rewards, registry, create_token, create_vault, rando):
-
-    # Not just anyone can create a new endorsed Vault, only governance can!
-    with brownie.reverts():
-        registry.newVault(create_token(), guardian, rewards, "", "", {"from": rando})
-
+def test_banksy(gov, registry, create_vault, rando):
     vault = create_vault()
-
-    # Not just anyone can create a new Release either
-    with brownie.reverts():
-        registry.newRelease(vault, {"from": rando})
-
     registry.newRelease(vault)
     assert registry.tags(vault) == ""
 
-    # Not just anyone can tag a Vault either
+    # Not just anyone can tag a Vault, only a Banksy can!
     with brownie.reverts():
         registry.tagVault(vault, "Anything I want!", {"from": rando})
-
-    # Not just anyone can endorse a Vault either
-    with brownie.reverts():
-        registry.endorseVault(vault, {"from": rando})
 
     # Not just anyone can become a banksy either
     with brownie.reverts():

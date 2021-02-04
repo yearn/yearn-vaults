@@ -1,10 +1,15 @@
 import brownie
 
 
-def test_release_management(gov, registry, create_vault):
+def test_release_management(gov, registry, create_vault, rando):
     # No releases yet
     with brownie.reverts():
         registry.latestRelease()
+
+    # Not just anyone can create a new Release
+    vault = create_vault()
+    with brownie.reverts():
+        registry.newRelease(vault, {"from": rando})
 
     # Creating the first release makes `latestRelease()` work
     v1_vault = create_vault(version="1.0.0")
@@ -23,3 +28,10 @@ def test_release_management(gov, registry, create_vault):
     # Can only endorse the latest release.
     with brownie.reverts():
         registry.endorseVault(v1_vault)
+
+    # Check that newRelease raises if vault governance is a rando
+    bad_vault = create_vault()
+    bad_vault.setGovernance(rando)
+    bad_vault.acceptGovernance({"from": rando})
+    with brownie.reverts():
+        registry.newRelease(bad_vault, {"from": gov})

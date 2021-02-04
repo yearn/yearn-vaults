@@ -10,13 +10,6 @@ def test_deployment_management(
     with brownie.reverts():
         registry.latestVault(token)
 
-    # Check that newRelease raises if vault governance is a rando
-    bad_vault = create_vault()
-    bad_vault.setGovernance(rando)
-    bad_vault.acceptGovernance({"from": rando})
-    with brownie.reverts():
-        registry.newRelease(bad_vault, {"from": gov})
-
     # Creating the first deployment makes `latestVault()` work
     v1_vault = create_vault(token, version="1.0.0")
     registry.newRelease(v1_vault, {"from": gov})
@@ -41,6 +34,10 @@ def test_deployment_management(
     assert proxy_vault.rewards() == rewards
     assert proxy_vault.guardian() == guardian
     assert registry.latestVault(token) == proxy_vault
+
+    # Not just anyone can create a new endorsed Vault, only governance can!
+    with brownie.reverts():
+        registry.newVault(create_token(), guardian, rewards, "", "", {"from": rando})
 
 
 def test_experimental_deployments(
@@ -95,3 +92,8 @@ def test_experimental_deployments(
     )
     registry.endorseVault(experimental_vault, {"from": gov})
     assert registry.latestVault(token) == experimental_vault
+
+    # Only governance can endorse a Vault
+    vault = create_vault()
+    with brownie.reverts():
+        registry.endorseVault(vault, {"from": rando})
