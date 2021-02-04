@@ -9,8 +9,6 @@ PACKAGE_VERSION = yaml.safe_load(
     (Path(__file__).parent.parent.parent.parent / "ethpm-config.yaml").read_text()
 )["version"]
 
-ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
-
 
 def test_api_adherrance(check_api_adherrance, Vault, interface):
     check_api_adherrance(Vault, interface.VaultAPI)
@@ -58,6 +56,7 @@ def test_vault_name_symbol_override(guardian, gov, rewards, token, Vault):
         ("name", "setName", "NewName yVault", False),
         ("symbol", "setSymbol", "yvNEW", False),
         ("emergencyShutdown", "setEmergencyShutdown", True, True),
+        ("emergencyShutdown", "setEmergencyShutdown", False, False),
         ("guardian", "setGuardian", None, True),
         ("rewards", "setRewards", None, False),
         ("management", "setManagement", None, False),
@@ -69,7 +68,7 @@ def test_vault_name_symbol_override(guardian, gov, rewards, token, Vault):
 def test_vault_setParams(
     chain, gov, guardian, management, vault, rando, getter, setter, val, guard_allowed,
 ):
-    if not val:
+    if val is None:
         # Can't access fixtures, so use None to mean any random address
         val = rando
 

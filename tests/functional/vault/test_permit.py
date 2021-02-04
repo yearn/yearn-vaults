@@ -77,3 +77,12 @@ def test_permit_expired(vault):
     assert vault.allowance(owner.address, spender.address) == 0
     with brownie.reverts("dev: permit expired"):
         vault.permit(owner.address, spender.address, amount, expiry, signature)
+
+def test_permit_bad_owner(vault):
+    nonce = vault.nonces(owner.address)
+    expiry = 0
+    permit = generate_permit(vault, owner, spender, amount, nonce, expiry)
+    signature = spender.sign_message(permit).signature
+    assert vault.allowance(owner.address, spender.address) == 0
+    with brownie.reverts("dev: invalid owner"):
+        vault.permit(brownie.ZERO_ADDRESS, spender.address, amount, expiry, signature)
