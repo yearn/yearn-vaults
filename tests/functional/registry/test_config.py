@@ -31,7 +31,7 @@ def test_registry_setGovernance(gov, registry, rando):
 
 def test_banksy(gov, guardian, rewards, registry, create_token, create_vault, rando):
 
-    # Not just anyone can create a new Vault, only a Banksy can!
+    # Not just anyone can create a new endorsed Vault, only governance can!
     with brownie.reverts():
         registry.newVault(create_token(), guardian, rewards, "", "", {"from": rando})
 
