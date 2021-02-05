@@ -21,9 +21,16 @@ def management(accounts):
     yield accounts[3]
 
 
-@pytest.fixture
-def token(gov, Token):
-    yield gov.deploy(Token)
+@pytest.fixture(params=["Normal", "NoReturn"])
+def token(gov, Token, request):
+    token = gov.deploy(Token)
+    # NOTE: Run our test suite using both compliant and non-compliant ERC20 Token
+    if request.param == "NoReturn":
+        token._initialized = False  # otherwise Brownie throws an `AttributeError`
+        setattr(token, "transfer", token.transferWithoutReturn)
+        setattr(token, "transferFrom", token.transferFromWithoutReturn)
+        token._initialized = True  # shhh, nothing to see here...
+    yield token
 
 
 @pytest.fixture
