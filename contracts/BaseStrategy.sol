@@ -9,7 +9,8 @@ struct StrategyParams {
     uint256 performanceFee;
     uint256 activation;
     uint256 debtRatio;
-    uint256 rateLimit;
+    uint256 minDebtPerHarvest;
+    uint256 maxDebtPerHarvest;
     uint256 lastReport;
     uint256 totalDebt;
     uint256 totalGain;
@@ -183,7 +184,9 @@ abstract contract BaseStrategy {
 
     event UpdatedRewards(address rewards);
 
-    event UpdatedReportDelay(uint256 delay);
+    event UpdatedMinReportDelay(uint256 delay);
+
+    event UpdatedMaxReportDelay(uint256 delay);
 
     event UpdatedProfitFactor(uint256 profitFactor);
 
@@ -192,6 +195,10 @@ abstract contract BaseStrategy {
     event EmergencyExitEnabled();
 
     event UpdatedMetadataURI(string metadataURI);
+
+    // The minimum number of seconds between harvest calls. See
+    // `setMinReportDelay()` for more details.
+    uint256 public minReportDelay = 0;
 
     // The maximum number of seconds between harvest calls. See
     // `setMaxReportDelay()` for more details.
@@ -296,6 +303,23 @@ abstract contract BaseStrategy {
 
     /**
      * @notice
+     *  Used to change `minReportDelay`. `minReportDelay` is the minimum number
+     *  of blocks that should pass for `harvest()` to be called.
+     *
+     *  For external keepers (such as the Keep3r network), this is the minimum
+     *  time between jobs to wait. (see `harvestTrigger()`
+     *  for more details.)
+     *
+     *  This may only be called by governance or the strategist.
+     * @param _delay The minimum number of seconds to wait between harvests.
+     */
+    function setMinReportDelay(uint256 _delay) external onlyAuthorized {
+        minReportDelay = _delay;
+        emit UpdatedMinReportDelay(_delay);
+    }
+
+    /**
+     * @notice
      *  Used to change `maxReportDelay`. `maxReportDelay` is the maximum number
      *  of blocks that should pass for `harvest()` to be called.
      *
@@ -308,7 +332,7 @@ abstract contract BaseStrategy {
      */
     function setMaxReportDelay(uint256 _delay) external onlyAuthorized {
         maxReportDelay = _delay;
-        emit UpdatedReportDelay(_delay);
+        emit UpdatedMaxReportDelay(_delay);
     }
 
     /**
@@ -516,7 +540,7 @@ abstract contract BaseStrategy {
      *  This call and `tendTrigger` should never return `true` at the
      *  same time.
      *
-     *  See `maxReportDelay`, `profitFactor`, `debtThreshold` to adjust the
+     *  See `min/maxReportDelay`, `profitFactor`, `debtThreshold` to adjust the
      *  strategist-controlled parameters that will influence whether this call
      *  returns `true` or not. These parameters will be used in conjunction
      *  with the parameters reported to the Vault (see `params`) to determine
@@ -535,6 +559,9 @@ abstract contract BaseStrategy {
 
         // Should not trigger if Strategy is not activated
         if (params.activation == 0) return false;
+
+        // Should not trigger if we haven't waited long enough since previous harvest
+        if (block.timestamp.sub(params.lastReport) < minReportDelay) return false;
 
         // Should trigger if hasn't been called in a while
         if (block.timestamp.sub(params.lastReport) >= maxReportDelay) return true;

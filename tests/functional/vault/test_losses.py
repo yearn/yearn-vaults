@@ -22,7 +22,7 @@ def strategy(gov, vault, TestStrategy):
 
 
 def test_losses(chain, vault, strategy, gov, token):
-    vault.addStrategy(strategy, 1000, 1000, 0, {"from": gov})
+    vault.addStrategy(strategy, 1000, 0, 1000, 0, {"from": gov})
     token.approve(vault, 2 ** 256 - 1, {"from": gov})
     vault.deposit(5000, {"from": gov})
 

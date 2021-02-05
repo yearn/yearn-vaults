@@ -92,7 +92,8 @@ struct StrategyParams:
     performanceFee: uint256  # Strategist's fee (basis points)
     activation: uint256  # Activation block.timestamp
     debtRatio: uint256  # Maximum borrow amount (in BPS of total assets)
-    rateLimit: uint256  # Limit on the increase of debt per unit time since last harvest
+    minDebtPerHarvest: uint256  # Lower limit on the increase of debt since last harvest
+    maxDebtPerHarvest: uint256  # Upper limit on the increase of debt since last harvest
     lastReport: uint256  # block.timestamp of the last time a report occured
     totalDebt: uint256  # Total outstanding debt that Strategy has
     totalGain: uint256  # Total returns that Strategy has realized for Vault
@@ -102,7 +103,8 @@ struct StrategyParams:
 event StrategyAdded:
     strategy: indexed(address)
     debtRatio: uint256  # Maximum borrow amount (in BPS of total assets)
-    rateLimit: uint256  # Limit on the increase of debt per unit time since last harvest
+    minDebtPerHarvest: uint256  # Lower limit on the increase of debt since last harvest
+    maxDebtPerHarvest: uint256  # Upper limit on the increase of debt since last harvest
     performanceFee: uint256  # Strategist's fee (basis points)
 
 
@@ -163,9 +165,14 @@ event StrategyUpdateDebtRatio:
     debtRatio: uint256 # The new debt limit for the strategy (in BPS of total assets)
 
 
-event StrategyUpdateRateLimit:
+event StrategyUpdateMinDebtPerHarvest:
     strategy: indexed(address) # Address of the strategy for the rate limit adjustment
-    rateLimit: uint256 # The new rate limit for the strategy
+    minDebtPerHarvest: uint256  # Lower limit on the increase of debt since last harvest
+
+
+event StrategyUpdateMaxDebtPerHarvest:
+    strategy: indexed(address) # Address of the strategy for the rate limit adjustment
+    maxDebtPerHarvest: uint256  # Upper limit on the increase of debt since last harvest
 
 
 event StrategyUpdatePerformanceFee:
@@ -1018,7 +1025,8 @@ def _organizeWithdrawalQueue():
 def addStrategy(
     strategy: address,
     debtRatio: uint256,
-    rateLimit: uint256,
+    minDebtPerHarvest: uint256,
+    maxDebtPerHarvest: uint256,
     performanceFee: uint256,
 ):
     """
@@ -1032,8 +1040,10 @@ def addStrategy(
     @param strategy The address of the Strategy to add.
     @param debtRatio
         The share of the total assets in the `vault that the `strategy` has access to.
-    @param rateLimit
-        Limit on the increase of debt per unit time since last harvest
+    @param minDebtPerHarvest
+        Lower limit on the increase of debt since last harvest
+    @param maxDebtPerHarvest
+        Upper limit on the increase of debt since last harvest
     @param performanceFee
         The fee the strategist will receive based on this Vault's performance.
     """
@@ -1052,6 +1062,7 @@ def addStrategy(
 
     # Check strategy parameters
     assert self.debtRatio + debtRatio <= MAX_BPS
+    assert minDebtPerHarvest <= maxDebtPerHarvest
     assert performanceFee <= MAX_BPS - self.performanceFee
 
     # Add strategy to approved strategies
@@ -1059,13 +1070,14 @@ def addStrategy(
         performanceFee: performanceFee,
         activation: block.timestamp,
         debtRatio: debtRatio,
-        rateLimit: rateLimit,
+        minDebtPerHarvest: minDebtPerHarvest,
+        maxDebtPerHarvest: maxDebtPerHarvest,
         lastReport: block.timestamp,
         totalDebt: 0,
         totalGain: 0,
         totalLoss: 0,
     })
-    log StrategyAdded(strategy, debtRatio, rateLimit, performanceFee)
+    log StrategyAdded(strategy, debtRatio, minDebtPerHarvest, maxDebtPerHarvest, performanceFee)
 
     # Update Vault parameters
     self.debtRatio += debtRatio
@@ -1098,9 +1110,9 @@ def updateStrategyDebtRatio(
 
 
 @external
-def updateStrategyRateLimit(
+def updateStrategyMinDebtPerHarvest(
     strategy: address,
-    rateLimit: uint256,
+    minDebtPerHarvest: uint256,
 ):
     """
     @notice
@@ -1109,12 +1121,36 @@ def updateStrategyRateLimit(
 
         This may only be called by governance or management.
     @param strategy The Strategy to update.
-    @param rateLimit Limit on the increase of debt per unit time since last harvest
+    @param minDebtPerHarvest
+        Lower limit on the increase of debt since last harvest
     """
     assert msg.sender in [self.management, self.governance]
     assert self.strategies[strategy].activation > 0
-    self.strategies[strategy].rateLimit = rateLimit
-    log StrategyUpdateRateLimit(strategy, rateLimit)
+    assert self.strategies[strategy].maxDebtPerHarvest >= minDebtPerHarvest
+    self.strategies[strategy].minDebtPerHarvest = minDebtPerHarvest
+    log StrategyUpdateMinDebtPerHarvest(strategy, minDebtPerHarvest)
+
+
+@external
+def updateStrategyMaxDebtPerHarvest(
+    strategy: address,
+    maxDebtPerHarvest: uint256,
+):
+    """
+    @notice
+        Change the quantity assets per block this Vault may deposit to or
+        withdraw from `strategy`.
+
+        This may only be called by governance or management.
+    @param strategy The Strategy to update.
+    @param maxDebtPerHarvest
+        Upper limit on the increase of debt since last harvest
+    """
+    assert msg.sender in [self.management, self.governance]
+    assert self.strategies[strategy].activation > 0
+    assert self.strategies[strategy].minDebtPerHarvest <= maxDebtPerHarvest
+    self.strategies[strategy].maxDebtPerHarvest = maxDebtPerHarvest
+    log StrategyUpdateMaxDebtPerHarvest(strategy, maxDebtPerHarvest)
 
 
 @external
@@ -1180,7 +1216,8 @@ def migrateStrategy(oldVersion: address, newVersion: address):
         # NOTE: use last report for activation time, so E[R] calc works
         activation: strategy.lastReport,
         debtRatio: strategy.debtRatio,
-        rateLimit: strategy.rateLimit,
+        minDebtPerHarvest: strategy.minDebtPerHarvest,
+        maxDebtPerHarvest: strategy.maxDebtPerHarvest,
         lastReport: strategy.lastReport,
         totalDebt: strategy.totalDebt,
         totalGain: 0,
@@ -1310,8 +1347,8 @@ def _creditAvailable(strategy: address) -> uint256:
     vault_totalDebt: uint256 = self.totalDebt
     strategy_debtLimit: uint256 = self.strategies[strategy].debtRatio * vault_totalAssets / MAX_BPS
     strategy_totalDebt: uint256 = self.strategies[strategy].totalDebt
-    strategy_rateLimit: uint256 = self.strategies[strategy].rateLimit
-    strategy_lastReport: uint256 = self.strategies[strategy].lastReport
+    strategy_minDebtPerHarvest: uint256 = self.strategies[strategy].minDebtPerHarvest
+    strategy_maxDebtPerHarvest: uint256 = self.strategies[strategy].maxDebtPerHarvest
 
     # Exhausted credit line
     if strategy_debtLimit <= strategy_totalDebt or vault_debtLimit <= vault_totalDebt:
@@ -1323,17 +1360,21 @@ def _creditAvailable(strategy: address) -> uint256:
     # Adjust by the global debt limit left
     available = min(available, vault_debtLimit - vault_totalDebt)
 
-    # Adjust by the rate limit algorithm (limits the step size per reporting period)
-    delta: uint256 = block.timestamp - strategy_lastReport
-    # NOTE: Protect against unnecessary overflow faults here
-    # NOTE: Set `strategy_rateLimit` to 0 to disable the rate limit
-    if strategy_rateLimit > 0 and available / strategy_rateLimit >= delta:
-        available = strategy_rateLimit * delta
-
     # Can only borrow up to what the contract has in reserve
     # NOTE: Running near 100% is discouraged
-    return min(available, self.token.balanceOf(self))
+    available = min(available, self.token.balanceOf(self))
 
+    # Adjust by min and max borrow limits (per harvest)
+    # NOTE: min increase can be used to ensure that if a strategy has a minimum
+    #       amount of capital needed to purchase a position, it's not given capital
+    #       it can't make use of yet.
+    # NOTE: max increase is used to make sure each harvest isn't bigger than what
+    #       is authorized. This combined with adjusting min and max periods in
+    #       `BaseStrategy` can be used to effect a "rate limit" on capital increase.
+    if available < strategy_minDebtPerHarvest:
+        return 0
+    else:
+        return min(available, strategy_maxDebtPerHarvest)
 
 @view
 @external

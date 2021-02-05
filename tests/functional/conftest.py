@@ -57,7 +57,8 @@ def strategy(gov, strategist, keeper, token, vault, TestStrategy):
     vault.addStrategy(
         strategy,
         4_000,  # 40% of Vault
-        vault.totalAssets() // 8640000,  # Rate limit of 1% of vault's assets per day
+        0,  # Minimum debt increase per harvest
+        2 ** 256 - 1,  # maximum debt increase per harvest
         1000,  # 10% performance fee for Strategist
         {"from": gov},
     )

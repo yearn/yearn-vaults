@@ -98,7 +98,8 @@ def test_vault_setParams(
     "key,setter,val,max",
     [
         ("debtRatio", "updateStrategyDebtRatio", 500, 10000),
-        ("rateLimit", "updateStrategyRateLimit", 10, None),
+        ("minDebtPerHarvest", "updateStrategyMinDebtPerHarvest", 10, None),
+        ("maxDebtPerHarvest", "updateStrategyMaxDebtPerHarvest", 10, None),
     ],
 )
 def test_vault_updateStrategy(
@@ -131,6 +132,29 @@ def test_vault_updateStrategy(
         with brownie.reverts():
             getattr(vault, setter)(strategy, max + 1, {"from": gov})
         assert vault.strategies(strategy).dict()[key] == max
+
+
+def test_min_max_debtIncrease(gov, vault, TestStrategy):
+    strategy = gov.deploy(TestStrategy, vault)
+    # Can't set min > max or max < min in adding a strategy
+    with brownie.reverts():
+        vault.addStrategy(strategy, 1_000, 20_000, 10_000, 1_000, {"from": gov})
+
+    vault.addStrategy(strategy, 1_000, 10_000, 10_000, 1_000, {"from": gov})
+    # Can't set min > max
+    with brownie.reverts():
+        vault.updateStrategyMaxDebtPerHarvest(
+            strategy,
+            vault.strategies(strategy).dict()["minDebtPerHarvest"] - 1,
+            {"from": gov},
+        )
+    # Can't set max > min
+    with brownie.reverts():
+        vault.updateStrategyMinDebtPerHarvest(
+            strategy,
+            vault.strategies(strategy).dict()["maxDebtPerHarvest"] + 1,
+            {"from": gov},
+        )
 
 
 def test_vault_setGovernance(gov, vault, rando):
