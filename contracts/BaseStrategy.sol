@@ -238,6 +238,10 @@ abstract contract BaseStrategy {
         _;
     }
 
+    constructor(address _vault) public {
+        _initialize(_vault, msg.sender, msg.sender, msg.sender);
+    }
+
     /**
      * @notice
      *  Initializes the Strategy, this is called only once, when the
@@ -245,13 +249,18 @@ abstract contract BaseStrategy {
      * @dev `_vault` should implement `VaultAPI`.
      * @param _vault The address of the Vault responsible for this Strategy.
      */
-    constructor(address _vault) public {
+    function _initialize(
+        address _vault,
+        address _strategist,
+        address _rewards,
+        address _keeper
+    ) internal {
         vault = VaultAPI(_vault);
         want = IERC20(vault.token());
         want.safeApprove(_vault, uint256(-1)); // Give Vault unlimited access (might save gas)
-        strategist = msg.sender;
-        rewards = msg.sender;
-        keeper = msg.sender;
+        strategist = _strategist;
+        rewards = _rewards;
+        keeper = _keeper;
         vault.approve(rewards, uint256(-1)); // Allow rewards to be pulled
     }
 
@@ -740,5 +749,18 @@ abstract contract BaseStrategy {
         for (uint256 i; i < _protectedTokens.length; i++) require(_token != _protectedTokens[i], "!protected");
 
         IERC20(_token).safeTransfer(governance(), IERC20(_token).balanceOf(address(this)));
+    }
+}
+
+abstract contract BaseStrategyInitializable is BaseStrategy {
+    constructor(address _vault) public BaseStrategy(_vault) {}
+
+    function initialize(
+        address _vault,
+        address _strategist,
+        address _rewards,
+        address _keeper
+    ) external {
+        _initialize(_vault, _strategist, _rewards, _keeper);
     }
 }
