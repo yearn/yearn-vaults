@@ -2,7 +2,7 @@ import brownie
 
 
 def test_deployment_management(
-    gov, guardian, rewards, registry, Vault, create_token, create_vault
+    gov, guardian, rewards, registry, Vault, create_token, create_vault, rando
 ):
     token = create_token()
 
@@ -34,6 +34,10 @@ def test_deployment_management(
     assert proxy_vault.rewards() == rewards
     assert proxy_vault.guardian() == guardian
     assert registry.latestVault(token) == proxy_vault
+
+    # Not just anyone can create a new endorsed Vault, only governance can!
+    with brownie.reverts():
+        registry.newVault(create_token(), guardian, rewards, "", "", {"from": rando})
 
 
 def test_experimental_deployments(
@@ -88,3 +92,8 @@ def test_experimental_deployments(
     )
     registry.endorseVault(experimental_vault, {"from": gov})
     assert registry.latestVault(token) == experimental_vault
+
+    # Only governance can endorse a Vault
+    vault = create_vault()
+    with brownie.reverts():
+        registry.endorseVault(vault, {"from": rando})
