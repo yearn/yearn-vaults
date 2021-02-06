@@ -12,6 +12,11 @@ import {BaseStrategy, StrategyParams, VaultAPI} from "../BaseStrategy.sol";
 contract TestStrategy is BaseStrategy {
     bool public doReentrancy;
 
+    // Some token that needs to be protected for some reason
+    // Initialize this to some fake address, because we're just using it
+    // to test `BaseStrategy.protectedTokens()`
+    address public constant protectedToken = address(0xbad);
+
     constructor(address _vault) public BaseStrategy(_vault) {}
 
     function name() external override view returns (string memory) {
@@ -92,6 +97,8 @@ contract TestStrategy is BaseStrategy {
     }
 
     function protectedTokens() internal override view returns (address[] memory) {
-        return new address[](0); // No additional tokens/tokenized positions for mock
+        address[] memory protected = new address[](1);
+        protected[0] = protectedToken;
+        return protected;
     }
 }
