@@ -30,8 +30,6 @@ def test_release_management(gov, registry, create_vault, rando):
         registry.endorseVault(v1_vault)
 
     # Check that newRelease raises if vault governance is a rando
-    bad_vault = create_vault()
-    bad_vault.setGovernance(rando)
-    bad_vault.acceptGovernance({"from": rando})
+    bad_vault = create_vault(governance=rando)
     with brownie.reverts():
         registry.newRelease(bad_vault, {"from": gov})
