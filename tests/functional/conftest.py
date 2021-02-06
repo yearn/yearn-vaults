@@ -23,26 +23,43 @@ def management(accounts):
     yield accounts[3]
 
 
-@pytest.fixture(params=[("Normal", 18), ("NoReturn", 18), ("Normal", 8), ("Normal", 2)])
-def token(gov, request):
-    (behaviour, decimal) = request.param
+@pytest.fixture
+def create_token(gov):
+    def create_token(decimal=18, behaviour="Normal"):
+        assert behaviour in ("Normal", "NoReturn")
+        return gov.deploy(Token if behaviour == "Normal" else TokenNoReturn, decimal)
 
+    yield create_token
+
+
+@pytest.fixture(params=[("Normal", 18), ("NoReturn", 18), ("Normal", 8), ("Normal", 2)])
+def token(create_token, request):
     # NOTE: Run our test suite using both compliant and non-compliant ERC20 Token
-    yield gov.deploy(Token if behaviour == "Normal" else TokenNoReturn, decimal)
+    (behaviour, decimal) = request.param
+    yield create_token(decimal=decimal, behaviour=behaviour)
 
 
 @pytest.fixture
-def vault(gov, guardian, management, token, rewards, Vault):
-    vault = guardian.deploy(Vault)
-    vault.initialize(token, gov, rewards, "", "", guardian)
-    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+def create_vault(gov, guardian, rewards, create_token, patch_vault_version):
+    def create_vault(token=None, version=None, governance=gov):
+        if token is None:
+            token = create_token()
+        vault = patch_vault_version(version).deploy({"from": guardian})
+        vault.initialize(token, governance, rewards, "", "", guardian)
+        vault.setDepositLimit(2 ** 256 - 1, {"from": governance})
+        return vault
+
+    yield create_vault
+
+
+@pytest.fixture
+def vault(gov, management, token, create_vault):
+    vault = create_vault(token=token, governance=gov)
     vault.setManagement(management, {"from": gov})
 
     # Make it so vault has some AUM to start
     token.approve(vault, token.balanceOf(gov) // 2, {"from": gov})
     vault.deposit(token.balanceOf(gov) // 2, {"from": gov})
-    assert token.balanceOf(vault) == token.balanceOf(gov)
-    assert vault.totalDebt() == 0  # No connected strategies yet
     yield vault
 
 
@@ -83,3 +100,8 @@ def strategy(gov, strategist, keeper, rewards, vault, TestStrategy, request):
 @pytest.fixture
 def rando(accounts):
     yield accounts[9]
+
+
+@pytest.fixture
+def registry(gov, Registry):
+    yield Registry.deploy({"from": gov})
