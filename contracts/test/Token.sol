@@ -22,4 +22,16 @@ contract Token is ERC20 {
         require(!_blocked[to], "Token transfer refused. Receiver is on blacklist");
         super._beforeTokenTransfer(from, to, amount);
     }
+
+    function transferWithoutReturn(address recipient, uint256 amount) public {
+        super.transfer(recipient, amount);
+    }
+
+    function transferFromWithoutReturn(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) public {
+        super.transferFrom(sender, recipient, amount);
+    }
 }

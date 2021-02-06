@@ -557,6 +557,41 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
 
 
 @internal
+def erc20_safe_transfer(token: address, receiver: address, amount: uint256):
+    # Used only to send tokens that are not the type managed by this Vault.
+    # HACK: Used to handle non-compliant tokens like USDT
+    response: Bytes[32] = raw_call(
+        token,
+        concat(
+            method_id("transfer(address,uint256)"),
+            convert(receiver, bytes32),
+            convert(amount, bytes32),
+        ),
+        max_outsize=32,
+    )
+    if len(response) > 0:
+        assert convert(response, bool), "Transfer failed!"
+
+
+@internal
+def erc20_safe_transferFrom(token: address, sender: address, receiver: address, amount: uint256):
+    # Used only to send tokens that are not the type managed by this Vault.
+    # HACK: Used to handle non-compliant tokens like USDT
+    response: Bytes[32] = raw_call(
+        token,
+        concat(
+            method_id("transferFrom(address,address,uint256)"),
+            convert(sender, bytes32),
+            convert(receiver, bytes32),
+            convert(amount, bytes32),
+        ),
+        max_outsize=32,
+    )
+    if len(response) > 0:
+        assert convert(response, bool), "Transfer failed!"
+
+
+@internal
 def _transfer(sender: address, receiver: address, amount: uint256):
     # See note on `transfer()`.
 
@@ -811,7 +846,7 @@ def deposit(_amount: uint256 = MAX_UINT256, recipient: address = msg.sender) -> 
     shares: uint256 = self._issueSharesForAmount(recipient, amount)
 
     # Tokens are transferred from msg.sender (may be different from _recipient)
-    assert self.token.transferFrom(msg.sender, self, amount)
+    self.erc20_safe_transferFrom(self.token.address, msg.sender, self, amount)
 
     return shares  # Just in case someone wants them
 
@@ -986,7 +1021,7 @@ def withdraw(
     log Transfer(msg.sender, ZERO_ADDRESS, shares)
 
     # Withdraw remaining balance to _recipient (may be different to msg.sender) (minus fee)
-    assert self.token.transfer(recipient, value)
+    self.erc20_safe_transfer(self.token.address, recipient, value)
 
     return value
 
@@ -1569,9 +1604,9 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     #       the Vault based on the Strategy's debt limit (as well as the Vault's).
     totalAvail: uint256 = gain + debtPayment
     if totalAvail < credit:  # credit surplus, give to Strategy
-        assert self.token.transfer(msg.sender, credit - totalAvail)
+        self.erc20_safe_transfer(self.token.address, msg.sender, credit - totalAvail)
     elif totalAvail > credit:  # credit deficit, take from Strategy
-        assert self.token.transferFrom(msg.sender, self, totalAvail - credit)
+        self.erc20_safe_transferFrom(self.token.address, msg.sender, self, totalAvail - credit)
     # else, don't do anything because it is balanced
 
     # Update reporting time
@@ -1597,23 +1632,6 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     else:
         # Otherwise, just return what we have as debt outstanding
         return debt
-
-
-@internal
-def erc20_safe_transfer(token: address, to: address, amount: uint256):
-    # Used only to send tokens that are not the type managed by this Vault.
-    # HACK: Used to handle non-compliant tokens like USDT
-    response: Bytes[32] = raw_call(
-        token,
-        concat(
-            method_id("transfer(address,uint256)"),
-            convert(to, bytes32),
-            convert(amount, bytes32),
-        ),
-        max_outsize=32,
-    )
-    if len(response) > 0:
-        assert convert(response, bool), "Transfer failed!"
 
 
 @external
