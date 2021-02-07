@@ -43,7 +43,7 @@ def main():
         get_address("Vault Registry", default="v2.registry.ychad.eth")
     )
 
-    latest_release = Version(registry.latestRelease())
+    latest_release = Version("0.0.0")  # Version(registry.latestRelease())
     use_proxy = False  # NOTE: Use a proxy to save on gas for experimental Vaults
     if Version(PACKAGE_VERSION) < latest_release:
         click.echo("Cannot deploy Vault for old API version")
@@ -105,7 +105,7 @@ def main():
             if guardian != dev.address:
                 # NOTE: Only need to include if guardian is not self
                 args.append(guardian)
-            vault = dev.deploy(Vault)
+            vault = dev.deploy(Vault, publish_source=True)
             vault.initialize(*args)
             click.echo(f"New Vault Release deployed [{vault.address}]")
             click.echo(
