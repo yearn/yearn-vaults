@@ -17,14 +17,14 @@ def test_config(gov, token, vault, registry, ytoken):
         assert ytoken.decimals()
 
     with brownie.reverts():
-        ytoken.latestVault()
+        ytoken.bestVault()
 
     # This won't revert though, there's no Vaults yet
     assert ytoken.allVaults() == []
 
     # Now they work when we have a Vault
     registry.newRelease(vault, {"from": gov})
-    assert ytoken.latestVault() == vault
+    assert ytoken.bestVault() == vault
     assert ytoken.name() == vault.name()
     assert ytoken.symbol() == vault.symbol()
     assert ytoken.decimals() == vault.decimals()

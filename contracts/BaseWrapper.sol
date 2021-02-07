@@ -17,7 +17,7 @@ abstract contract BaseWrapper {
         token = ERC20(_token);
     }
 
-    function latestVault() public virtual view returns (VaultAPI) {
+    function bestVault() public virtual view returns (VaultAPI) {
         return VaultAPI(registry.latestVault(address(token)));
     }
 
@@ -39,14 +39,14 @@ contract MigrationWrapper is BaseWrapper {
     constructor(address _token) public BaseWrapper(_token) {}
 
     function _migrate(address account) internal returns (uint256 migrated) {
-        VaultAPI latest = latestVault();
-        uint256 deposit_limit = latest.depositLimit().sub(latest.totalAssets());
+        VaultAPI best = bestVault();
+        uint256 deposit_limit = best.depositLimit().sub(best.totalAssets());
         VaultAPI[] memory vaults = allVaults();
 
         for (uint256 id = 0; id < vaults.length; id++) {
             uint256 shares = vaults[id].balanceOf(account);
 
-            if (vaults[id] == latest) {
+            if (vaults[id] == best) {
                 break;
             }
 
@@ -57,7 +57,7 @@ contract MigrationWrapper is BaseWrapper {
 
                 if (maxWithdrawal < shares) shares = maxWithdrawal;
 
-                // NOTE: There is a maximum deposit size to the latest vault (in tokens)
+                // NOTE: There is a maximum deposit size to the best vault (in tokens)
                 uint256 maxDeposit = deposit_limit
                     .sub(migrated) // NOTE: Changes every iteration
                     .mul(vaults[id].pricePerShare()) // NOTE: Every Vault is different
@@ -72,7 +72,7 @@ contract MigrationWrapper is BaseWrapper {
             }
         }
 
-        token.approve(address(latest), migrated);
-        latest.deposit(migrated, account);
+        token.approve(address(best), migrated);
+        best.deposit(migrated, account);
     }
 }
