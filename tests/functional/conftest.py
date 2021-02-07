@@ -96,6 +96,32 @@ def rando(accounts):
     yield accounts[9]
 
 
+@pytest.fixture(scope="session")
+def registry_deployment_txn(web3):
+    from collections import namedtuple
+
+    # NOTE: Registry deployment txn of v2.registry.ychad.eth on mainnet
+    txn = web3._mainnet.eth.getTransaction(
+        "0x61db0649f50c4839010e6d4cdd0fac960f25b86c4f0328912fb96859b4827560"
+    )
+    # NOTE: Just did this so we pass around a smaller object
+    yield namedtuple("Transaction", ["sender", "nonce"])(
+        sender=txn["from"], nonce=txn["nonce"]
+    )
+
+
 @pytest.fixture
-def registry(gov, Registry):
-    yield Registry.deploy({"from": gov})
+def registry(accounts, web3, registry_deployment_txn, gov, Registry):
+    # Load account that deployed the registry on mainnet,
+    # and set the nonce to just before that transaction
+    registry_deployer = accounts.at(registry_deployment_txn.sender, force=True)
+    # NOTE: This sucks, but there's no `set_nonce` yet
+    while registry_deployer.nonce < registry_deployment_txn.nonce:
+        registry_deployer.transfer(registry_deployer, 0)
+
+    registry = Registry.deploy({"from": registry_deployer})
+    assert registry.address == web3._mainnet.ens.address("v2.registry.ychad.eth")
+
+    registry.setGovernance(gov, {"from": registry_deployer})
+    registry.acceptGovernance({"from": gov})
+    yield registry
