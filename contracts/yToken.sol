@@ -6,42 +6,14 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 
-import {VaultAPI, MigrationWrapper} from "./BaseWrapper.sol";
+import {VaultAPI, BaseWrapper} from "./BaseWrapper.sol";
 
-contract yToken is IERC20, MigrationWrapper {
+contract yToken is IERC20, BaseWrapper {
     using SafeMath for uint256;
 
     mapping(address => mapping(address => uint256)) public override allowance;
 
-    constructor(address _token) public MigrationWrapper(_token) {}
-
-    function migrate() external returns (uint256) {
-        return _migrate(msg.sender);
-    }
-
-    function permitAll(VaultAPI[] calldata vaults, bytes[] calldata signatures) external {
-        require(vaults.length == signatures.length);
-        for (uint256 i = 0; i < vaults.length; i) {
-            require(vaults[i].permit(msg.sender, address(this), uint256(-1), 0, signatures[i]));
-        }
-    }
-
-    function deposit(uint256 amount) external returns (uint256) {
-        VaultAPI vault = bestVault();
-
-        token.transferFrom(msg.sender, address(this), amount);
-        token.approve(address(vault), amount);
-
-        return vault.deposit(amount, msg.sender);
-    }
-
-    function withdraw(uint256 amount) external returns (uint256) {
-        _migrate(msg.sender);
-        VaultAPI vault = bestVault();
-
-        uint256 maxShares = amount.mul(vault.pricePerShare()).div(10**vault.decimals());
-        return vault.withdraw(maxShares, msg.sender);
-    }
+    constructor(address _token) public BaseWrapper(_token) {}
 
     function name() external view returns (string memory) {
         VaultAPI best = bestVault();
@@ -59,19 +31,11 @@ contract yToken is IERC20, MigrationWrapper {
     }
 
     function totalSupply() external override view returns (uint256 total) {
-        VaultAPI[] memory vaults = allVaults();
-
-        for (uint256 id = 0; id < vaults.length; id++) {
-            total = total.add(vaults[id].totalSupply().mul(vaults[id].pricePerShare()).div(10**vaults[id].decimals()));
-        }
+        return totalAssets();
     }
 
     function balanceOf(address account) external override view returns (uint256 balance) {
-        VaultAPI[] memory vaults = allVaults();
-
-        for (uint256 id = 0; id < vaults.length; id++) {
-            balance = balance.add(vaults[id].balanceOf(account).mul(vaults[id].pricePerShare()).div(10**vaults[id].decimals()));
-        }
+        return totalAssetsForAccount(account);
     }
 
     function _transfer(
@@ -80,11 +44,8 @@ contract yToken is IERC20, MigrationWrapper {
         uint256 amount
     ) internal {
         require(receiver != address(0), "ERC20: transfer to the zero address");
-
-        _migrate(sender);
-
-        VaultAPI best = bestVault();
-        best.transferFrom(sender, receiver, amount);
+        require(amount == _withdraw(sender, amount, true)); // `true` = withdraw from `best`
+        token.transfer(receiver, amount);
         emit Transfer(sender, receiver, amount);
     }
 
@@ -128,5 +89,26 @@ contract yToken is IERC20, MigrationWrapper {
     function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
         _approve(msg.sender, spender, allowance[msg.sender][spender].sub(subtractedValue));
         return true;
+    }
+
+    function deposit(uint256 amount) external returns (uint256 shares) {
+        _deposit(msg.sender, amount, true); // `true` = pull from sender
+        VaultAPI vault = bestVault();
+        vault.transfer(msg.sender, vault.balanceOf(address(this)));
+    }
+
+    function withdraw(uint256 amount) external returns (uint256) {
+        return _withdraw(msg.sender, amount, true); // `true` = withdraw from `best`
+    }
+
+    function permitAll(VaultAPI[] calldata vaults, bytes[] calldata signatures) external {
+        require(vaults.length == signatures.length);
+        for (uint256 i = 0; i < vaults.length; i) {
+            require(vaults[i].permit(msg.sender, address(this), uint256(-1), 0, signatures[i]));
+        }
+    }
+
+    function migrate() external returns (uint256) {
+        return _migrate(msg.sender);
     }
 }
