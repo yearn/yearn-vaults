@@ -44,9 +44,10 @@ contract yToken is IERC20, BaseWrapper {
         uint256 amount
     ) internal {
         require(receiver != address(0), "ERC20: transfer to the zero address");
-        require(amount == _withdraw(sender, amount, true)); // `true` = withdraw from `best`
-        token.transfer(receiver, amount);
-        emit Transfer(sender, receiver, amount);
+        uint256 withdrawn = _withdraw(sender, amount, true); // `true` = withdraw from `best`
+        require(amount.sub(1) >= withdrawn);
+        token.transfer(receiver, withdrawn);
+        emit Transfer(sender, receiver, withdrawn);
     }
 
     function transfer(address receiver, uint256 amount) public virtual override returns (bool) {
@@ -103,7 +104,7 @@ contract yToken is IERC20, BaseWrapper {
 
     function permitAll(VaultAPI[] calldata vaults, bytes[] calldata signatures) external {
         require(vaults.length == signatures.length);
-        for (uint256 i = 0; i < vaults.length; i) {
+        for (uint256 i = 0; i < vaults.length; i++) {
             require(vaults[i].permit(msg.sender, address(this), uint256(-1), 0, signatures[i]));
         }
     }
