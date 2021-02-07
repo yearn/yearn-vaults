@@ -139,6 +139,8 @@ abstract contract BaseWrapper {
         uint256 deposit_limit = best.depositLimit().sub(best.totalAssets());
         migrated = _withdraw(account, deposit_limit, false); // `false` = don't withdraw from `best`
 
-        require(migrated.sub(1) >= _deposit(account, migrated, false)); // `false` = don't do `transferFrom`
+        if (migrated > 0) {
+            require(migrated.sub(1) >= _deposit(account, migrated, false)); // `false` = don't do `transferFrom`
+        }
     }
 }
