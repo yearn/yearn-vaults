@@ -11,12 +11,12 @@ def test_config(gov, token, vault, registry, affiliate_token):
     assert registry.nextDeployment(token) == 0
 
     with brownie.reverts():
-        affiliate_token.latestVault()
+        affiliate_token.bestVault()
 
     # This won't revert though, there's no Vaults yet
     assert affiliate_token.allVaults() == []
 
     # Now they work when we have a Vault
     registry.newRelease(vault, {"from": gov})
-    assert affiliate_token.latestVault() == vault
+    assert affiliate_token.bestVault() == vault
     assert affiliate_token.allVaults() == [vault]

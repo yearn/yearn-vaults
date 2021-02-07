@@ -27,7 +27,7 @@ contract yToken is IERC20, MigrationWrapper {
     }
 
     function deposit(uint256 amount) external returns (uint256) {
-        VaultAPI vault = latestVault();
+        VaultAPI vault = bestVault();
 
         token.transferFrom(msg.sender, address(this), amount);
         token.approve(address(vault), amount);
@@ -37,25 +37,25 @@ contract yToken is IERC20, MigrationWrapper {
 
     function withdraw(uint256 amount) external returns (uint256) {
         _migrate(msg.sender);
-        VaultAPI vault = latestVault();
+        VaultAPI vault = bestVault();
 
         uint256 maxShares = amount.mul(vault.pricePerShare()).div(10**vault.decimals());
         return vault.withdraw(maxShares, msg.sender);
     }
 
     function name() external view returns (string memory) {
-        VaultAPI latest = latestVault();
-        return latest.name();
+        VaultAPI best = bestVault();
+        return best.name();
     }
 
     function symbol() external view returns (string memory) {
-        VaultAPI latest = latestVault();
-        return latest.symbol();
+        VaultAPI best = bestVault();
+        return best.symbol();
     }
 
     function decimals() external view returns (uint256) {
-        VaultAPI latest = latestVault();
-        return latest.decimals();
+        VaultAPI best = bestVault();
+        return best.decimals();
     }
 
     function totalSupply() external override view returns (uint256 total) {
@@ -83,8 +83,8 @@ contract yToken is IERC20, MigrationWrapper {
 
         _migrate(sender);
 
-        VaultAPI latest = latestVault();
-        latest.transferFrom(sender, receiver, amount);
+        VaultAPI best = bestVault();
+        best.transferFrom(sender, receiver, amount);
         emit Transfer(sender, receiver, amount);
     }
 

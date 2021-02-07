@@ -46,7 +46,7 @@ contract AffiliateToken is ERC20, MigrationWrapper {
     }
 
     function deposit(uint256 amount) external returns (uint256 shares) {
-        VaultAPI vault = latestVault();
+        VaultAPI vault = bestVault();
 
         token.transferFrom(msg.sender, address(this), amount);
         token.approve(address(vault), amount);
@@ -57,7 +57,7 @@ contract AffiliateToken is ERC20, MigrationWrapper {
 
     function withdraw(uint256 shares) external returns (uint256) {
         _burn(msg.sender, shares);
-        VaultAPI vault = latestVault();
+        VaultAPI vault = bestVault();
         uint256 amount = _shareValue(shares);
         uint256 sharesFromLatest = amount.mul(vault.pricePerShare()).div(10**uint256(vault.decimals()));
         return vault.withdraw(sharesFromLatest, msg.sender);
