@@ -74,17 +74,24 @@ def other_token(gov, Token):
     yield gov.deploy(Token)
 
 
-def test_sweep(gov, strategy, rando, token, other_token):
-    token.transfer(strategy, token.balanceOf(gov), {"from": gov})
-    other_token.transfer(strategy, other_token.balanceOf(gov), {"from": gov})
-
+def test_sweep(gov, vault, strategy, rando, token, other_token):
     # Strategy want token doesn't work
+    token.transfer(strategy, token.balanceOf(gov), {"from": gov})
     assert token.address == strategy.want()
     assert token.balanceOf(strategy) > 0
-    with brownie.reverts():
+    with brownie.reverts("!want"):
         strategy.sweep(token, {"from": gov})
 
+    # Vault share token doesn't work
+    with brownie.reverts("!shares"):
+        strategy.sweep(vault.address, {"from": gov})
+
+    # Protected token doesn't work
+    with brownie.reverts("!protected"):
+        strategy.sweep(strategy.protectedToken(), {"from": gov})
+
     # But any other random token works
+    other_token.transfer(strategy, other_token.balanceOf(gov), {"from": gov})
     assert other_token.address != strategy.want()
     assert other_token.balanceOf(strategy) > 0
     assert other_token.balanceOf(gov) == 0
