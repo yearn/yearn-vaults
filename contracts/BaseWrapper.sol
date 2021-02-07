@@ -10,6 +10,9 @@ import {RegistryAPI, VaultAPI} from "./BaseStrategy.sol";
 abstract contract BaseWrapper {
     ERC20 public token;
 
+    // Reduce number of external calls (SLOADs stay the same)
+    VaultAPI[] private _cachedVaults;
+
     // v2.registry.ychad.eth
     RegistryAPI constant registry = RegistryAPI(0xE15461B18EE31b7379019Dc523231C57d1Cbc18c);
 
@@ -22,14 +25,31 @@ abstract contract BaseWrapper {
     }
 
     function allVaults() public virtual view returns (VaultAPI[] memory) {
+        uint256 cache_length = _cachedVaults.length;
         uint256 num_deployments = registry.nextDeployment(address(token));
+
+        // Use cached
+        if (cache_length == num_deployments) {
+            return _cachedVaults;
+        }
+
         VaultAPI[] memory vaults = new VaultAPI[](num_deployments);
 
-        for (uint256 deployment_id = 0; deployment_id < num_deployments; deployment_id++) {
+        for (uint256 deployment_id = 0; deployment_id < cache_length; deployment_id++) {
+            vaults[deployment_id] = _cachedVaults[deployment_id];
+        }
+
+        for (uint256 deployment_id = cache_length; deployment_id < num_deployments; deployment_id++) {
             vaults[deployment_id] = VaultAPI(registry.vaults(address(token), deployment_id));
         }
 
         return vaults;
+    }
+
+    function _updateVaultCache(VaultAPI[] memory vaults) internal {
+        if (vaults.length > 0) {
+            _cachedVaults = vaults;
+        }
     }
 }
 
