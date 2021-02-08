@@ -96,7 +96,7 @@ def test_sweep(gov, vault, strategy, rando, token, other_token):
     assert other_token.balanceOf(strategy) > 0
     assert other_token.balanceOf(gov) == 0
     # Not any random person can do this
-    with brownie.reverts():
+    with brownie.reverts("!authorized"):
         strategy.sweep(other_token, {"from": rando})
 
     before = other_token.balanceOf(strategy)
