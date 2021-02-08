@@ -76,26 +76,28 @@ abstract contract BaseWrapper {
     }
 
     function _deposit(
-        address account,
+        address depositor,
+        address reciever,
         uint256 amount,
-        bool pullFunds
-    ) internal returns (uint256) {
+        bool pullFunds // If true, funds need to be pulled from `depositor` via `transferFrom`
+    ) internal returns (uint256 deposited) {
         VaultAPI best = bestVault();
 
         if (token.allowance(address(this), address(best)) < uint256(-1)) token.approve(address(best), uint256(-1)); // Vaults are trusted
 
-        if (pullFunds) token.transferFrom(account, address(this), amount);
-        return
-            best
-                .deposit(amount)
-                .mul(best.pricePerShare()) // Adjust by price of best
-                .div(10**best.decimals());
+        if (pullFunds) token.transferFrom(depositor, address(this), amount);
+        deposited = best
+            .deposit(amount, reciever)
+            .mul(best.pricePerShare()) // Adjust by price of best
+            .div(10**best.decimals());
+        // `receiver` now has shares of `best` (worth `deposited` tokens) as balance
     }
 
     function _withdraw(
-        address account,
+        address sender,
+        address receiver,
         uint256 amount,
-        bool withdrawFromBest
+        bool withdrawFromBest // If true, also withdraw from `best`
     ) internal returns (uint256 withdrawn) {
         VaultAPI best = bestVault();
 
@@ -107,10 +109,10 @@ abstract contract BaseWrapper {
                 continue; // Don't withdraw from the best
             }
 
-            uint256 shares = vaults[id].balanceOf(account);
+            uint256 shares = vaults[id].balanceOf(sender);
 
             // NOTE: No need for allowance check if we are withdrawing the balance from this contract
-            if (shares > 0 && (account == address(this) || vaults[id].allowance(account, address(this)) >= shares)) {
+            if (shares > 0 && (sender == address(this) || vaults[id].allowance(sender, address(this)) >= shares)) {
                 // NOTE: There is a maximum withdrawal size from each vault (in shares)
                 uint256 maxWithdrawal = vaults[id].maxAvailableShares();
 
@@ -126,21 +128,21 @@ abstract contract BaseWrapper {
                 if (withdrawalLeft < shares) shares = withdrawalLeft;
 
                 // NOTE: No need for share transfer if we are migrating the balance of this contract
-                if (account != address(this)) vaults[id].transferFrom(account, address(this), shares);
-                withdrawn = withdrawn.add(vaults[id].withdraw(shares, address(this)));
+                if (sender != address(this)) vaults[id].transferFrom(sender, address(this), shares);
+                withdrawn = withdrawn.add(vaults[id].withdraw(shares, receiver));
             }
         }
-        // Contract now has `withdrawn` tokens as balance
+        // `receiver` now has `withdrawn` tokens as balance
     }
 
     function _migrate(address account) internal returns (uint256 migrated) {
         VaultAPI best = bestVault();
 
         uint256 deposit_limit = best.depositLimit().sub(best.totalAssets());
-        migrated = _withdraw(account, deposit_limit, false); // `false` = don't withdraw from `best`
+        migrated = _withdraw(account, address(this), deposit_limit, false); // `false` = don't withdraw from `best`
 
         if (migrated > 0) {
-            require(migrated.sub(1) >= _deposit(account, migrated, false)); // `false` = don't do `transferFrom`
+            require(migrated.sub(1) >= _deposit(address(this), account, migrated, false)); // `false` = don't do `transferFrom` because it's already local
         }
     }
 }
