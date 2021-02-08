@@ -9,7 +9,7 @@ https://github.com/iearn-finance/chief-multisig-officer
 - Coordinate with Core Dev strategist for getting a review in board https://github.com/orgs/iearn-finance/projects/5
 - Peer review completed by:
     - yearn.rocks: at least 2 strategists
-    - Experimental: at least 1 strategist + 1 core dev in board 
+    - Experimental: at least 1 strategist + 1 core dev in the Code Review board 
 - Check if want token has a deploy vault already (>=v0.3.0) and coordinate to use that first if possible.
 - If a new vault is needed, deploy it using the registry:
     - `registry.newExperimentalVault(want, you, multisig, treasury, "", "")`
