@@ -8,8 +8,7 @@ https://github.com/iearn-finance/chief-multisig-officer
 ## Before deploying
 - Coordinate with Core Dev strategist for getting a review in board https://github.com/orgs/iearn-finance/projects/5
 - Peer review completed by:
-    - yearn.rocks: at least 2 strategists
-    - Experimental: at least 1 strategist + 1 core dev in the Code Review board 
+    - yearn.rocks / Experimental: at least 2 strategists
 - Check if want token has a deploy vault already (>=v0.3.0) and coordinate to use that first if possible.
 - If a new vault is needed, deploy it using the registry:
     - `registry.newExperimentalVault(want, you, multisig, treasury, "", "")`
@@ -89,6 +88,7 @@ Repo: https://github.com/Grandthrax/Sharer
     - Tell Carlos harvest and tend gas usage. For instance 1.5m.
 
 ## Scaling Up / Moving to Endorse
+- [ ] In additon to the 2 strategists, a Core Developer has to review the strategy before going into production.
 - [ ] Increase limits
 - [ ] Add to experimental tab on yearn.finance
 - [ ] Set management fee to production level
