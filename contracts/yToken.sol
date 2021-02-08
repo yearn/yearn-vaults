@@ -44,10 +44,8 @@ contract yToken is IERC20, BaseWrapper {
         uint256 amount
     ) internal {
         require(receiver != address(0), "ERC20: transfer to the zero address");
-        uint256 withdrawn = _withdraw(sender, amount, true); // `true` = withdraw from `best`
-        require(amount.sub(1) >= withdrawn);
-        token.transfer(receiver, withdrawn);
-        emit Transfer(sender, receiver, withdrawn);
+        require(amount == _withdraw(sender, receiver, amount, true)); // `true` means use `bestVault`
+        emit Transfer(sender, receiver, amount);
     }
 
     function transfer(address receiver, uint256 amount) public virtual override returns (bool) {
@@ -92,14 +90,12 @@ contract yToken is IERC20, BaseWrapper {
         return true;
     }
 
-    function deposit(uint256 amount) external returns (uint256 shares) {
-        _deposit(msg.sender, amount, true); // `true` = pull from sender
-        VaultAPI vault = bestVault();
-        vault.transfer(msg.sender, vault.balanceOf(address(this)));
+    function deposit(uint256 amount) external returns (uint256) {
+        return _deposit(msg.sender, msg.sender, amount, true); // `true` = pull from sender
     }
 
     function withdraw(uint256 amount) external returns (uint256) {
-        return _withdraw(msg.sender, amount, true); // `true` = withdraw from `best`
+        return _withdraw(msg.sender, msg.sender, amount, true); // `true` = withdraw from `best`
     }
 
     function permitAll(VaultAPI[] calldata vaults, bytes[] calldata signatures) external {
