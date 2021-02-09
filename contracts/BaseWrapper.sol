@@ -54,7 +54,7 @@ abstract contract BaseWrapper {
         }
     }
 
-    function totalAssetsForAccount(address account) public view returns (uint256 balance) {
+    function totalBalance(address account) public view returns (uint256 balance) {
         VaultAPI[] memory vaults = allVaults();
 
         for (uint256 id = 0; id < vaults.length; id++) {
@@ -62,16 +62,11 @@ abstract contract BaseWrapper {
         }
     }
 
-    function totalAssets() public view returns (uint256 totalTokenBalance) {
+    function totalAssets() public view returns (uint256 assets) {
         VaultAPI[] memory vaults = allVaults();
 
         for (uint256 id = 0; id < vaults.length; id++) {
-            uint256 tokensInVault = vaults[id]
-                .balanceOf(address(this))
-                .mul(vaults[id].pricePerShare()) // NOTE: Every vault is different
-                .div(10**uint256(vaults[id].decimals()));
-
-            totalTokenBalance = totalTokenBalance.add(tokensInVault);
+            assets = assets.add(vaults[id].totalAssets().mul(vaults[id].pricePerShare()).div(10**vaults[id].decimals()));
         }
     }
 

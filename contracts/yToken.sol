@@ -35,7 +35,7 @@ contract yToken is IERC20, BaseWrapper {
     }
 
     function balanceOf(address account) external override view returns (uint256 balance) {
-        return totalAssetsForAccount(account);
+        return totalBalance(account);
     }
 
     function _transfer(
