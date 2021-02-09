@@ -145,3 +145,16 @@ def test_deposit_withdraw_faillure(token, gov, vault):
 
     with brownie.reverts():
         vault.withdraw(vault.balanceOf(gov), {"from": gov})
+
+
+def test_report_loss(token, gov, vault, strategy, accounts):
+    strategy.harvest()
+    strategy_account = accounts.at(strategy.address, force=True)
+    token.transfer(gov, token.balanceOf(strategy.address), {"from": strategy_account})
+    assert token.balanceOf(strategy.address) == 0
+
+    # Make sure we do not send more funds to the strategy.
+    strategy.harvest()
+    assert token.balanceOf(strategy.address) == 0
+
+    assert vault.debtRatio() == 0
