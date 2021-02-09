@@ -1482,8 +1482,9 @@ def _reportLoss(strategy: address, loss: uint256):
 
     # Also, make sure we reduce our trust with the strategy by the same amount
     debtRatio: uint256 = self.strategies[strategy].debtRatio
-    self.strategies[strategy].debtRatio -= min(loss * MAX_BPS / self._totalAssets(), debtRatio)
-
+    ratio_change: uint256 = min(loss * MAX_BPS / self._totalAssets(), debtRatio)
+    self.strategies[strategy].debtRatio -= ratio_change 
+    self.debtRatio -= ratio_change
 
 @internal
 def _assessFees(strategy: address, gain: uint256):
