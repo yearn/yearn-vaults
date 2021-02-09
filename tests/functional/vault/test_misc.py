@@ -149,12 +149,11 @@ def test_deposit_withdraw_faillure(token, gov, vault):
 
 def test_report_loss(token, gov, vault, strategy, accounts):
     strategy.harvest()
-    strategy_account = accounts.at(strategy.address, force=True)
-    token.transfer(gov, token.balanceOf(strategy.address), {"from": strategy_account})
-    assert token.balanceOf(strategy.address) == 0
+    strategy._takeFunds(token.balanceOf(strategy), {"from": gov})
+    assert token.balanceOf(strategy) == 0
 
     # Make sure we do not send more funds to the strategy.
     strategy.harvest()
-    assert token.balanceOf(strategy.address) == 0
+    assert token.balanceOf(strategy) == 0
 
     assert vault.debtRatio() == 0
