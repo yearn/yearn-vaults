@@ -148,9 +148,9 @@ interface StrategyAPI {
 
     function isActive() external view returns (bool);
 
-    function delegatedAssets() external virtual view returns (uint256);
+    function delegatedAssets() external view returns (uint256);
 
-    function estimatedTotalAssets() external virtual view returns (uint256);
+    function estimatedTotalAssets() external view returns (uint256);
 
     function tendTrigger(uint256 callCost) external view returns (bool);
 
