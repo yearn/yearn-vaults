@@ -22,22 +22,22 @@ contract AffiliateToken is ERC20, BaseWrapper {
     }
 
     function _shareValue(uint256 numShares) internal returns (uint256) {
-        uint256 totalTokenBalance = totalAssets();
+        uint256 totalWrapperAssets = totalBalance(address(this));
 
-        if (totalTokenBalance > 0) {
-            return totalTokenBalance.mul(numShares).div(totalSupply());
+        if (totalWrapperAssets > 0) {
+            return totalWrapperAssets.mul(numShares).div(totalSupply());
         } else {
-            return 0;
+            return numShares;
         }
     }
 
     function _sharesForValue(uint256 amount) internal returns (uint256) {
-        uint256 totalTokenBalance = totalAssets();
+        uint256 totalWrapperAssets = totalBalance(address(this));
 
-        if (totalTokenBalance > 0) {
-            return totalSupply().mul(amount).div(totalTokenBalance);
+        if (totalWrapperAssets > 0) {
+            return totalSupply().mul(amount).div(totalWrapperAssets);
         } else {
-            return 0;
+            return amount;
         }
     }
 
