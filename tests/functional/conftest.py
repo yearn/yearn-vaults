@@ -29,6 +29,7 @@ def token(gov, Token, request):
         token._initialized = False  # otherwise Brownie throws an `AttributeError`
         setattr(token, "transfer", token.transferWithoutReturn)
         setattr(token, "transferFrom", token.transferFromWithoutReturn)
+        setattr(token, "approve", token.approveWithoutReturn)
         token._initialized = True  # shhh, nothing to see here...
     yield token
 

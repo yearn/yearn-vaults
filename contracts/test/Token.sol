@@ -34,4 +34,8 @@ contract Token is ERC20 {
     ) public {
         super.transferFrom(sender, recipient, amount);
     }
+
+    function approveWithoutReturn(address spender, uint256 amount) public {
+        super.approve(spender, amount);
+    }
 }
