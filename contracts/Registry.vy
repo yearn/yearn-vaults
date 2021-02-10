@@ -166,7 +166,6 @@ def newRelease(vault: address):
     assert Vault(vault).governance() == msg.sender  # dev: not governed
 
     self._registerRelease(vault)
-    self._registerDeployment(Vault(vault).token(), vault)  # NOTE: Should never throw
 
 
 @internal

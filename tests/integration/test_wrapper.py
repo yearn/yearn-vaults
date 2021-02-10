@@ -42,6 +42,7 @@ class Migration:
         print(f"  Registry.newRelease({vault})")
 
         self.registry.newRelease(vault, {"from": self.gov})
+        self.registry.endorseVault(vault, {"from": self.gov})
 
         # NOTE: yToken's are non-custodial, so you need to authorize them
         if self.wrapper._name == "yToken":
@@ -105,6 +106,7 @@ def test_migration_wrapper(
     # NOTE: Must start with at least one vault in registry (for token)
     vault = create_vault(token=token, version="1.0.0")
     registry.newRelease(vault, {"from": gov})
+    registry.endorseVault(vault, {"from": gov})
 
     # NOTE: yToken's are non-custodial, so you need to authorize them
     if wrapper._name == "yToken":

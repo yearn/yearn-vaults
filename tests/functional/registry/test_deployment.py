@@ -13,6 +13,7 @@ def test_deployment_management(
     # Creating the first deployment makes `latestVault()` work
     v1_vault = create_vault(token, version="1.0.0")
     registry.newRelease(v1_vault, {"from": gov})
+    registry.endorseVault(v1_vault, {"from": gov})
     assert registry.latestVault(token) == v1_vault
     assert registry.latestRelease() == v1_vault.apiVersion() == "1.0.0"
 

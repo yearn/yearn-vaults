@@ -23,6 +23,7 @@ def test_config(gov, token, vault, registry, affiliate_token):
 
     # Now they work when we have a Vault
     registry.newRelease(vault, {"from": gov})
+    registry.endorseVault(vault, {"from": gov})
     assert affiliate_token.bestVault() == vault
     assert affiliate_token.allVaults() == [vault]
 
@@ -62,6 +63,7 @@ def test_setRegistry(rando, affiliate, gov, affiliate_token):
 
 def test_deposit(token, registry, vault, affiliate_token, gov, rando):
     registry.newRelease(vault, {"from": gov})
+    registry.endorseVault(vault, {"from": gov})
     token.transfer(rando, 10000, {"from": gov})
     assert affiliate_token.balanceOf(rando) == vault.balanceOf(rando) == 0
 
@@ -75,6 +77,7 @@ def test_deposit(token, registry, vault, affiliate_token, gov, rando):
 def test_migrate(token, registry, create_vault, affiliate_token, gov, rando, affiliate):
     vault1 = create_vault(version="1.0.0", token=token)
     registry.newRelease(vault1, {"from": gov})
+    registry.endorseVault(vault1, {"from": gov})
     token.transfer(rando, 10000, {"from": gov})
     token.approve(affiliate_token, 10000, {"from": rando})
     affiliate_token.deposit(10000, {"from": rando})
@@ -83,6 +86,7 @@ def test_migrate(token, registry, create_vault, affiliate_token, gov, rando, aff
 
     vault2 = create_vault(version="2.0.0", token=token)
     registry.newRelease(vault2, {"from": gov})
+    registry.endorseVault(vault2, {"from": gov})
 
     with brownie.reverts():
         affiliate_token.migrate({"from": rando})
@@ -96,6 +100,7 @@ def test_migrate(token, registry, create_vault, affiliate_token, gov, rando, aff
 
 def test_transfer(token, registry, vault, affiliate_token, gov, rando, affiliate):
     registry.newRelease(vault, {"from": gov})
+    registry.endorseVault(vault, {"from": gov})
     token.transfer(rando, 10000, {"from": gov})
     token.approve(affiliate_token, 10000, {"from": rando})
     affiliate_token.deposit(10000, {"from": rando})
@@ -109,6 +114,7 @@ def test_transfer(token, registry, vault, affiliate_token, gov, rando, affiliate
 
 def test_withdraw(token, registry, vault, affiliate_token, gov, rando):
     registry.newRelease(vault, {"from": gov})
+    registry.endorseVault(vault, {"from": gov})
     token.transfer(rando, 10000, {"from": gov})
     token.approve(affiliate_token, 10000, {"from": rando})
     affiliate_token.deposit(10000, {"from": rando})
