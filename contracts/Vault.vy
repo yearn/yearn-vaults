@@ -875,7 +875,7 @@ def _shareValue(shares: uint256) -> uint256:
     
     return (shares * freeFunds) / self.totalSupply
 
-
+    
 @view
 @internal
 def _sharesForAmount(amount: uint256) -> uint256:

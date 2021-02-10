@@ -34,4 +34,9 @@ contract Token is ERC20 {
     ) public {
         super.transferFrom(sender, recipient, amount);
     }
+
+    // Public mint function. Do not use in production.
+    function mint(uint256 amount) public {
+        _mint(msg.sender, amount);
+    }
 }
