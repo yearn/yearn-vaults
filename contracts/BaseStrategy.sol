@@ -255,6 +255,8 @@ abstract contract BaseStrategy {
         address _rewards,
         address _keeper
     ) internal {
+        require(address(want) == address(0), "Strategy already initialized");
+
         vault = VaultAPI(_vault);
         want = IERC20(vault.token());
         want.safeApprove(_vault, uint256(-1)); // Give Vault unlimited access (might save gas)
