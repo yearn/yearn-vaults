@@ -52,7 +52,8 @@ https://github.com/iearn-finance/chief-multisig-officer
     - Check that tokens in the strategy cannot be sweeped by dust collection
 
    Example: https://github.com/Macarse/yhegic/tree/master/tests/development
-- Tag vault as "test" in v2.registry.ychad.eth with dev multisig trx
+- Tag vault as "experimental" in v2.registry.ychad.eth
+    - `registry.tagVault(vaultAddr, "https://meta.yearn.network/vaults/${vaultAddr}/vault.json")`
 
 ### Sharer contract (optional)
 Sharer is a contract for distributing strategist rewards. For boarding school graduates suggested is 34% to strategist_ms and 66% to strategist.
