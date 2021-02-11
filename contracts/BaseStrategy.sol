@@ -248,7 +248,7 @@ abstract contract BaseStrategy {
     constructor(address _vault) public {
         vault = VaultAPI(_vault);
         want = IERC20(vault.token());
-        want.approve(_vault, uint256(-1)); // Give Vault unlimited access (might save gas)
+        want.safeApprove(_vault, uint256(-1)); // Give Vault unlimited access (might save gas)
         strategist = msg.sender;
         rewards = msg.sender;
         keeper = msg.sender;
