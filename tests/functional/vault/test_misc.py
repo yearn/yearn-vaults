@@ -1,5 +1,6 @@
 import pytest
 import brownie
+import pytest
 
 
 @pytest.fixture
@@ -157,3 +158,52 @@ def test_report_loss(token, gov, vault, strategy, accounts):
     assert token.balanceOf(strategy) == 0
 
     assert vault.debtRatio() == 0
+
+
+def test_sandwich_attack(
+    chain, TestStrategy, web3, token, gov, vault, strategist, rando
+):
+
+    honest_lp = gov
+    attacker = rando
+    balance = token.balanceOf(honest_lp) / 2
+
+    # seed attacker their funds
+    token.transfer(attacker, balance, {"from": honest_lp})
+
+    # we don't use the one in conftest because we want no rate limit
+    strategy = strategist.deploy(TestStrategy, vault)
+    vault.setManagementFee(0, {"from": gov})
+    vault.setPerformanceFee(0, {"from": gov})
+    vault.addStrategy(strategy, 4_000, 0, 2 ** 256 - 1, 0, {"from": gov})
+    vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
+
+    strategy.harvest({"from": strategist})
+    # strategy is returning 0.02%. Equivalent to 35.6% a year at 5 harvests a day
+    profit_to_be_returned = token.balanceOf(strategy) / 5000
+    token.transfer(strategy, profit_to_be_returned, {"from": honest_lp})
+
+    # now for the attack
+
+    # attacker sees harvest enter tx pool
+    attack_amount = token.balanceOf(attacker)
+
+    # attacker deposits
+    token.approve(vault, attack_amount, {"from": attacker})
+    vault.deposit(attack_amount, {"from": attacker})
+
+    # harvest happens
+    strategy.harvest({"from": strategist})
+
+    chain.sleep(1)
+    chain.mine(1)
+
+    # attacker withdraws. Pays back loan. and keeps or sells profit
+    vault.withdraw(vault.balanceOf(attacker), {"from": attacker})
+
+    profit = token.balanceOf(attacker) - attack_amount
+    profit_percent = profit / attack_amount
+
+    print(f"Attack Profit Percent: {profit_percent}")
+    # 5 rebases a day = 1780 a year. Less than 0.0004% profit on attack makes it closer to neutral EV
+    assert profit_percent == pytest.approx(0, abs=10e-5)
