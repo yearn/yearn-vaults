@@ -201,6 +201,7 @@ event StrategyAddedToQueue:
 # NOTE: Track the total for overhead targeting purposes
 strategies: public(HashMap[address, StrategyParams])
 MAXIMUM_STRATEGIES: constant(uint256) = 20
+DEGREDATION_COEFFICIENT: constant(uint256) = 10 ** 18
 
 # Ordering that `withdraw` uses to determine which strategies to pull funds from
 # NOTE: Does *NOT* have to match the ordering of all the current strategies that
@@ -221,7 +222,7 @@ lastReport: public(uint256)  # block.timestamp of last report
 activation: public(uint256)  # block.timestamp of contract deployment
 lockedProfit: public(uint256) # how much profit is locked and cant be withdrawn
 
-lockedProfitDegration: public(uint256) # rate per block of degration. 1e18 is 100% per block
+lockedProfitDegration: public(uint256) # rate per block of degration. DEGREDATION_COEFFICIENT is 100% per block
 rewards: public(address)  # Rewards contract where Governance fees are sent to
 # Governance Fee for management of Vault (given to `rewards`)
 managementFee: public(uint256)
@@ -291,7 +292,7 @@ def initialize(
     log UpdateManagementFee(convert(200, uint256))
     self.lastReport = block.timestamp
     self.activation = block.timestamp
-    self.lockedProfitDegration = convert(0.000046 * 1e18, uint256) # 6 hours in blocks
+    self.lockedProfitDegration = convert(DEGREDATION_COEFFICIENT * 46 /10 ** 6 , uint256) # 6 hours in blocks
     # EIP-712
     self.DOMAIN_SEPARATOR = keccak256(
         concat(
@@ -870,9 +871,9 @@ def _shareValue(shares: uint256) -> uint256:
         # NOTE: if sqrt(Vault.totalAssets()) >>> 1e39, this could potentially revert
     lockedFundsRatio: uint256 = (block.timestamp - self.lastReport) * self.lockedProfitDegration
     freeFunds: uint256 = self._totalAssets()
-    if(lockedFundsRatio < convert(1e18, uint256)):
-        freeFunds = freeFunds - (self.lockedProfit - (lockedFundsRatio * self.lockedProfit / convert(1e18, uint256)))
 
+    if(lockedFundsRatio < DEGREDATION_COEFFICIENT):
+        freeFunds -= (self.lockedProfit - (lockedFundsRatio * self.lockedProfit / DEGREDATION_COEFFICIENT))
     return (shares * freeFunds) / self.totalSupply
 
     
