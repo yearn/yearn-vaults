@@ -875,7 +875,8 @@ def _shareValue(shares: uint256) -> uint256:
 
     if(lockedFundsRatio < DEGREDATION_COEFFICIENT):
         freeFunds -= (self.lockedProfit - (lockedFundsRatio * self.lockedProfit / DEGREDATION_COEFFICIENT))
-    return (shares * freeFunds) / self.totalSupply
+    # NOTE: using 1e3 for extra precision here, when decimals is low
+    return ((10 ** 3 * (shares * freeFunds)) / self.totalSupply) / 10 ** 3
 
     
 @view
