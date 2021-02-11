@@ -440,6 +440,7 @@ def setLockedProfitDegration(degration: uint256):
     @param degration The rate of degration in percent per second scaled to 1e18.
     """
     assert msg.sender == self.governance
+    assert degration >= 0 and degration <= DEGREDATION_COEFFICIENT
     self.lockedProfitDegration = degration
 
 @external
