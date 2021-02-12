@@ -42,7 +42,7 @@ contract AffiliateToken is ERC20, BaseWrapper {
     }
 
     function deposit(uint256 amount) external returns (uint256 deposited) {
-        deposited = _sharesForValue(_deposit(msg.sender, msg.sender, amount, true)); // `true` = pull from `msg.sender`
+        deposited = _sharesForValue(_deposit(msg.sender, address(this), amount, true)); // `true` = pull from `msg.sender`
         _mint(msg.sender, deposited);
     }
 
@@ -52,6 +52,6 @@ contract AffiliateToken is ERC20, BaseWrapper {
     }
 
     function migrate() external onlyAffliate returns (uint256) {
-        _migrate(address(this));
+        return _migrate(address(this));
     }
 }
