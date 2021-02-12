@@ -75,17 +75,23 @@ abstract contract BaseWrapper {
         address reciever,
         uint256 amount,
         bool pullFunds // If true, funds need to be pulled from `depositor` via `transferFrom`
-    ) internal returns (uint256 deposited) {
+    ) internal returns (uint256) {
         VaultAPI best = bestVault();
 
-        if (token.allowance(address(this), address(best)) < uint256(-1)) token.approve(address(best), uint256(-1)); // Vaults are trusted
-
         if (pullFunds) token.transferFrom(depositor, address(this), amount);
-        deposited = best
-            .deposit(amount, reciever)
-            .mul(best.pricePerShare()) // Adjust by price of best
-            .div(10**best.decimals());
-        // `receiver` now has shares of `best` (worth `deposited` tokens) as balance
+
+        if (token.allowance(address(this), address(best)) < uint256(-1)) {
+            token.approve(address(best), uint256(-1)); // Vaults are trusted
+        }
+
+        // `receiver` now has shares of `best` (worth `amount` tokens) as balance
+        return
+            best
+                .deposit(amount, reciever)
+                .mul(10**3) // Add 3 extra decimals of precision
+                .mul(best.pricePerShare()) // Adjust by price of best
+                .div(10**best.decimals())
+                .div(10**3); // Add 3 extra decimals of precision
     }
 
     function _withdraw(
