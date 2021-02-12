@@ -1,5 +1,7 @@
 import brownie
 
+from eth_account import Account
+
 
 def test_config(gov, token, vault, registry, ytoken):
     assert ytoken.token() == token
@@ -68,3 +70,32 @@ def test_withdraw(token, registry, vault, ytoken, gov, rando):
     ytoken.withdraw(10000, {"from": rando})
     assert ytoken.balanceOf(rando) == vault.balanceOf(rando) == 0
     assert token.balanceOf(rando) == 10000
+
+
+def test_migrate(token, registry, create_vault, sign_vault_permit, ytoken, gov):
+    rando = Account.create()
+    token.transfer(rando.address, 10000, {"from": gov})
+    token.approve(ytoken, 10000, {"from": rando.address})
+
+    vault1 = create_vault(version="1.0.0", token=token)
+    registry.newRelease(vault1, {"from": gov})
+    assert registry.latestVault(token) == vault1
+
+    ytoken.deposit(5000, {"from": rando.address})
+    assert vault1.balanceOf(rando.address) == 5000
+
+    vault2 = create_vault(version="2.0.0", token=token)
+    registry.newRelease(vault2, {"from": gov})
+    assert registry.latestVault(token) == vault2
+
+    ytoken.deposit(5000, {"from": rando.address})
+    assert vault1.balanceOf(rando.address) == 5000
+    assert vault2.balanceOf(rando.address) == 5000
+
+    sig1 = sign_vault_permit(vault1, rando, ytoken.address)
+    sig2 = sign_vault_permit(vault2, rando, ytoken.address)
+    ytoken.permitAll([vault1, vault2], [sig1, sig2], {"from": rando.address})
+
+    ytoken.migrate({"from": rando.address})
+    assert vault1.balanceOf(rando.address) == 0
+    assert vault2.balanceOf(rando.address) == 10000
