@@ -139,11 +139,16 @@ abstract contract BaseWrapper {
     function _migrate(address account) internal returns (uint256 migrated) {
         VaultAPI best = bestVault();
 
-        uint256 deposit_limit = best.depositLimit().sub(best.totalAssets());
-        migrated = _withdraw(account, address(this), deposit_limit, false); // `false` = don't withdraw from `best`
+        uint256 alreadyDeposited = best.balanceOf(account).mul(best.pricePerShare()).div(10**best.decimals());
+        uint256 amountToMigrate = totalBalance(account).sub(alreadyDeposited);
 
-        if (migrated > 0) {
-            require(migrated.sub(1) >= _deposit(address(this), account, migrated, false)); // `false` = don't do `transferFrom` because it's already local
-        }
+        uint256 depositLeft = best.depositLimit().sub(best.totalAssets());
+        if (amountToMigrate > depositLeft) amountToMigrate = depositLeft;
+
+        if (amountToMigrate > 0) {
+            migrated = _withdraw(account, address(this), amountToMigrate, false); // `false` = don't withdraw from `best`
+            require(migrated == amountToMigrate);
+            require(migrated == _deposit(address(this), account, migrated, false)); // `false` = don't do `transferFrom` because it's already local
+        } // else: nothing to migrate! (not a failure)
     }
 }
