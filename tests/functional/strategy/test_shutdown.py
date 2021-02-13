@@ -1,3 +1,5 @@
+import pytest
+
 DAY = 86400  # seconds
 
 
@@ -57,7 +59,8 @@ def test_emergency_shutdown(token, gov, vault, strategy, keeper, chain):
     assert token.balanceOf(vault) == initial_investment + strategyReturn
 
 
-def test_emergency_exit(token, gov, vault, strategy, keeper, chain):
+@pytest.mark.parametrize("withSurplus", [True, False])
+def test_emergency_exit(token, gov, vault, strategy, keeper, chain, withSurplus):
     # NOTE: totalSupply matches total investment at t = 0
     initial_investment = vault.totalSupply()
     vault.updateStrategyMaxDebtPerHarvest(
@@ -86,9 +89,15 @@ def test_emergency_exit(token, gov, vault, strategy, keeper, chain):
         add_yield()
         strategy.harvest({"from": keeper})
 
-    # Oh my! There was a hack!
-    stolen_funds = token.balanceOf(strategy) // 10
-    strategy._takeFunds(stolen_funds, {"from": gov})
+    if withSurplus:
+        # Add balance to test the case in harvest() where totalAssets > debtOutstanding
+        stolen_funds = 0
+        added_funds = token.balanceOf(strategy) // 10
+        token.transfer(strategy, added_funds, {"from": gov})
+    else:
+        # Oh my! There was a hack!
+        stolen_funds = token.balanceOf(strategy) // 10
+        strategy._takeFunds(stolen_funds, {"from": gov})
 
     # Call for an exit
     strategy.setEmergencyExit({"from": gov})
