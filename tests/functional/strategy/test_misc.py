@@ -9,14 +9,14 @@ def test_harvest_tend_authority(gov, keeper, strategist, strategy, rando):
     strategy.tend({"from": keeper})
     strategy.tend({"from": strategist})
     strategy.tend({"from": gov})
-    with brownie.reverts():
+    with brownie.reverts("!authorized"):
         strategy.tend({"from": rando})
 
     # Only keeper, strategist, or gov can call harvest
     strategy.harvest({"from": keeper})
     strategy.harvest({"from": strategist})
     strategy.harvest({"from": gov})
-    with brownie.reverts():
+    with brownie.reverts("!authorized"):
         strategy.harvest({"from": rando})
 
 

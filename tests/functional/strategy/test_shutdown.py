@@ -124,11 +124,11 @@ def test_emergency_exit(token, gov, vault, strategy, keeper, chain, withSurplus)
     assert token.balanceOf(vault) == initial_investment + strategyReturn - stolen_funds
 
 
-def test_set_emergency_exit_permissions(strategy, gov, strategist, keeper, rando):
+def test_set_emergency_exit_authority(strategy, gov, strategist, keeper, rando):
     # Can only setEmergencyExit as governance or strategist
     strategy.setEmergencyExit({"from": gov})
     strategy.setEmergencyExit({"from": strategist})
-    with brownie.reverts():
+    with brownie.reverts("!authorized"):
         strategy.setEmergencyExit({"from": keeper})
-    with brownie.reverts():
+    with brownie.reverts("!authorized"):
         strategy.setEmergencyExit({"from": rando})
