@@ -78,6 +78,20 @@ interface VaultAPI is IERC20 {
      * is subject to governance defined by the Vault.
      */
     function governance() external view returns (address);
+
+    /**
+     * View the management address of the Vault to assert privileged functions
+     * can only be called by management. The Strategy serves the Vault, so it
+     * is subject to management defined by the Vault.
+     */
+    function management() external view returns (address);
+
+    /**
+     * View the guardian address of the Vault to assert privileged functions
+     * can only be called by guardian. The Strategy serves the Vault, so it
+     * is subject to guardian defined by the Vault.
+     */
+    function guardian() external view returns (address);
 }
 
 /**
@@ -234,7 +248,14 @@ abstract contract BaseStrategy {
     }
 
     modifier onlyKeepers() {
-        require(msg.sender == keeper || msg.sender == strategist || msg.sender == governance(), "!authorized");
+        require(
+            msg.sender == keeper ||
+                msg.sender == strategist ||
+                msg.sender == governance() ||
+                msg.sender == guardian() ||
+                msg.sender == management(),
+            "!authorized"
+        );
         _;
     }
 
@@ -389,6 +410,22 @@ abstract contract BaseStrategy {
      */
     function governance() internal view returns (address) {
         return vault.governance();
+    }
+
+    /**
+     * Resolve management address from Vault contract, used to make assertions
+     * on protected functions in the Strategy.
+     */
+    function management() internal view returns (address) {
+        return vault.management();
+    }
+
+    /**
+     * Resolve guardian address from Vault contract, used to make assertions
+     * on protected functions in the Strategy.
+     */
+    function guardian() internal view returns (address) {
+        return vault.guardian();
     }
 
     /**
