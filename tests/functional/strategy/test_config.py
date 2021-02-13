@@ -57,9 +57,23 @@ def test_strategy_setEmergencyExit(strategy, gov, strategist, rando, chain):
         ("rewards", "setRewards", "gov", None, False, "!strategist"),
         ("keeper", "setKeeper", "strategist", None, True, "!authorized"),
         ("keeper", "setKeeper", "gov", None, True, "!authorized"),
-        ("minReportDelay", "setMinReportDelay", "strategist", 1000, True, "!authorized"),
+        (
+            "minReportDelay",
+            "setMinReportDelay",
+            "strategist",
+            1000,
+            True,
+            "!authorized",
+        ),
         ("minReportDelay", "setMinReportDelay", "gov", 2000, True, "!authorized"),
-        ("maxReportDelay", "setMaxReportDelay", "strategist", 1000, True, "!authorized"),
+        (
+            "maxReportDelay",
+            "setMaxReportDelay",
+            "strategist",
+            1000,
+            True,
+            "!authorized",
+        ),
         ("maxReportDelay", "setMaxReportDelay", "gov", 2000, True, "!authorized"),
         ("profitFactor", "setProfitFactor", "strategist", 1000, True, "!authorized"),
         ("profitFactor", "setProfitFactor", "gov", 2000, True, "!authorized"),
@@ -68,7 +82,16 @@ def test_strategy_setEmergencyExit(strategy, gov, strategist, rando, chain):
     ],
 )
 def test_strategy_setParams(
-    gov, strategist, strategy, rando, getter, setter, caller, val, guard_allowed, authority_error
+    gov,
+    strategist,
+    strategy,
+    rando,
+    getter,
+    setter,
+    caller,
+    val,
+    guard_allowed,
+    authority_error,
 ):
     if val is None:
         # Can't access fixtures, so use None to mean any random address
