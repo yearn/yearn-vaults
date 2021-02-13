@@ -138,11 +138,13 @@ def test_reject_ether(gov, strategy):
         gov.transfer(strategy, 1)
 
 
-def test_set_metadataURI(gov, strategy, rando):
+def test_set_metadataURI(gov, strategy, strategist, rando):
     assert strategy.metadataURI() == ""  # Empty by default
     strategy.setMetadataURI("ipfs://test", {"from": gov})
     assert strategy.metadataURI() == "ipfs://test"
     strategy.setMetadataURI("ipfs://test2", {"from": gov})
     assert strategy.metadataURI() == "ipfs://test2"
-    with brownie.reverts():
+    strategy.setMetadataURI("ipfs://test3", {"from": strategist})
+    assert strategy.metadataURI() == "ipfs://test3"
+    with brownie.reverts("!authorized"):
         strategy.setMetadataURI("ipfs://fake", {"from": rando})
