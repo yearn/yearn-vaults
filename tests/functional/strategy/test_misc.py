@@ -58,6 +58,18 @@ def test_harvest_tend_trigger(chain, gov, vault, token, TestStrategy):
 
     chain.undo()
 
+    # Check that trigger works if strategy has no outstanding debt but does have a loss
+    chain.mine(timedelta=strategy.minReportDelay())
+    loss = token.balanceOf(strategy) // 10
+    strategy._takeFunds(loss, {"from": gov})
+    assert vault.debtOutstanding(strategy) == 0
+    assert vault.debtOutstanding(strategy) <= strategy.debtThreshold()
+    totalDebt = vault.strategies(strategy).dict()["totalDebt"]
+    assert strategy.estimatedTotalAssets() + strategy.debtThreshold() < totalDebt
+    assert strategy.harvestTrigger(MAX_UINT256)
+    
+    chain.undo()
+    
     # Check that trigger works in emergency exit mode
     strategy.setEmergencyExit({"from": gov})
     assert strategy.harvestTrigger(MAX_UINT256)
