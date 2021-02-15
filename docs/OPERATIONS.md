@@ -157,4 +157,28 @@ s1.harvest({'from': strategist})
 We should also see the strategy's `debtRatio` going to zero and funds returning to the vault.
 
 ## Emergency Procedures
-TBD
+We can also shutdown the vault to return assets as soon as possible. To do that we will need a guardian or governance account.
+
+```
+# Sound the alarm
+vault.setEmergencyShutdown(true, {'from': gov})
+
+# Harvest all strategies
+s1.harvest({'from': gov})
+s2.harvest({'from': gov})
+s3.harvest({'from': gov})
+
+# Check all the tokens are back in the vault
+>>> hegic.balanceOf(vault) == vault.totalAssets()
+True
+```
+You will notice that this procedure doesn't change the debt ratio.
+```
+>>> vault.strategies(s1).dict()['debtRatio']
+1600
+```
+It drops the credit to 0.
+```
+>>> vault.creditAvailable(s1)
+0
+```
