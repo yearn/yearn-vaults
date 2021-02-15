@@ -53,6 +53,12 @@ def test_addStrategy(
     with brownie.reverts():
         vault.addStrategy(strategy, 100, 10, 20, 1000, {"from": rando})
 
+    # Can't add a strategy during emergency shutdown
+    vault.setEmergencyShutdown(True, {"from": gov})
+    with brownie.reverts():
+        vault.addStrategy(strategy, 100, 10, 20, 1000, {"from": gov})
+    vault.setEmergencyShutdown(False, {"from": gov})
+        
     assert vault.strategies(strategy).dict() == {
         "performanceFee": 0,
         "activation": 0,
@@ -83,6 +89,10 @@ def test_addStrategy(
     # Can't add a strategy twice
     with brownie.reverts():
         vault.addStrategy(strategy, 100, 10, 20, 1000, {"from": gov})
+
+    # Can't add zero address as a strategy
+    with brownie.reverts():
+        vault.addStrategy(ZERO_ADDRESS, 100, 10, 20, 1000, {"from": gov})
 
     # Can't add a strategy with incorrect vault or want token
     with brownie.reverts():
