@@ -61,7 +61,7 @@ Sharer is a contract for distributing strategist rewards. For boarding school gr
 Repo: https://github.com/Grandthrax/Sharer
 
 - Setup rewards for your strategy by calling `sharer.addContributors`
-- If you forked someone elses strategy then cut them in
+- If you forked someone else's strategy then cut them in
 - Be sure to reward people who helped you 
 
 ### Example Script:
