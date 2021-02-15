@@ -9,14 +9,14 @@ def test_harvest_tend_authority(gov, keeper, strategist, strategy, rando):
     strategy.tend({"from": keeper})
     strategy.tend({"from": strategist})
     strategy.tend({"from": gov})
-    with brownie.reverts():
+    with brownie.reverts("!authorized"):
         strategy.tend({"from": rando})
 
     # Only keeper, strategist, or gov can call harvest
     strategy.harvest({"from": keeper})
     strategy.harvest({"from": strategist})
     strategy.harvest({"from": gov})
-    with brownie.reverts():
+    with brownie.reverts("!authorized"):
         strategy.harvest({"from": rando})
 
 
@@ -54,6 +54,18 @@ def test_harvest_tend_trigger(chain, gov, vault, token, TestStrategy):
     assert vault.debtOutstanding(strategy) == 0
     vault.revokeStrategy(strategy, {"from": gov})
     assert vault.debtOutstanding(strategy) > strategy.debtThreshold()
+    assert strategy.harvestTrigger(MAX_UINT256)
+
+    chain.undo()
+
+    # Check that trigger works if strategy has no outstanding debt but does have a loss
+    chain.mine(timedelta=strategy.minReportDelay())
+    loss = token.balanceOf(strategy) // 10
+    strategy._takeFunds(loss, {"from": gov})
+    assert vault.debtOutstanding(strategy) == 0
+    assert vault.debtOutstanding(strategy) <= strategy.debtThreshold()
+    totalDebt = vault.strategies(strategy).dict()["totalDebt"]
+    assert strategy.estimatedTotalAssets() + strategy.debtThreshold() < totalDebt
     assert strategy.harvestTrigger(MAX_UINT256)
 
     chain.undo()
@@ -96,7 +108,7 @@ def test_sweep(gov, vault, strategy, rando, token, other_token):
     assert other_token.balanceOf(strategy) > 0
     assert other_token.balanceOf(gov) == 0
     # Not any random person can do this
-    with brownie.reverts():
+    with brownie.reverts("!authorized"):
         strategy.sweep(other_token, {"from": rando})
 
     before = other_token.balanceOf(strategy)
@@ -126,11 +138,13 @@ def test_reject_ether(gov, strategy):
         gov.transfer(strategy, 1)
 
 
-def test_set_metadataURI(gov, strategy, rando):
+def test_set_metadataURI(gov, strategy, strategist, rando):
     assert strategy.metadataURI() == ""  # Empty by default
     strategy.setMetadataURI("ipfs://test", {"from": gov})
     assert strategy.metadataURI() == "ipfs://test"
     strategy.setMetadataURI("ipfs://test2", {"from": gov})
     assert strategy.metadataURI() == "ipfs://test2"
-    with brownie.reverts():
+    strategy.setMetadataURI("ipfs://test3", {"from": strategist})
+    assert strategy.metadataURI() == "ipfs://test3"
+    with brownie.reverts("!authorized"):
         strategy.setMetadataURI("ipfs://fake", {"from": rando})
