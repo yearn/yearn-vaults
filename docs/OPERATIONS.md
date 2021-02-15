@@ -102,12 +102,13 @@ Repo: https://github.com/Grandthrax/Sharer
 - [ ] Now you are on main yearn page!
 
 ## Limits per Stage
-These are the stantdard deposit limits per stage. This can be increased or decreased on a case by case basis.
+These are the standard deposit limits per stage. They can be adjusted on a case by case basis.
 
 | Stage | Limit |
 | ---- | --- |
-| Yearn.rocks / Experimental | $500.000 |
-| Production  | $10.000.000 | 
+| Yearn.rocks / Experimental | $500K |
+| Production  | $10M | 
+
 
 ## Revoking a strategy with normal migration
 TBD
