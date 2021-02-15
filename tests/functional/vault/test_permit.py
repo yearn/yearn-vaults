@@ -78,6 +78,7 @@ def test_permit_expired(vault):
     with brownie.reverts("dev: permit expired"):
         vault.permit(owner.address, spender.address, amount, expiry, signature)
 
+
 def test_permit_bad_owner(vault):
     nonce = vault.nonces(owner.address)
     expiry = 0
