@@ -49,6 +49,18 @@ def test_strategy_setEmergencyExit(strategy, gov, strategist, rando, chain):
     assert strategy.emergencyExit()
 
 
+def test_strategy_harvest_permission(
+    strategy, gov, strategist, guardian, management, keeper, rando
+):
+    strategy.harvest({"from": gov})
+    strategy.harvest({"from": strategist})
+    strategy.harvest({"from": management})
+    strategy.harvest({"from": guardian})
+    strategy.harvest({"from": keeper})
+    with brownie.reverts():
+        strategy.harvest({"from": rando})
+
+
 @pytest.mark.parametrize(
     "getter,setter,val,gov_allowed,strategist_allowed,authority_error",
     [
