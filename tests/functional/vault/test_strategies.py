@@ -1,8 +1,6 @@
 import pytest
 import brownie
-
-
-ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
+from brownie import ZERO_ADDRESS
 
 
 @pytest.fixture
