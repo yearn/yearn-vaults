@@ -33,6 +33,13 @@ def test_strategy_deployment(strategist, vault, TestStrategy):
     assert not strategy.tendTrigger(0)
 
 
+def test_strategy_no_reinit(strategist, vault, TestStrategy):
+    strategy = strategist.deploy(TestStrategy, vault)
+
+    with brownie.reverts("Strategy already initialized"):
+        strategy.initialize(vault, strategist, strategist, strategist)
+
+
 def test_strategy_setEmergencyExit(strategy, gov, strategist, rando, chain):
     # Only governance or strategist can set this param
     with brownie.reverts():
