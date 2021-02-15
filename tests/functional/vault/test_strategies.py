@@ -56,7 +56,7 @@ def test_addStrategy(
     with brownie.reverts():
         vault.addStrategy(strategy, 100, 10, 20, 1000, {"from": gov})
     vault.setEmergencyShutdown(False, {"from": gov})
-
+        
     assert vault.strategies(strategy).dict() == {
         "performanceFee": 0,
         "activation": 0,
