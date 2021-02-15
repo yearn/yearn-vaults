@@ -10,6 +10,9 @@ PACKAGE_VERSION = yaml.safe_load(
 )["version"]
 
 
+DEGREDATION_COEFFICIENT = 10 ** 18
+
+
 def test_api_adherrance(check_api_adherrance, Vault, interface):
     check_api_adherrance(Vault, interface.VaultAPI)
 
@@ -178,3 +181,11 @@ def test_vault_setGovernance(gov, vault, rando):
     # Only new governance can accept a change of governance
     with brownie.reverts():
         vault.acceptGovernance({"from": gov})
+
+
+def test_vault_setLockedProfitDegrationRange(gov, vault):
+    # value must be between 0 and DEGREDATION_COEFFICIENT (inclusive)
+    vault.setLockedProfitDegration(0, {"from": gov})
+    vault.setLockedProfitDegration(DEGREDATION_COEFFICIENT, {"from": gov})
+    with brownie.reverts():
+        vault.setLockedProfitDegration(DEGREDATION_COEFFICIENT + 1000, {"from": gov})
