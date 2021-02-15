@@ -90,7 +90,7 @@ def test_strategy_setParams(
     setter,
     caller,
     val,
-    guard_allowed,
+    strategist_allowed,
     authority_error,
 ):
     if val is None:
