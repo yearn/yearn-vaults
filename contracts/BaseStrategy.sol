@@ -252,8 +252,8 @@ abstract contract BaseStrategy {
             msg.sender == keeper ||
                 msg.sender == strategist ||
                 msg.sender == governance() ||
-                msg.sender == guardian() ||
-                msg.sender == management(),
+                msg.sender == vault.guardian() ||
+                msg.sender == vault.management(),
             "!authorized"
         );
         _;
@@ -410,22 +410,6 @@ abstract contract BaseStrategy {
      */
     function governance() internal view returns (address) {
         return vault.governance();
-    }
-
-    /**
-     * Resolve management address from Vault contract, used to make assertions
-     * on protected functions in the Strategy.
-     */
-    function management() internal view returns (address) {
-        return vault.management();
-    }
-
-    /**
-     * Resolve guardian address from Vault contract, used to make assertions
-     * on protected functions in the Strategy.
-     */
-    function guardian() internal view returns (address) {
-        return vault.guardian();
     }
 
     /**
