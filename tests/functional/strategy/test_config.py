@@ -109,7 +109,7 @@ def test_strategy_setParams(
         getattr(strategy, setter)(val, {"from": caller})
         assert getattr(strategy, getter)() == val
 
-        getattr(strategy, setter)(prev_val, {"from": caller})
+        getattr(strategy, setter)(prev_val, {"from": gov})
         assert getattr(strategy, getter)() == prev_val
     else:
         with brownie.reverts(authority_error):
