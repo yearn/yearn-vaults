@@ -111,7 +111,50 @@ These are the standard deposit limits per stage. They can be adjusted on a case 
 
 
 ## Revoking a strategy with normal migration
-TBD
+Let's say we found a problem in one of the strategies and we want to return all funds. There are two ways of doing it.
+
+The scripts below use the HEGIC vault as an example.
+
+### From the vault
+```
+# Grab the gov account
+gov = accounts.at(vault.governance(), force=True)
+
+# The cream strategy is the first in the withdrawal queue 
+s1 = Contract(vault.withdrawalQueue(0))
+
+# Revoke msg should be sent from gov or guardian
+vault.revokeStrategy(s1, {"from": gov}) 
+```
+
+After running the command you will notice:
+```vault.strategies(s1).dict()['debtRatio'] == 0```
+
+Last step is running a harvest to return funds to vault.
+```
+s1.harvest({"from": gov})
+>>> hegic.balanceOf(s1)
+0
+>>> hegic.balanceOf(vault)/1e18
+291731.2666932462
+```
+
+### From the strategy
+From the strategy itself we can turn on emergency mode.
+To do it we need to run:
+
+```
+# Grab the strategist account
+strategist = accounts.at(s1.strategist(), force=True)
+
+# Turn on the emergency exit
+s1.setEmergencyExit({'from': strategist})
+
+# Harvest to move funds to the vault
+s1.harvest({'from': strategist})
+```
+
+We should also see the strategy's `debtRatio` going to zero and funds returning to the vault.
 
 ## Emergency Procedures
 TBD
