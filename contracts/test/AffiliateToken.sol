@@ -8,6 +8,8 @@ import {VaultAPI, BaseWrapper} from "../BaseWrapper.sol";
 contract AffiliateToken is ERC20, BaseWrapper {
     address public affiliate;
 
+    address public pendingAffiliate;
+
     modifier onlyAffiliate() {
         require(msg.sender == affiliate);
         _;
@@ -20,6 +22,15 @@ contract AffiliateToken is ERC20, BaseWrapper {
     ) public BaseWrapper(_token) ERC20(name, symbol) {
         affiliate = msg.sender;
         _setupDecimals(uint8(token.decimals()));
+    }
+
+    function setAffiliate(address _affiliate) external onlyAffiliate {
+        pendingAffiliate = _affiliate;
+    }
+
+    function acceptAffiliate() external {
+        require(msg.sender == pendingAffiliate);
+        affiliate = msg.sender;
     }
 
     function setRegistry(address _registry) external onlyAffiliate {

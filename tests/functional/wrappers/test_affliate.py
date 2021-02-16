@@ -22,6 +22,28 @@ def test_config(gov, token, vault, registry, affiliate_token):
     assert affiliate_token.allVaults() == [vault]
 
 
+def test_setAffiliate(affiliate, affiliate_token, rando):
+    new_affiliate = rando
+    # No one can set affiliate but affiliate
+    with brownie.reverts():
+        affiliate_token.setAffiliate(new_affiliate, {"from": new_affiliate})
+    # Affiliate doesn't change until it's accepted
+    affiliate_token.setAffiliate(new_affiliate, {"from": affiliate})
+    assert affiliate_token.affiliate() == affiliate
+    # Only new affiliate can accept a change of affiliate
+    with brownie.reverts():
+        affiliate_token.acceptAffiliate({"from": affiliate})
+    # Affiliate doesn't change until it's accepted
+    affiliate_token.acceptAffiliate({"from": new_affiliate})
+    assert affiliate_token.affiliate() == new_affiliate
+    # No one can set affiliate but affiliate
+    with brownie.reverts():
+        affiliate_token.setAffiliate(new_affiliate, {"from": affiliate})
+    # Only new affiliate can accept a change of affiliate
+    with brownie.reverts():
+        affiliate_token.acceptAffiliate({"from": affiliate})
+
+
 def test_setRegistry(rando, affiliate, affiliate_token):
     with brownie.reverts():
         affiliate_token.setRegistry(rando, {"from": rando})
