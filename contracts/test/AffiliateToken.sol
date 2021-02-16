@@ -6,10 +6,10 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {VaultAPI, BaseWrapper} from "../BaseWrapper.sol";
 
 contract AffiliateToken is ERC20, BaseWrapper {
-    address public affliate;
+    address public affiliate;
 
-    modifier onlyAffliate() {
-        require(msg.sender == affliate);
+    modifier onlyAffiliate() {
+        require(msg.sender == affiliate);
         _;
     }
 
@@ -52,7 +52,7 @@ contract AffiliateToken is ERC20, BaseWrapper {
         return _withdraw(address(this), msg.sender, _shareValue(shares), true); // `true` = withdraw from `best`
     }
 
-    function migrate() external onlyAffliate returns (uint256) {
+    function migrate() external onlyAffiliate returns (uint256) {
         return _migrate(address(this));
     }
 }
