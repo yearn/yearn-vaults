@@ -143,8 +143,14 @@ event UpdateDepositLimit:
 event UpdatePerformanceFee:
     performanceFee: uint256 # New active performance fee
 
+event UpdateDefaultPerformanceFee:
+    performanceFee: uint256 # New active performance fee
+
 
 event UpdateManagementFee:
+    managementFee: uint256 # New active management fee
+
+event UpdateDefaultManagementFee:
     managementFee: uint256 # New active management fee
 
 
@@ -225,9 +231,11 @@ lockedProfit: public(uint256) # how much profit is locked and cant be withdrawn
 lockedProfitDegration: public(uint256) # rate per block of degration. DEGREDATION_COEFFICIENT is 100% per block
 rewards: public(address)  # Rewards contract where Governance fees are sent to
 # Governance Fee for management of Vault (given to `rewards`)
-managementFee: public(uint256)
-# Governance Fee for performance of Vault (given to `rewards`)
-performanceFee: public(uint256)
+defaultManagementFee: public(uint256)
+managementFee: public(HashMap[address, uint256])
+# Governance Fee for performance of Strategy (given to `rewards`)
+defaultPerformanceFee: public(uint256)
+performanceFee: public(HashMap[address, uint256])
 MAX_BPS: constant(uint256) = 10_000  # 100%, or 10k basis points
 SECS_PER_YEAR: constant(uint256) = 31_557_600  # 365.25 days
 # `nonces` track `permit` approvals with signature.
@@ -286,9 +294,9 @@ def initialize(
     log UpdateRewards(rewards)
     self.guardian = guardian
     log UpdateGuardian(guardian)
-    self.performanceFee = 1000  # 10% of yield (per Strategy)
+    self.defaultPerformanceFee = 1000  # 10% of yield (per Strategy)
     log UpdatePerformanceFee(convert(1000, uint256))
-    self.managementFee = 200  # 2% per year
+    self.defaultManagementFee = 200  # 2% per year
     log UpdateManagementFee(convert(200, uint256))
     self.lastReport = block.timestamp
     self.activation = block.timestamp
@@ -461,7 +469,7 @@ def setDepositLimit(limit: uint256):
 
 
 @external
-def setPerformanceFee(fee: uint256):
+def setPerformanceFee(strategy: address, fee: uint256):
     """
     @notice
         Used to change the value of `performanceFee`.
@@ -473,12 +481,28 @@ def setPerformanceFee(fee: uint256):
     """
     assert msg.sender == self.governance
     assert fee <= MAX_BPS
-    self.performanceFee = fee
+    self.performanceFee[strategy] = fee
     log UpdatePerformanceFee(fee)
+
+@external
+def setDefaultPerformanceFee(strategy: address, fee: uint256):
+    """
+    @notice
+        Used to change the value of `performanceFee`.
+
+        Should set this value below the maximum strategist performance fee.
+
+        This may only be called by governance.
+    @param fee The new performance fee to use.
+    """
+    assert msg.sender == self.governance
+    assert fee <= MAX_BPS
+    self.defaultPerformanceFee = fee
+    log UpdateDefaultPerformanceFee(fee)
 
 
 @external
-def setManagementFee(fee: uint256):
+def setManagementFee(strategy: address, fee: uint256):
     """
     @notice
         Used to change the value of `managementFee`.
@@ -488,8 +512,22 @@ def setManagementFee(fee: uint256):
     """
     assert msg.sender == self.governance
     assert fee <= MAX_BPS
-    self.managementFee = fee
+    self.managementFee[strategy] = fee
     log UpdateManagementFee(fee)
+
+@external
+def setDefaultManagementFee(strategy: address, fee: uint256):
+    """
+    @notice
+        Used to change the value of `managementFee`.
+
+        This may only be called by governance.
+    @param fee The new management fee to use.
+    """
+    assert msg.sender == self.governance
+    assert fee <= MAX_BPS
+    self.defaultManagementFee = fee
+    log UpdateDefaultManagementFee(fee)
 
 
 @external
@@ -1082,6 +1120,7 @@ def addStrategy(
     minDebtPerHarvest: uint256,
     maxDebtPerHarvest: uint256,
     performanceFee: uint256,
+    disableFees: bool = False
 ):
     """
     @notice
@@ -1117,11 +1156,22 @@ def addStrategy(
     # Check strategy parameters
     assert self.debtRatio + debtRatio <= MAX_BPS
     assert minDebtPerHarvest <= maxDebtPerHarvest
-    assert performanceFee <= MAX_BPS - self.performanceFee
+    assert performanceFee <= MAX_BPS - self.defaultPerformanceFee
+    
+    perf_fee: uint256 = performanceFee
+
+    # Set vault fees to default if not disabled
+    if disableFees:
+        self.performanceFee[strategy] = 0
+        self.managementFee[strategy] = 0
+        perf_fee = 0
+    else:
+        self.performanceFee[strategy] = self.defaultPerformanceFee
+        self.managementFee[strategy] = self.defaultManagementFee
 
     # Add strategy to approved strategies
     self.strategies[strategy] = StrategyParams({
-        performanceFee: performanceFee,
+        performanceFee: perf_fee,
         activation: block.timestamp,
         debtRatio: debtRatio,
         minDebtPerHarvest: minDebtPerHarvest,
@@ -1222,7 +1272,7 @@ def updateStrategyPerformanceFee(
     @param performanceFee The new fee the strategist will receive.
     """
     assert msg.sender == self.governance
-    assert performanceFee <= MAX_BPS - self.performanceFee
+    assert performanceFee <= MAX_BPS - self.performanceFee[strategy]
     assert self.strategies[strategy].activation > 0
     self.strategies[strategy].performanceFee = performanceFee
     log StrategyUpdatePerformanceFee(strategy, performanceFee)
@@ -1277,6 +1327,10 @@ def migrateStrategy(oldVersion: address, newVersion: address):
         totalGain: 0,
         totalLoss: 0,
     })
+
+    # Set fees
+    self.performanceFee[newVersion] = self.performanceFee[oldVersion]
+    self.managementFee[newVersion] = self.managementFee[oldVersion]
 
     Strategy(oldVersion).migrate(newVersion)
     log StrategyMigrated(oldVersion, newVersion)
@@ -1510,40 +1564,41 @@ def _assessFees(strategy: address, gain: uint256):
     # Issue new shares to cover fees
     # NOTE: In effect, this reduces overall share price by the combined fee
     # NOTE: may throw if Vault.totalAssets() > 1e64, or not called for more than a year
-    governance_fee: uint256 = (
-        (self.totalDebt * (block.timestamp - self.lastReport) * self.managementFee)
-        / MAX_BPS
-        / SECS_PER_YEAR
-    )
-    strategist_fee: uint256 = 0  # Only applies in certain conditions
+    if self.strategies[strategy].performanceFee > 0 or self.performanceFee[strategy] > 0 or self.managementFee[strategy] > 0:
+        governance_fee: uint256 = (
+            (self.totalDebt * (block.timestamp - self.lastReport) * self.managementFee[strategy])
+            / MAX_BPS
+            / SECS_PER_YEAR
+        )
+        strategist_fee: uint256 = 0  # Only applies in certain conditions
 
-    # NOTE: Applies if Strategy is not shutting down, or it is but all debt paid off
-    # NOTE: No fee is taken when a Strategy is unwinding it's position, until all debt is paid
-    if gain > 0:
-        # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
-        strategist_fee = (
-            gain * self.strategies[strategy].performanceFee
-        ) / MAX_BPS
-        # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
-        governance_fee += gain * self.performanceFee / MAX_BPS
+        # NOTE: Applies if Strategy is not shutting down, or it is but all debt paid off
+        # NOTE: No fee is taken when a Strategy is unwinding it's position, until all debt is paid
+        if gain > 0:
+            # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
+            strategist_fee = (
+                gain * self.strategies[strategy].performanceFee
+            ) / MAX_BPS
+            # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
+            governance_fee += gain * self.performanceFee[strategy] / MAX_BPS
 
-    # NOTE: This must be called prior to taking new collateral,
-    #       or the calculation will be wrong!
-    # NOTE: This must be done at the same time, to ensure the relative
-    #       ratio of governance_fee : strategist_fee is kept intact
-    total_fee: uint256 = governance_fee + strategist_fee
-    if total_fee > 0:  # NOTE: If mgmt fee is 0% and no gains were realized, skip
-        reward: uint256 = self._issueSharesForAmount(self, total_fee)
+        # NOTE: This must be called prior to taking new collateral,
+        #       or the calculation will be wrong!
+        # NOTE: This must be done at the same time, to ensure the relative
+        #       ratio of governance_fee : strategist_fee is kept intact
+        total_fee: uint256 = governance_fee + strategist_fee
+        if total_fee > 0:  # NOTE: If mgmt fee is 0% and no gains were realized, skip
+            reward: uint256 = self._issueSharesForAmount(self, total_fee)
 
-        # Send the rewards out as new shares in this Vault
-        if strategist_fee > 0:  # NOTE: Guard against DIV/0 fault
-            # NOTE: Unlikely to throw unless sqrt(reward) >>> 1e39
-            strategist_reward: uint256 = (strategist_fee * reward) / total_fee
-            self._transfer(self, strategy, strategist_reward)
-            # NOTE: Strategy distributes rewards at the end of harvest()
-        # NOTE: Governance earns any dust leftover from flooring math above
-        if self.balanceOf[self] > 0:
-            self._transfer(self, self.rewards, self.balanceOf[self])
+            # Send the rewards out as new shares in this Vault
+            if strategist_fee > 0:  # NOTE: Guard against DIV/0 fault
+                # NOTE: Unlikely to throw unless sqrt(reward) >>> 1e39
+                strategist_reward: uint256 = (strategist_fee * reward) / total_fee
+                self._transfer(self, strategy, strategist_reward)
+                # NOTE: Strategy distributes rewards at the end of harvest()
+            # NOTE: Governance earns any dust leftover from flooring math above
+            if self.balanceOf[self] > 0:
+                self._transfer(self, self.rewards, self.balanceOf[self])
 
 
 @external
