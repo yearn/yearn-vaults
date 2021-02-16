@@ -22,6 +22,10 @@ contract AffiliateToken is ERC20, BaseWrapper {
         _setupDecimals(uint8(token.decimals()));
     }
 
+    function setRegistry(address _registry) external onlyAffiliate {
+        _setRegistry(_registry);
+    }
+
     function _shareValue(uint256 numShares) internal returns (uint256) {
         uint256 totalShares = totalSupply();
 

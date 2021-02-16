@@ -22,6 +22,14 @@ def test_config(gov, token, vault, registry, affiliate_token):
     assert affiliate_token.allVaults() == [vault]
 
 
+def test_setRegistry(rando, affiliate, affiliate_token):
+    with brownie.reverts():
+        affiliate_token.setRegistry(rando, {"from": rando})
+
+    # Only affiliate can call this method
+    affiliate_token.setRegistry(rando, {"from": affiliate})
+
+
 def test_deposit(token, registry, vault, affiliate_token, gov, rando):
     registry.newRelease(vault, {"from": gov})
     token.transfer(rando, 10000, {"from": gov})

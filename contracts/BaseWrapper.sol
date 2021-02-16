@@ -15,11 +15,17 @@ abstract contract BaseWrapper {
     // Reduce number of external calls (SLOADs stay the same)
     VaultAPI[] private _cachedVaults;
 
-    // v2.registry.ychad.eth
-    RegistryAPI constant registry = RegistryAPI(0xE15461B18EE31b7379019Dc523231C57d1Cbc18c);
+    RegistryAPI public registry;
 
     constructor(address _token) public {
         token = ERC20(_token);
+        // v2.registry.ychad.eth
+        registry = RegistryAPI(0xE15461B18EE31b7379019Dc523231C57d1Cbc18c);
+    }
+
+    function _setRegistry(address _registry) internal {
+        // In case you want to override the registry instead of re-deploying
+        registry = RegistryAPI(_registry);
     }
 
     function bestVault() public virtual view returns (VaultAPI) {
