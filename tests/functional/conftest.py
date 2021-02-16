@@ -77,7 +77,7 @@ def strategy(
         # strategy proxy address is returned in the event ProxyCreated
         strategyAddress = tx.events["ProxyCreated"]["proxy"]
         # redefine strategy as the new proxy deployed
-        strategy = TestStrategy.at(strategyAddress)
+        strategy = TestStrategy.at(strategyAddress, owner=strategist)
 
     strategy.setKeeper(keeper, {"from": strategist})
     vault.addStrategy(
