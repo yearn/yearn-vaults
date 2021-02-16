@@ -18,6 +18,7 @@ contract AffiliateToken is ERC20, BaseWrapper {
         string memory name,
         string memory symbol
     ) public BaseWrapper(_token) ERC20(name, symbol) {
+        affiliate = msg.sender;
         _setupDecimals(uint8(token.decimals()));
     }
 
