@@ -99,3 +99,39 @@ def test_migrate(token, registry, create_vault, sign_vault_permit, ytoken, gov):
     ytoken.migrate({"from": rando.address})
     assert vault1.balanceOf(rando.address) == 0
     assert vault2.balanceOf(rando.address) == 10000
+
+
+def test_yweth_wrapper(gov, rando, registry, create_vault, weth, yWETH):
+    vault1 = create_vault(version="1.0.0", token=weth)
+    registry.newRelease(vault1, {"from": gov})
+    assert registry.latestVault(weth) == vault1
+    yweth = yWETH.deploy(weth, {"from": gov})
+    assert yweth.token() == weth
+
+    # Deposits from ETH work just fine
+    amount = rando.balance()
+    yweth.depositETH({"from": rando, "value": amount})
+    assert vault1.balanceOf(rando) == amount
+
+    vault2 = create_vault(version="2.0.0", token=weth)
+    registry.newRelease(vault2, {"from": gov})
+    assert registry.latestVault(weth) == vault2
+
+    # Migrations work just fine
+    assert vault1.balanceOf(rando) == amount
+    assert vault2.balanceOf(rando) == 0
+    vault1.approve(yweth, amount, {"from": rando})
+    yweth.migrate({"from": rando})
+    assert vault1.balanceOf(rando) == 0
+    assert vault2.balanceOf(rando) == amount
+
+    # Withdrawing to ETH works just fine
+    vault2.approve(yweth, amount, {"from": rando})
+    yweth.withdrawETH(amount, {"from": rando})
+    assert vault1.balanceOf(rando) == 0
+    assert vault2.balanceOf(rando) == 0
+    assert rando.balance() == amount
+
+    # Also check straight ether transfers work
+    rando.transfer(yweth, amount)
+    assert vault2.balanceOf(rando) == amount

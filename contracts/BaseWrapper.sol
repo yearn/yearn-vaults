@@ -78,7 +78,9 @@ abstract contract BaseWrapper {
     ) internal returns (uint256) {
         VaultAPI best = bestVault();
 
-        if (pullFunds) token.transferFrom(depositor, address(this), amount);
+        if (pullFunds) {
+            token.transferFrom(depositor, address(this), amount);
+        }
 
         if (token.allowance(address(this), address(best)) < uint256(-1)) {
             token.approve(address(best), uint256(-1)); // Vaults are trusted

@@ -109,3 +109,37 @@ contract yToken is IERC20, BaseWrapper {
         return _migrate(msg.sender);
     }
 }
+
+interface IWETH {
+    function deposit() external payable;
+
+    function withdraw(uint256 wad) external;
+}
+
+contract yWETH is yToken {
+    constructor(address _weth) public yToken(_weth) {}
+
+    function depositETH() public payable returns (uint256) {
+        uint256 amount = msg.value;
+        // NOTE: `BaseWrapper.token` is WETH
+        IWETH(address(token)).deposit{value: amount}();
+        // NOTE: Deposit handles approvals
+        // NOTE: Need to use different method to deposit than `yToken`
+        return _deposit(address(this), msg.sender, amount, false); // `false` = pull from `this`
+    }
+
+    function withdrawETH(uint256 amount) external returns (uint256 withdrawn) {
+        // NOTE: Need to use different method to withdraw than `yToken`
+        withdrawn = _withdraw(msg.sender, address(this), amount, true); // `true` = withdraw from `best`
+        // NOTE: `BaseWrapper.token` is WETH
+        IWETH(address(token)).withdraw(withdrawn);
+        // NOTE: Any unintentionally
+        msg.sender.transfer(address(this).balance);
+    }
+
+    fallback() external payable {
+        if (msg.sender != address(token)) {
+            depositETH();
+        } // else: WETH is sending us back ETH, so don't do anything (to avoid recursion)
+    }
+}
