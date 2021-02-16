@@ -57,20 +57,41 @@ interface VaultAPI is IERC20 {
 
     function strategies(address _strategy) external view returns (StrategyParams memory);
 
+    function activation() external view returns (uint);
+
     function pricePerShare() external view returns (uint256);
 
     function totalAssets() external view returns (uint256);
 
     function depositLimit() external view returns (uint256);
 
+    function withdrawalQueue(uint position) external view returns (address);
+
     function maxAvailableShares() external view returns (uint256);
 
+    function availableDepositLimit() external view returns (uint256);
+
+    function emergencyShutdown() external view returns (bool);
+
+    function debtRatio() external view returns (uint);
+
+    function totalDebt() external view returns (uint);
+
+    function lastReport() external view returns (uint);
+
+    function rewards() external view returns (address);
+
+    function managementFee() external view returns (uint);
+    
+    function performanceFee() external view returns (uint);
     /**
      * View how much the Vault would increase this Strategy's borrow limit,
      * based on its present performance (since its last report). Can be used to
      * determine expectedReturn in your Strategy.
      */
     function creditAvailable() external view returns (uint256);
+
+    function creditAvailable(address strategy) external view returns (uint256);
 
     /**
      * View how much the Vault would like to pull back from the Strategy,
@@ -79,12 +100,16 @@ interface VaultAPI is IERC20 {
      */
     function debtOutstanding() external view returns (uint256);
 
+    function debtOutstanding(address strategy) external view returns (uint256);
+
     /**
      * View how much the Vault expect this Strategy to return at the current
      * block, based on its present performance (since its last report). Can be
      * used to determine expectedReturn in your Strategy.
      */
     function expectedReturn() external view returns (uint256);
+
+    function expectedReturn(address strategy) external view returns (uint256);
 
     /**
      * This is the main contact point where the Strategy interacts with the
