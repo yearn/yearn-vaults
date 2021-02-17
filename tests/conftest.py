@@ -7,7 +7,7 @@ import yaml
 from eth_account import Account
 from eth_account.messages import encode_structured_data
 
-from brownie import compile_source, Vault
+from brownie import compile_source, Token, Vault
 
 PACKAGE_VERSION = yaml.safe_load(
     (Path(__file__).parents[1] / "ethpm-config.yaml").read_text()
@@ -82,6 +82,58 @@ def patch_vault_version():
             return compile_source(source).Vyper
 
     return patch_vault_version
+
+
+@pytest.fixture
+def sign_token_permit():
+    def sign_token_permit(
+        token: Token,
+        owner: Account,  # NOTE: Must be a eth_key account, not Brownie
+        spender: str,
+        allowance: int = 2 ** 256 - 1,  # Allowance to set with `permit`
+        deadline: int = 0,  # 0 means no time limit
+        override_nonce: int = None,
+    ):
+        chain_id = 1  # ganache bug https://github.com/trufflesuite/ganache/issues/1643
+        if override_nonce:
+            nonce = override_nonce
+        else:
+            nonce = token.nonces(owner.address)
+        data = {
+            "types": {
+                "EIP712Domain": [
+                    {"name": "name", "type": "string"},
+                    {"name": "version", "type": "string"},
+                    {"name": "chainId", "type": "uint256"},
+                    {"name": "verifyingContract", "type": "address"},
+                ],
+                "Permit": [
+                    {"name": "owner", "type": "address"},
+                    {"name": "spender", "type": "address"},
+                    {"name": "value", "type": "uint256"},
+                    {"name": "nonce", "type": "uint256"},
+                    {"name": "deadline", "type": "uint256"},
+                ],
+            },
+            "domain": {
+                "name": token.name(),
+                "version": "1",
+                "chainId": chain_id,
+                "verifyingContract": str(token),
+            },
+            "primaryType": "Permit",
+            "message": {
+                "owner": owner.address,
+                "spender": spender,
+                "value": allowance,
+                "nonce": nonce,
+                "deadline": deadline,
+            },
+        }
+        permit = encode_structured_data(data)
+        return owner.sign_message(permit)
+
+    return sign_token_permit
 
 
 @pytest.fixture

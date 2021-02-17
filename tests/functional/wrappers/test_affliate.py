@@ -1,4 +1,9 @@
 import brownie
+import pytest
+
+from eth_account import Account
+
+AMOUNT = 100
 
 
 def test_config(gov, token, vault, registry, affiliate_token):
@@ -109,3 +114,23 @@ def test_withdraw(token, registry, vault, affiliate_token, gov, rando):
     affiliate_token.withdraw(10000, {"from": rando})
     assert affiliate_token.balanceOf(rando) == 0
     assert token.balanceOf(rando) == 10000
+
+
+def test_permit(chain, rando, affiliate_token, sign_token_permit):
+    owner = Account.create()
+    deadline = chain[-1].timestamp + 3600
+    signature = sign_token_permit(
+        affiliate_token, owner, str(rando), allowance=AMOUNT, deadline=deadline
+    )
+    assert affiliate_token.allowance(owner.address, rando) == 0
+    affiliate_token.permit(
+        owner.address,
+        rando,
+        AMOUNT,
+        deadline,
+        signature.v,
+        signature.r,
+        signature.s,
+        {"from": rando},
+    )
+    assert affiliate_token.allowance(owner.address, rando) == AMOUNT
