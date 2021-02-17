@@ -106,7 +106,7 @@ Repo: https://github.com/Grandthrax/Sharer
 - [ ] Set governance to ychad.eth
 - [ ] yearn governance now must accept governance and endorse
     - `strategy.acceptGovernance()` should be run by ychad.eth
-    - `registry.endorseVault(strategy)` Needs ychad.eth governace accepted for this to work
+    - `registry.endorseVault(vault)` Needs ychad.eth governace accepted for this to work
     - **Order is important. Will fail if order is wrong**
 - [ ] Now you are on main yearn page!
 
