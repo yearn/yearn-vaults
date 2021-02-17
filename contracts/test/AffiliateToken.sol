@@ -76,13 +76,21 @@ contract AffiliateToken is ERC20, BaseWrapper {
         }
     }
 
-    function deposit(uint256 amount) external returns (uint256 deposited) {
+    function deposit() external returns (uint256) {
+        return deposit(token.balanceOf(msg.sender));
+    }
+
+    function deposit(uint256 amount) public returns (uint256 deposited) {
         uint256 shares = _sharesForValue(amount); // NOTE: Must be calculated before deposit is handled
         deposited = _deposit(msg.sender, address(this), amount, true); // `true` = pull from `msg.sender`
         _mint(msg.sender, shares);
     }
 
-    function withdraw(uint256 shares) external returns (uint256) {
+    function withdraw() external returns (uint256) {
+        return withdraw(balanceOf(msg.sender));
+    }
+
+    function withdraw(uint256 shares) public returns (uint256) {
         _burn(msg.sender, shares);
         return _withdraw(address(this), msg.sender, _shareValue(shares), true); // `true` = withdraw from `best`
     }
