@@ -14,20 +14,13 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - name: Cache Compiler Installations
-      uses: actions/cache@v2
-      with:
-        path: |
-          ~/.solcx
-          ~/.vvm
-        key: compiler-cache
-
     - name: Cache compiler installations
       uses: actions/cache@v2
       with:
         path: |
           ~/.solcx
           ~/.vvm
+          /home/runner/.vvm/vyper-0.2.8
         key: ${{ runner.os }}-compiler-cache
 
     - name: Setup node.js
@@ -74,20 +67,13 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - name: Cache Compiler Installations
-      uses: actions/cache@v2
-      with:
-        path: |
-          ~/.solcx
-          ~/.vvm
-        key: compiler-cache
-
     - name: Cache compiler installations
       uses: actions/cache@v2
       with:
         path: |
           ~/.solcx
           ~/.vvm
+          /home/runner/.vvm/vyper-0.2.8
         key: ${{ runner.os }}-compiler-cache
 
     - name: Setup node.js
@@ -134,20 +120,13 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - name: Cache Compiler Installations
-      uses: actions/cache@v2
-      with:
-        path: |
-          ~/.solcx
-          ~/.vvm
-        key: compiler-cache
-
     - name: Cache compiler installations
       uses: actions/cache@v2
       with:
         path: |
           ~/.solcx
           ~/.vvm
+          /home/runner/.vvm/vyper-0.2.8
         key: ${{ runner.os }}-compiler-cache
 
     - name: Setup node.js
@@ -194,20 +173,13 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - name: Cache Compiler Installations
-      uses: actions/cache@v2
-      with:
-        path: |
-          ~/.solcx
-          ~/.vvm
-        key: compiler-cache
-
     - name: Cache compiler installations
       uses: actions/cache@v2
       with:
         path: |
           ~/.solcx
           ~/.vvm
+          /home/runner/.vvm/vyper-0.2.8
         key: ${{ runner.os }}-compiler-cache
 
     - name: Setup node.js
