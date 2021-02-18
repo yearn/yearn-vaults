@@ -6,13 +6,16 @@ https://github.com/iearn-finance/chief-multisig-officer
 **IMPORTANT**: you should **NOT** create a new release with a test vault, it will be endorsed as a production
 
 ## Process for a new vault release
+- Check latest version in v2.registry.ychad.eth against the planned new release vault to be sure its an updated version
 - Deploy vault for production with using the new version (this should not be an experimental vault since it will be endorsed with this process)
 - Set governance to ychad.eth
     - `vault.setGovernance(0xfeb4acf3df3cdea7399794d0869ef76a6efaff52)`
 - Multisig needs to accept governance
     - `vault.acceptGovernance()`
-- Governance calls the registry to create a new release on v2.registry.ychad.eth
+- Governance calls the registry to create a new release on v2.registry.ychad.eth 
     - `registry.newRelease(vault)`
+**Note** Last two steps may need to be done in different transactions since it sometimes can fail in practice using multisig from Gnosis.
+
 
 ## Before deploying
 - Coordinate with Core Dev strategist for getting a review in board https://github.com/orgs/iearn-finance/projects/5
