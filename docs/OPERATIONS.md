@@ -1,68 +1,112 @@
 # Deploy a Strategy / Vault for V2
 
-NOTE: This [repo](https://github.com/iearn-finance/chief-multisig-officer) is encouraged to create multiple scripts for governance and dev multisig execution of complex transactions.
+**Note**: This [repo](https://github.com/iearn-finance/chief-multisig-officer) is encouraged to create multiple scripts for governance and dev multisig execution of complex transactions.
 
-**IMPORTANT**: you should **NOT** create a new release with a test vault, it will be endorsed as a production
+**IMPORTANT**: you should **NOT** create a new release with a test vault, it will be endorsed as a production.
 
-## Process for a new vault release
+## Process for new vault release
 
-- Check latest version in v2.registry.ychad.eth against the planned new release vault to be sure its an updated version
-- Deploy vault for production with using the new version (this should not be an experimental vault since it will be endorsed with this process)
-- Set governance to ychad.eth
-  - `vault.setGovernance(0xfeb4acf3df3cdea7399794d0869ef76a6efaff52)`
-- Multisig needs to accept governance
-  - `vault.acceptGovernance()`
-- Governance calls the registry to create a new release on v2.registry.ychad.eth - `registry.newRelease(vault)`
-  **Note** Last two steps may need to be done in different transactions since it sometimes can fail in practice using multisig from Gnosis.
+- Check latest version in `v2.registry.ychad.eth` against the planned new release vault to be sure its an updated version.
+- Deploy vault for production using the new version (this should not be an experimental vault since it will be endorsed with this process).
+- Set governance to `ychad.eth`:
 
-## Before deploying
+  ```python
+  vault.setGovernance(0xfeb4acf3df3cdea7399794d0869ef76a6efaff52)
+  ```
 
-- Coordinate with Core Dev strategist for getting a review in [board](https://github.com/orgs/iearn-finance/projects/5)
-- Peer review completed by:
-  - yearn.rocks / Experimental: at least 2 strategists
-- Check if want token has a deploy vault already (>=v0.3.0) and coordinate to use that first if possible.
+- Let multisig accept governance:
+
+  ```python
+  vault.acceptGovernance()
+  ```
+
+- Let governance create a new release on `v2.registry.ychad.eth`:
+
+  ```python
+  registry.newRelease(vault)
+  ```
+
+**Note**: Last two steps may need to be done in different transactions since it sometimes can fail in practice using multisig from Gnosis.
+
+## Before deployment
+
+- Coordinate with Core Dev strategist for getting a review on [board](https://github.com/orgs/iearn-finance/projects/5).
+- Complete peer review by at least 2 strategists.
+- Check if `want` token has a deployed vault already (>=v0.3.0) and coordinate to use that first if possible.
 - If a new vault is needed, deploy it using the registry:
-  - `registry.newExperimentalVault(want, you, multisig, treasury, "", "")`
-    - args: token, gov, guardian, rewards, name, symbol
-    - multisig (strategists) = '0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7'
-    - gov for testing = '0x846e211e8ba920b353fb717631c015cf04061cc9' (dev.ychad.eth)
-    - treasury = '0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde'
-      (treasury.ychad.eth)
-  - Check new vault has ABI setup on etherscan (until verification with Vyper and proxy is fixed on Etherscan)
-  - Coordinate with a core developer to stablish proper deposit limit for new vault and other settings. See the table below: [Limits per Stage](#Limits per Stage)
-  - Set a deposit limit to the vault
-    `vault.setDepositLimit(50_000 * 1e18)`
-    \$50k USD converted to your want. Example above is 50k DAI
-- Deploy strategy with settings and upload code to Etherscan for verification
+
+  ```python
+  registry.newExperimentalVault(want, you, multisig, treasury, "", "")
+  ```
+
+  - args: token, gov, guardian, rewards, name, symbol
+  - `multisig` (strategists) = '0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7'
+  - gov for testing = '0x846e211e8ba920b353fb717631c015cf04061cc9' (dev.ychad.eth)
+  - `treasury` = '0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde'
+    (treasury.ychad.eth)
+
+- Check new vault has ABI setup on etherscan (until verification with Vyper and proxy is fixed on Etherscan).
+- Coordinate with core developer to set proper deposit limit and other settings for new vault. See the table below: [Limits per Stage](#limits-per-stage).
+- Set a deposit limit to \$50k USD converted to your `want` token. Example below is 50k DAI
+
+  ```python
+  vault.setDepositLimit(50_000 * 1e18)
+  ```
+
+- Deploy strategy and upload code to Etherscan for verification.
 - Tag GitHub review issue with deployed version and add mainnet address(es).
 
-## After deploying strategy
+## After deployment
 
-- Add strategy to vault
-  - `vault.addStrategy(strategy, debt_ratio, rate_limit, 1000)`
-  - debt_ratio should be 9800 if first strategy on vault
-  - rate_limit is 0 unless there is reason for it to be different
-- Set keeper
-  - `strategy.setKeeper(keep3r_manager)`
-  - keep3r_manager = '0x13dAda6157Fee283723c0254F43FF1FdADe4EEd6'
-- Set rewards
-  - `strategy.setRewards(address)`
-    Read below if you want to use the sharer contract
-- Set management fee to 0
-  - `vault.setManagementFee(0)`
+- Add strategy to vault:
+
+  ```python
+  vault.addStrategy(strategy, debt_ratio, rate_limit, 1000)
+  ```
+
+  - `debt_ratio` should be `9800` if first strategy on vault.
+  - `rate_limit` is `0` unless there is reason for it to be different.
+
+- Set keeper:
+
+  ```python
+  strategy.setKeeper(keep3r_manager)
+  ```
+
+  - `keep3r_manager` = `0x13dAda6157Fee283723c0254F43FF1FdADe4EEd6`
+
+- Set rewards:
+
+  ```python
+  strategy.setRewards(address)
+  ```
+
+  - Read [below](<#Sharer-contract-(optional)>) if you want to use the sharer contract.
+
+- Set management fee to 0:
+
+  ```python
+  vault.setManagementFee(0)
+  ```
+
 - Set governance
-  - `vault.setGovernance(multisig)`
-  - multisig = '0x846e211e8ba920b353fb717631c015cf04061cc9'
-    (dev.ychad.eth)
-  - Governance needs to be accepted before it is in place. After you set this you will still have control over the strategy.
-- Run tests against "live" vault and strategy in mainnet-fork
 
-  - Harvest
-  - Profitable harvest
-  - Revoke strategy and check that funds return to the vault
-  - Increase/decrease debt + harvest, and check that the strategy is working well
-  - Migration
-  - Check that tokens in the strategy cannot be sweeped by dust collection
+  ```python
+  vault.setGovernance(multisig)
+  ```
+
+  - `multisig` = `0x846e211e8ba920b353fb717631c015cf04061cc9`
+    (`dev.ychad.eth`).
+  - Governance needs to be accepted before it is in place. After you set this you will still have control over the strategy.
+
+- Run tests against "live" vault and strategy in mainnet-fork:
+
+  - Harvest.
+  - Profitable harvest.
+  - Revoke strategy and check that funds return to the vault.
+  - Increase/decrease debt + harvest, and check that the strategy is working well.
+  - Migration.
+  - Check that tokens in the strategy cannot be sweeped by dust collection.
 
   Example: Hegic strat [repo](https://github.com/Macarse/yhegic/tree/master/tests/development).
 
@@ -71,11 +115,11 @@ NOTE: This [repo](https://github.com/iearn-finance/chief-multisig-officer) is en
 
 ### Sharer contract (optional)
 
-Sharer is a contract for distributing strategist rewards. For boarding school graduates suggested is 34% to strategist_ms and 66% to strategist – [repo](https://github.com/Grandthrax/Sharer).
+"Sharer" is a contract for distributing/splitting strategist rewards. For boarding school graduates suggested split is 34% to strategist multisig and 66% to strategist – [repo](https://github.com/Grandthrax/Sharer).
 
-- Setup rewards for your strategy by calling `sharer.addContributors`
-- If you forked someone else's strategy then cut them in
-- Be sure to reward people who helped you
+- Setup rewards for your strategy by calling `sharer.addContributors`.
+- Include devs if you forked someone else's strategy.
+- Be sure to reward people who helped you.
 
 ### Example Script
 
@@ -85,36 +129,54 @@ Sharer is a contract for distributing strategist rewards. For boarding school gr
 
 ## The Manual Phase
 
-- [ ] Deposit some "want" tokens into the vault
-- [ ] Do first harvest and make sure it worked correctly
-  - `strategy.harvest()`
-- [ ] Publish on yearn.rocks
-  - Governance dev multisig **_must_** call `vault.acceptGovernance()` first
-  - Talk to Facu
-- [ ] Monitor harvest and tend triggers for first few days. Call harvest/tend manually
+- [ ] Deposit some `want` tokens into the vault.
+- [ ] Do first `harvest` and make sure it worked correctly.
+
+  ```python
+  strategy.harvest()
+  ```
+
+- [ ] Publish on yearn.rocks:
+  - Governance dev multisig **_must_** call `vault.acceptGovernance()` first.
+  - Talk to Facu.
+- [ ] Monitor `harvest` and `tend` triggers for first few days. Call `harvest`/`tend` manually.
 
 ## Setting up Keep3r
 
-- [ ] Adjust trigger variables until they are correct
+- [ ] Adjust trigger variables until they are correct:
   - `strategy.setProfitFactor()`
   - `strategy.setDebtThreshold()`
   - `strategy.setMaxReportDelay()`
-- [ ] Add strategy to the keep3r job
+- [ ] Add strategy to the keep3r job:
   - `keep3r_manager.addStrategy(strategy, 1_500_000, 1_500_000)`
-  - Tell Carlos harvest and tend gas usage. For instance 1.5m.
+  - Tell Poolpi Tako `harvest` and `tend` gas usage. For instance 1.5m.
 
-## Scaling Up / Moving to Endorse
+## Scaling up / Moving to Endorse
 
 - [ ] In additon to the 2 strategists, a Core Developer has to review the strategy before going into production.
-- [ ] Increase limits
-- [ ] Add to experimental tab on yearn.finance
-- [ ] Set management fee to production level
-  - `vault.setManagementFee(200)`
-- [ ] Set governance to ychad.eth
-- [ ] yearn governance now must accept governance and endorse
-  - `strategy.acceptGovernance()` should be run by ychad.eth
-  - `registry.endorseVault(vault)` Needs ychad.eth governace accepted for this to work
-  - **Order is important. Will fail if order is wrong**
+- [ ] Increase limits.
+- [ ] Add to experimental tab on yearn.finance.
+- [ ] Set management fee to production level:
+
+  ```python
+  vault.setManagementFee(200)
+  ```
+
+- [ ] Set governance to `ychad.eth`:
+
+  ```python
+  vault.setGovernance(0xfeb4acf3df3cdea7399794d0869ef76a6efaff52)
+  ```
+
+- [ ] yearn governance now must accept governance and endorse the vault:
+
+  ```python
+  strategy.acceptGovernance() # from ychad.eth
+  registry.endorseVault(vault) # from ychad.eth
+  ```
+
+  **Note**: Order is important. Will fail if order is wrong.
+
 - [ ] Now you are on main yearn page!
 
 ## Limits per Stage
@@ -146,9 +208,12 @@ vault.revokeStrategy(s1, {"from": gov})
 ```
 
 After running the command you will notice:
-`vault.strategies(s1).dict()['debtRatio'] == 0`
 
-Last step is running a harvest to return funds to vault.
+```python
+vault.strategies(s1).dict()['debtRatio'] == 0
+```
+
+Last step is running a `harvest` to return funds to vault:
 
 ```python
 s1.harvest({"from": gov})
@@ -174,11 +239,11 @@ s1.setEmergencyExit({'from': strategist})
 s1.harvest({'from': strategist})
 ```
 
-We should also see the strategy's `debtRatio` going to zero and funds returning to the vault.
+We should also see the strategy's `debtRatio` going to `0` and funds returning to the vault.
 
 ## Emergency Procedures
 
-We can also shutdown the vault to return assets as soon as possible. To do that we will need a guardian or governance account.
+We can also shutdown the vault to return assets as soon as possible. To do that we will need a guardian or governance account:
 
 ```python
 # Sound the alarm
@@ -194,14 +259,14 @@ s3.harvest({'from': gov})
 True
 ```
 
-You will notice that this procedure doesn't change the debt ratio.
+You will notice that this procedure doesn't change the debt ratio:
 
 ```python
 >>> vault.strategies(s1).dict()['debtRatio']
 1600
 ```
 
-It drops the credit to 0.
+It drops the credit to `0`:
 
 ```python
 >>> vault.creditAvailable(s1)
