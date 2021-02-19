@@ -13,22 +13,19 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-
+  
     - name: Cache compiler installations
       uses: actions/cache@v2
       with:
         path: |
           ~/.solcx
-          ~/.vvm
-          /home/runner/.vvm/vyper-*
+          ~/.vvm/vyper-*
         key: ${{ runner.os }}-compiler-cache
 
     - name: Setup node.js
       uses: actions/setup-node@v1
       with:
         node-version: '12.x'
-    - name: pwd
-      run: pwd
 
     - name: Install ganache
       run: npm install -g ganache-cli@6.12.1
@@ -74,8 +71,7 @@ jobs:
       with:
         path: |
           ~/.solcx
-          ~/.vvm
-          /home/runner/.vvm/vyper-*
+          ~/.vvm/vyper-*
         key: ${{ runner.os }}-compiler-cache
 
     - name: Setup node.js
@@ -127,8 +123,7 @@ jobs:
       with:
         path: |
           ~/.solcx
-          ~/.vvm
-          /home/runner/.vvm/vyper-*
+          ~/.vvm/vyper-*
         key: ${{ runner.os }}-compiler-cache
 
     - name: Setup node.js
@@ -180,8 +175,7 @@ jobs:
       with:
         path: |
           ~/.solcx
-          ~/.vvm
-          /home/runner/.vvm/vyper-*
+          ~/.vvm/vyper-*
         key: ${{ runner.os }}-compiler-cache
 
     - name: Setup node.js
