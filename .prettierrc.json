@@ -12,6 +12,12 @@
                 "bracketSpacing": false,
                 "explicitTypes": "always"
             }
+        },
+        {
+            "files": "*.md",
+            "options": {
+                "tabWidth": 2
+            }
         }
     ]
 }
