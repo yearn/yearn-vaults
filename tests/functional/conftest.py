@@ -58,24 +58,15 @@ def keeper(accounts):
     yield accounts[5]
 
 
-@pytest.fixture
-def proxyFactory(gov, ProxyFactoryInitializable):
-    yield gov.deploy(ProxyFactoryInitializable)
-
-
 @pytest.fixture(params=["NoProxy", "Proxy"])
-def strategy(
-    gov, strategist, keeper, rewards, token, vault, TestStrategy, proxyFactory, request
-):
+def strategy(gov, strategist, keeper, vault, TestStrategy, request):
     strategy = strategist.deploy(TestStrategy, vault)
 
     if request.param == "Proxy":
-        # prepare call and data to initialize the proxy
-        data = strategy.initialize.encode_input(vault, strategist, rewards, keeper)
         # deploy the proxy using as logic the original strategy
-        tx = proxyFactory.deployMinimal(strategy, data, {"from": strategist})
-        # strategy proxy address is returned in the event ProxyCreated
-        strategyAddress = tx.events["ProxyCreated"]["proxy"]
+        tx = strategy.clone(vault, {"from": strategist})
+        # strategy proxy address is returned in the event `Cloned`
+        strategyAddress = tx.events["Cloned"]["clone"]
         # redefine strategy as the new proxy deployed
         strategy = TestStrategy.at(strategyAddress, owner=strategist)
 
