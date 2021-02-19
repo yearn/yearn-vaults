@@ -4,3 +4,4 @@ __pycache__
 build/
 reports/
 node_modules/
+.test_durations

@@ -8,60 +8,11 @@ on:
   pull_request:
 
 jobs:
-  functional-registry:
+  functional:
     runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v1
-  
-    - name: Cache compiler installations
-      uses: actions/cache@v2
-      with:
-        path: |
-          ~/.solcx
-          ~/.vvm/vyper-*
-        key: ${{ runner.os }}-compiler-cache
-
-    - name: Setup node.js
-      uses: actions/setup-node@v1
-      with:
-        node-version: '12.x'
-
-    - name: Install ganache
-      run: npm install -g ganache-cli@6.12.1
-
-    - name: Set up python 3.8
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.8
-
-    - name: Set pip cache directory path
-      id: pip-cache-dir-path
-      run: |
-        echo "::set-output name=dir::$(pip cache dir)"
-
-    - name: Restore pip cache
-      uses: actions/cache@v2
-      id: pip-cache
-      with:
-        path: |
-          ${{ steps.pip-cache-dir-path.outputs.dir }}
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements-dev.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-${{ hashFiles('**/requirements-dev.txt') }}
-          ${{ runner.os }}-pip-
-
-    - name: Install python dependencies
-      run: pip install -r requirements-dev.txt
-
-    - name: Compile Code
-      run: brownie compile --size
-
-    - name: Run Tests
-      run: brownie test tests/functional/registry --gas --coverage --revert-tb
-
-  functional-strategy:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+         group: [1, 2, 3]
 
     steps:
     - uses: actions/checkout@v1
@@ -103,66 +54,45 @@ jobs:
           ${{ runner.os }}-pip-${{ hashFiles('**/requirements-dev.txt') }}
           ${{ runner.os }}-pip-
 
-    - name: Install python dependencies
-      run: pip install -r requirements-dev.txt
-
-    - name: Compile Code
-      run: brownie compile --size
-
-    - name: Run Tests
-      run: brownie test tests/functional/strategy --gas --coverage --revert-tb
-
-  functional-vault:
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v1
-
-    - name: Cache compiler installations
+    - name: Restore duration cache
       uses: actions/cache@v2
+      id: test-duration-cache
       with:
         path: |
-          ~/.solcx
-          ~/.vvm/vyper-*
-        key: ${{ runner.os }}-compiler-cache
-
-    - name: Setup node.js
-      uses: actions/setup-node@v1
-      with:
-        node-version: '12.x'
-
-    - name: Install ganache
-      run: npm install -g ganache-cli@6.12.1
-
-    - name: Set up python 3.8
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.8
-
-    - name: Set pip cache directory path
-      id: pip-cache-dir-path
-      run: |
-        echo "::set-output name=dir::$(pip cache dir)"
-
-    - name: Restore pip cache
-      uses: actions/cache@v2
-      id: pip-cache
-      with:
-        path: |
-          ${{ steps.pip-cache-dir-path.outputs.dir }}
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements-dev.txt') }}
+          .test_durations
+        key: ${{ runner.os }}-pytest-split-test_durations
         restore-keys: |
-          ${{ runner.os }}-pip-${{ hashFiles('**/requirements-dev.txt') }}
-          ${{ runner.os }}-pip-
+          ${{ runner.os }}-pytest-split-test_durations
 
     - name: Install python dependencies
       run: pip install -r requirements-dev.txt
+    
+    - name: Install pytest-split 
+      run: pip install pytest-split
 
     - name: Compile Code
       run: brownie compile --size
 
-    - name: Run Tests
-      run: brownie test tests/functional/vault --gas --coverage --revert-tb
+    - name: Get Month
+      id: get-month
+      run: echo "::set-output name=date::$(/bin/date -u "+%Y%m")"
+      shell: bash
+
+    - name: Restore duration cache
+      uses: actions/cache@v2
+      id: test_durations_cache
+      with:
+        path: .test_durations
+        key: ${{ runner.os }}-${{ steps.get-month.outputs.date }}-test_durations-cache 
+
+    - name: Run Splitted Tests
+      if: steps.test_durations_cache.outputs.cache-hit == 'true'
+      run: brownie test tests/functional --gas --coverage --revert-tb --splits 3 --group ${{ matrix.group }};
+
+    - name: Run build test_duration
+      id: build_cache_duration
+      if: steps.test_durations_cache.outputs.cache-hit != 'true' 
+      run: brownie test --store-durations;
 
   integration:
     runs-on: ubuntu-latest
