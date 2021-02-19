@@ -154,9 +154,13 @@ abstract contract BaseWrapper {
         if (amountToMigrate > depositLeft) amountToMigrate = depositLeft;
 
         if (amountToMigrate > 0) {
-            migrated = _withdraw(account, address(this), amountToMigrate, false); // `false` = don't withdraw from `best`
-            require(migrated == amountToMigrate);
-            require(migrated == _deposit(address(this), account, migrated, false)); // `false` = don't do `transferFrom` because it's already local
+            // NOTE: `false` = don't withdraw from `best`
+            uint256 withdrawn = _withdraw(account, address(this), amountToMigrate, false);
+            require(withdrawn == amountToMigrate);
+            // NOTE: `false` = don't do `transferFrom` because it's already local
+            migrated = _deposit(address(this), account, withdrawn, false);
+            // NOTE: There's some precision loss here, but should be pretty bounded unless `decimals` is a really low number
+            require(withdrawn - migrated <= 10);
         } // else: nothing to migrate! (not a failure)
     }
 }
