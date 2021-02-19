@@ -110,7 +110,7 @@
 
   Example: Hegic strat [repo](https://github.com/Macarse/yhegic/tree/master/tests/development).
 
-- Tag vault as "experimental" in v2.registry.ychad.eth
+- Tag vault as "experimental" in `v2.registry.ychad.eth`
   - `registry.tagVault(vaultAddr, "https://meta.yearn.network/vaults/${vaultAddr}/vault.json")`
 
 ### Sharer contract (optional)
