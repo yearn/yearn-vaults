@@ -144,11 +144,15 @@ abstract contract BaseWrapper {
         // `receiver` now has `withdrawn` tokens as balance
     }
 
-    function _migrate(address account) internal returns (uint256 migrated) {
+    function _migrate(address account) internal returns (uint256) {
+        return _migrate(account, totalBalance(account));
+    }
+
+    function _migrate(address account, uint256 amount) internal returns (uint256 migrated) {
         VaultAPI best = bestVault();
 
         uint256 alreadyDeposited = best.balanceOf(account).mul(best.pricePerShare()).div(10**best.decimals());
-        uint256 amountToMigrate = totalBalance(account).sub(alreadyDeposited);
+        uint256 amountToMigrate = amount.sub(alreadyDeposited);
 
         uint256 depositLeft = best.depositLimit().sub(best.totalAssets());
         if (amountToMigrate > depositLeft) amountToMigrate = depositLeft;

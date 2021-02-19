@@ -103,6 +103,10 @@ contract AffiliateToken is ERC20, BaseWrapper {
         return _migrate(address(this));
     }
 
+    function migrate(uint256 amount) external onlyAffiliate returns (uint256) {
+        return _migrate(address(this), amount);
+    }
+
     /**
      * @notice Triggers an approval from owner to spends
      * @param owner The address to approve from

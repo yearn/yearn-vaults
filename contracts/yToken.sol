@@ -108,6 +108,10 @@ contract yToken is IERC20, BaseWrapper {
     function migrate() external returns (uint256) {
         return _migrate(msg.sender);
     }
+
+    function migrate(uint256 amount) external returns (uint256) {
+        return _migrate(msg.sender, amount);
+    }
 }
 
 interface IWETH {
