@@ -83,7 +83,7 @@ jobs:
       id: test_durations_cache
       with:
         path: .test_durations
-        key: ${{ runner.os }}-${{ steps.get-month.outputs.date }}-test_durations-cache 
+        key: ${{ runner.os }}-${{ steps.get-month.outputs.date }}-test_durations_cache 
 
     - name: Run Splitted Tests
       if: steps.test_durations_cache.outputs.cache-hit == 'true'
@@ -91,7 +91,7 @@ jobs:
 
     - name: Run build test_duration
       id: build_cache_duration
-      if: steps.test_durations_cache.outputs.cache-hit != 'true' 
+      if: steps.test_durations_cache.outputs.cache-hit != 'true' && matrix.group == 1 
       run: brownie test --store-durations;
 
   integration:
