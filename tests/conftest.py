@@ -190,6 +190,20 @@ def sign_vault_permit():
     return sign_vault_permit
 
 
+@pytest.fixture(scope="session")
+def registry_deployment_txn(web3):
+    from collections import namedtuple
+
+    # NOTE: Registry deployment txn of v2.registry.ychad.eth on mainnet
+    txn = web3._mainnet.eth.getTransaction(
+        "0x61db0649f50c4839010e6d4cdd0fac960f25b86c4f0328912fb96859b4827560"
+    )
+    # NOTE: Just did this so we pass around a smaller object
+    yield namedtuple("Transaction", ["sender", "nonce"])(
+        sender=txn["from"], nonce=txn["nonce"]
+    )
+
+
 # Function scoped isolation fixture to enable xdist.
 # Snapshots the chain before each test and reverts after test completion.
 @pytest.fixture(scope="function", autouse=True)

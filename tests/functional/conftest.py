@@ -102,20 +102,6 @@ def rando(accounts):
     yield accounts[9]
 
 
-@pytest.fixture(scope="session")
-def registry_deployment_txn(web3):
-    from collections import namedtuple
-
-    # NOTE: Registry deployment txn of v2.registry.ychad.eth on mainnet
-    txn = web3._mainnet.eth.getTransaction(
-        "0x61db0649f50c4839010e6d4cdd0fac960f25b86c4f0328912fb96859b4827560"
-    )
-    # NOTE: Just did this so we pass around a smaller object
-    yield namedtuple("Transaction", ["sender", "nonce"])(
-        sender=txn["from"], nonce=txn["nonce"]
-    )
-
-
 @pytest.fixture
 def registry(accounts, web3, registry_deployment_txn, gov, Registry):
     # Load account that deployed the registry on mainnet,

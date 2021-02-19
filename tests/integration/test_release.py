@@ -57,7 +57,9 @@ class ReleaseTest:
 
         print(f"Registry.newVault({token}, {self.latest_version})")
         vault = Vault.at(
-            self.registry.newVault(token, self.gov, self.gov, "", "").return_value
+            self.registry.newVault(
+                token, self.gov, self.gov, "", "", {"from": self.gov}
+            ).return_value
         )
 
         if token in self.vaults:
@@ -71,7 +73,7 @@ class ReleaseTest:
 
         vault = Vault.at(
             self.registry.newExperimentalVault(
-                token, self.gov, self.gov, self.gov, "", ""
+                token, self.gov, self.gov, self.gov, "", "", {"from": self.gov}
             ).return_value
         )
 
