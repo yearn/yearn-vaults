@@ -54,7 +54,7 @@
   ```
 
 - Deploy strategy and upload code to Etherscan for verification.
-- Tag GitHub review issue with deployed version and add mainnet address(es).
+- Tag GitHub review issue with deployed version and add mainnet address(es) to the [board](https://github.com/orgs/iearn-finance/projects/5).
 
 ## After deployment
 
