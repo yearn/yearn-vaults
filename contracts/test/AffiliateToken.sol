@@ -56,7 +56,7 @@ contract AffiliateToken is ERC20, BaseWrapper {
         _setRegistry(_registry);
     }
 
-    function _shareValue(uint256 numShares) internal returns (uint256) {
+    function _shareValue(uint256 numShares) internal view returns (uint256) {
         uint256 totalShares = totalSupply();
 
         if (totalShares > 0) {
@@ -66,7 +66,11 @@ contract AffiliateToken is ERC20, BaseWrapper {
         }
     }
 
-    function _sharesForValue(uint256 amount) internal returns (uint256) {
+    function pricePerShare() external view returns (uint256) {
+        return _shareValue(10**decimals());
+    }
+
+    function _sharesForValue(uint256 amount) internal view returns (uint256) {
         uint256 totalWrapperAssets = totalBalance(address(this));
 
         if (totalWrapperAssets > 0) {
