@@ -55,7 +55,7 @@ abstract contract BaseWrapper {
     }
 
     function _updateVaultCache(VaultAPI[] memory vaults) internal {
-        if (vaults.length > 0) {
+        if (vaults.length > _cachedVaults.length) {
             _cachedVaults = vaults;
         }
     }
