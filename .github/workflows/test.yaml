@@ -9,7 +9,7 @@ on:
 
 jobs:
 
-  functional-splitted:
+  functional:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -65,7 +65,7 @@ jobs:
       id: test_durations_cache
       with:
         path: .test_durations
-        key: ${{ runner.os }}-${{ steps.get-month.outputs.date }}-test-durations-
+        key: ${{ runner.os }}-${{ steps.get-month.outputs.date }}-test-durations-cache-
   
     - name: Check file existence
       id: check_test_durations
@@ -93,7 +93,7 @@ jobs:
     - name: Run build test_duration
       if: steps.check_test_durations.outputs.files_exists == 'false' # has to run on all, otherwise the first one that finishes creates an empty cache and lock the cache for others
       id: build_cache_duration
-      run: brownie test tests/functional --store-durations;
+      run: brownie test tests/functional --store-durations --gas --coverage --revert-tb; 
 
   integration:
     runs-on: ubuntu-latest
