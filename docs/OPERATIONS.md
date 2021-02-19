@@ -1,7 +1,6 @@
 # Deploy a Strategy / Vault for V2
 
-NOTE: This repo is encouraged to create multiple scripts for governance and dev multisig execution of complex transactions
-https://github.com/iearn-finance/chief-multisig-officer
+NOTE: This [repo](https://github.com/iearn-finance/chief-multisig-officer) is encouraged to create multiple scripts for governance and dev multisig execution of complex transactions.
 
 **IMPORTANT**: you should **NOT** create a new release with a test vault, it will be endorsed as a production
 
@@ -18,7 +17,7 @@ https://github.com/iearn-finance/chief-multisig-officer
 
 ## Before deploying
 
-- Coordinate with Core Dev strategist for getting a review in board https://github.com/orgs/iearn-finance/projects/5
+- Coordinate with Core Dev strategist for getting a review in [board](https://github.com/orgs/iearn-finance/projects/5)
 - Peer review completed by:
   - yearn.rocks / Experimental: at least 2 strategists
 - Check if want token has a deploy vault already (>=v0.3.0) and coordinate to use that first if possible.
@@ -35,7 +34,7 @@ https://github.com/iearn-finance/chief-multisig-officer
     `vault.setDepositLimit(50_000 * 1e18)`
     \$50k USD converted to your want. Example above is 50k DAI
 - Deploy strategy with settings and upload code to Etherscan for verification
-- Tag GitHub review issue https://github.com/orgs/iearn-finance/projects/5 with deployed version and add mainnet address(es).
+- Tag GitHub review issue with deployed version and add mainnet address(es).
 
 ## After deploying strategy
 
@@ -65,26 +64,23 @@ https://github.com/iearn-finance/chief-multisig-officer
   - Migration
   - Check that tokens in the strategy cannot be sweeped by dust collection
 
-  Example: https://github.com/Macarse/yhegic/tree/master/tests/development
+  Example: Hegic strat [repo](https://github.com/Macarse/yhegic/tree/master/tests/development).
 
 - Tag vault as "experimental" in v2.registry.ychad.eth
   - `registry.tagVault(vaultAddr, "https://meta.yearn.network/vaults/${vaultAddr}/vault.json")`
 
 ### Sharer contract (optional)
 
-Sharer is a contract for distributing strategist rewards. For boarding school graduates suggested is 34% to strategist_ms and 66% to strategist.
-
-Repo: https://github.com/Grandthrax/Sharer
+Sharer is a contract for distributing strategist rewards. For boarding school graduates suggested is 34% to strategist_ms and 66% to strategist – [repo](https://github.com/Grandthrax/Sharer).
 
 - Setup rewards for your strategy by calling `sharer.addContributors`
 - If you forked someone else's strategy then cut them in
 - Be sure to reward people who helped you
 
-### Example Script:
+### Example Script
 
-```
+```python
 # TBD Fill CMO example script to fill
-
 ```
 
 ## The Manual Phase
@@ -138,7 +134,7 @@ The scripts below use the HEGIC vault as an example.
 
 ### From the vault
 
-```
+```python
 # Grab the gov account
 gov = accounts.at(vault.governance(), force=True)
 
@@ -154,7 +150,7 @@ After running the command you will notice:
 
 Last step is running a harvest to return funds to vault.
 
-```
+```python
 s1.harvest({"from": gov})
 >>> hegic.balanceOf(s1)
 0
@@ -167,7 +163,7 @@ s1.harvest({"from": gov})
 From the strategy itself we can turn on emergency mode.
 To do it we need to run:
 
-```
+```python
 # Grab the strategist account
 strategist = accounts.at(s1.strategist(), force=True)
 
@@ -184,7 +180,7 @@ We should also see the strategy's `debtRatio` going to zero and funds returning 
 
 We can also shutdown the vault to return assets as soon as possible. To do that we will need a guardian or governance account.
 
-```
+```python
 # Sound the alarm
 vault.setEmergencyShutdown(true, {'from': gov})
 
@@ -200,14 +196,14 @@ True
 
 You will notice that this procedure doesn't change the debt ratio.
 
-```
+```python
 >>> vault.strategies(s1).dict()['debtRatio']
 1600
 ```
 
 It drops the credit to 0.
 
-```
+```python
 >>> vault.creditAvailable(s1)
 0
 ```
