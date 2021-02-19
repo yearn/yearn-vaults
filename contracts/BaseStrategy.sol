@@ -789,7 +789,16 @@ abstract contract BaseStrategyInitializable is BaseStrategy {
         _initialize(_vault, _strategist, _rewards, _keeper);
     }
 
-    function clone(address _vault) external returns (address newStrategy) {
+    function clone(address _vault) external returns (address) {
+        return clone(_vault, msg.sender, msg.sender, msg.sender);
+    }
+
+    function clone(
+        address _vault,
+        address _strategist,
+        address _rewards,
+        address _keeper
+    ) external returns (address newStrategy) {
         // Copied from https://github.com/optionality/clone-factory/blob/master/contracts/CloneFactory.sol
         bytes20 addressBytes = bytes20(address(this));
 
