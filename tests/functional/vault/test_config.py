@@ -183,7 +183,7 @@ def test_vault_setGovernance(gov, vault, rando):
         vault.acceptGovernance({"from": gov})
 
 
-def test_vault_setLockedProfitDegrationRange(gov, vault):
+def test_vault_setLockedProfitDegration_range(gov, vault):
     # value must be between 0 and DEGREDATION_COEFFICIENT (inclusive)
     vault.setLockedProfitDegration(0, {"from": gov})
     vault.setLockedProfitDegration(DEGREDATION_COEFFICIENT, {"from": gov})
