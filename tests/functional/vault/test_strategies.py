@@ -383,6 +383,17 @@ def test_withdrawalQueue(chain, gov, management, vault, strategy, other_strategy
     assert vault.withdrawalQueue(1) == other_strategy
 
 
+def test_addStrategyToQueue_bad_strategy(gov, vault, strategy):
+    # Can't add ZERO_ADDRESS strategy
+    with brownie.reverts():
+        vault.addStrategyToQueue(ZERO_ADDRESS, {"from": gov})
+
+    # Can't add strategy to queue that is already in the queue
+    vault.addStrategy(strategy, 100, 10, 20, 1000, {"from": gov})
+    with brownie.reverts():
+        vault.addStrategyToQueue(strategy, {"from": gov})
+
+
 def test_update_debtRatio_to_add_second_strategy(gov, vault, strategy, other_strategy):
 
     vault.addStrategy(strategy, 10_000, 0, 0, 0, {"from": gov})
