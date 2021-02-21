@@ -382,10 +382,6 @@ def test_withdrawalQueue(chain, gov, management, vault, strategy, other_strategy
     assert vault.withdrawalQueue(0) == strategy
     assert vault.withdrawalQueue(1) == other_strategy
 
-    # Can't add strategy to queue that is already in the queue
-    with brownie.reverts():
-        vault.addStrategyToQueue(strategy, {"from": gov})
-
 
 def test_update_debtRatio_to_add_second_strategy(gov, vault, strategy, other_strategy):
 
