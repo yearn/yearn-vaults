@@ -30,6 +30,7 @@
 
 ## Before deployment
 
+- Create a new issue in the strategies' [repo](https://github.com/iearn-finance/yearn-strategies/issues) using the template `Strategy Review`. **Complete all the fields**.
 - Coordinate with Core Dev strategist for getting a review on [board](https://github.com/orgs/iearn-finance/projects/5).
 - Complete peer review by at least 2 strategists.
 - Check if `want` token has a deployed vault already (>=v0.3.0) and coordinate to use that first if possible.
@@ -155,17 +156,8 @@
       VAULT_STATUS: "active", // 'active', 'withdraw'. Not active vaults have a label to show status
     }
   ```
+
 - [ ] Monitor `harvest` and `tend` triggers for first few days. Call `harvest`/`tend` manually.
-
-## Setting up Keep3r
-
-- [ ] Adjust trigger variables until they are correct:
-  - `strategy.setProfitFactor()`
-  - `strategy.setDebtThreshold()`
-  - `strategy.setMaxReportDelay()`
-- [ ] Add strategy to the keep3r job:
-  - `keep3r_manager.addStrategy(strategy, 1_500_000, 1_500_000)`
-  - Tell Poolpi Tako `harvest` and `tend` gas usage. For instance 1.5m.
 
 ## Scaling up / Moving to Endorse
 
@@ -194,6 +186,15 @@
   **Note**: Order is important. Will fail if order is wrong.
 
 - [ ] Now you are on main yearn page!
+
+## Setting up Keep3r
+
+- [ ] Adjust trigger variables until they are correct:
+  - `strategy.setProfitFactor()`
+  - `strategy.setDebtThreshold()`
+  - `strategy.setMaxReportDelay()`
+- [ ] Set strategy's Keep3r role to v2-keeper-contract (TBD)
+- [ ] Create an add-strategy PR in Keep3r [repo](https://github.com/iearn-finance/yearn-keeper) (TBD)
 
 ## Limits per Stage
 
