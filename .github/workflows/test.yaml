@@ -91,12 +91,12 @@ jobs:
 
     - name: Run Splitted Tests
       if: steps.check_test_durations.outputs.files_exists == 'true' 
-      run: brownie test tests/functional --gas --coverage --revert-tb --splits 5 --group ${{ matrix.group }};
+      run: brownie test tests/functional --gas --coverage --splits 5 --group ${{ matrix.group }};
 
     - name: Run build test_duration
       if: steps.check_test_durations.outputs.files_exists == 'false' # has to run on all, otherwise the first one that finishes creates an empty cache and lock the cache for others
       id: build_cache_duration
-      run: brownie test tests/functional --store-durations --gas --coverage --revert-tb; 
+      run: brownie test tests/functional --store-durations --gas --coverage
 
   integration:
     runs-on: ubuntu-latest
