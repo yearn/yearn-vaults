@@ -35,16 +35,20 @@
 - Complete peer review by at least 2 strategists.
 - Check if `want` token has a deployed vault already (>=v0.3.0) and coordinate to use that first if possible.
 - If a new vault is needed, deploy it using the registry:
+  - Set strategists multisig (`0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7`) as governance.
+  - Set Core Dev multisig (`dev.ychad.eth`) as guardian.
+  - Set treasury (`treasury.ychad.eth`) as the rewards address.
 
   ```python
-  registry.newExperimentalVault(want, you, multisig, treasury, "", "")
-  ```
+  token = want
+  governance = '0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7'
+  guardian = '0x846e211e8ba920B353FB717631C015cf04061Cc9'
+  treasury = '0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde'
+  name = ''
+  symbol = ''
 
-  - args: token, gov, guardian, rewards, name, symbol
-  - `multisig` (strategists) = '0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7'
-  - gov for testing = '0x846e211e8ba920b353fb717631c015cf04061cc9' (dev.ychad.eth)
-  - `treasury` = '0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde'
-    (treasury.ychad.eth)
+  registry.newExperimentalVault(token, governance, guardian, treasury, name, symbol)
+  ```
 
 - Check new vault has ABI setup on etherscan (until verification with Vyper and proxy is fixed on Etherscan).
 - Coordinate with core developer to set proper deposit limit and other settings for new vault. See the table below: [Limits per Stage](#limits-per-stage).
@@ -90,14 +94,13 @@
   vault.setManagementFee(0)
   ```
 
-- Set governance
+- Set `dev.ychad.eth` as governance
 
   ```python
+  multisig = '0x846e211e8ba920b353fb717631c015cf04061cc9'
   vault.setGovernance(multisig)
   ```
 
-  - `multisig` = `0x846e211e8ba920b353fb717631c015cf04061cc9`
-    (`dev.ychad.eth`).
   - Governance needs to be accepted before it is in place. After you set this you will still have control over the strategy.
 
 - Run tests against "live" vault and strategy in mainnet-fork:
