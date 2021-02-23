@@ -20,7 +20,8 @@ class Migration:
         user,
         gov,
         initial_vault,
-        balance_check_fn,
+        sum_deposits_fn,
+        initial_deposit,
     ):
         self.registry = registry
         self.token = token
@@ -29,11 +30,13 @@ class Migration:
         self.user = user
         self.gov = gov
         self._initial_vault = initial_vault
-        self.balance_check_fn = balance_check_fn
+        self.sum_deposits_fn = sum_deposits_fn
         self.returns_generated = 0
+        self._initial_deposit = initial_deposit
 
     def setup(self):
         self.vaults = [self._initial_vault]
+        self.deposited = self._initial_deposit
 
     def rule_new_release(self):
         api_version = str(Version(self.registry.latestRelease()).next_major())
@@ -49,6 +52,7 @@ class Migration:
         if amount > 0:
             print(f"  Wrapper.deposit({amount})")
             self.wrapper.deposit(amount, {"from": self.user})
+            self.deposited += amount
 
         else:
             print("  Wrapper.deposit: Nothing to deposit...")
@@ -75,6 +79,7 @@ class Migration:
         if amount > 0:
             print(f"  Wrapper.withdraw({amount})")
             self.wrapper.withdraw(amount, {"from": self.user})
+            self.deposited -= amount
 
         else:
             print("  Wrapper.withdraw: Nothing to withdraw...")
@@ -84,10 +89,10 @@ class Migration:
         print(f"    user: {self.token.balanceOf(self.user)} tokens")
         for vault in self.vaults:
             print(f"    {vault.address}: {vault.totalSupply()} tokens")
-        self.balance_check_fn()  # No losses
+        assert self.deposited + self.returns_generated - self.sum_deposits_fn() < 1000
 
 
-@pytest.mark.parametrize("Wrapper", [yToken, AffiliateToken])
+@pytest.mark.parametrize("Wrapper", [AffiliateToken, yToken])
 def test_migration_wrapper(
     state_machine, token, create_vault, whale, gov, registry, Wrapper
 ):
@@ -97,32 +102,22 @@ def test_migration_wrapper(
     if Wrapper._name == "yToken":
         wrapper = gov.deploy(Wrapper, token)
 
-        def balance_check_fn(self):
-            assert (
-                0
-                <= starting_balance
-                - self.token.balanceOf(self.user)
-                - sum(
-                    v.balanceOf(self.user) * v.pricePerShare() // 10 ** v.decimals()
-                    for v in self.vaults
-                )
-                < 1000  # up to 1e3 difference in computing this number
+        def sum_deposits_fn(self):
+            """ The token-value sum of the user's deposits in all vaults """
+            return sum(
+                v.balanceOf(self.user) * v.pricePerShare() // 10 ** v.decimals()
+                for v in self.vaults
             )
 
     else:
         wrapper = gov.deploy(Wrapper, token, "Test Affiliate Token", "afToken")
 
-        def balance_check_fn(self):
-            assert (
-                0
-                <= starting_balance
-                - self.token.balanceOf(self.user)
-                - (
-                    self.wrapper.balanceOf(self.user)
-                    * self.wrapper.pricePerShare()
-                    // 10 ** self.wrapper.decimals()
-                )
-                < 1000  # up to 1e3 difference in computing this number
+        def sum_deposits_fn(self):
+            """ The token-value of the user's deposits in the wrapper """
+            return (
+                self.wrapper.balanceOf(self.user)
+                * self.wrapper.pricePerShare()
+                // 10 ** self.wrapper.decimals()
             )
 
     token.approve(wrapper, 2 ** 256 - 1, {"from": whale})
@@ -136,9 +131,9 @@ def test_migration_wrapper(
     # NOTE: Start with something deposited
     wrapper.deposit(starting_balance // 10, {"from": whale})
     # HACK: Get this function working correctly
-    Caller = namedtuple("Caller", ["token", "vaults", "wrapper", "user"])
-    caller = Caller(token, [vault], wrapper, whale)
-    balance_check_fn(caller)
+    Caller = namedtuple("Caller", ["vaults", "wrapper", "user"])
+    caller = Caller([vault], wrapper, whale)
+    assert starting_balance == token.balanceOf(whale) + sum_deposits_fn(caller)
     del caller, Caller
 
     state_machine(
@@ -150,5 +145,6 @@ def test_migration_wrapper(
         whale,
         gov,
         vault,
-        balance_check_fn,
+        sum_deposits_fn,
+        starting_balance // 10,
     )
