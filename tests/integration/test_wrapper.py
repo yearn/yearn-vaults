@@ -80,7 +80,11 @@ class Migration:
             print("  Wrapper.withdraw: Nothing to withdraw...")
 
     def invariant_balances(self):
-        self.balance_check_fn()
+        print("  Balance Check")
+        print(f"    user: {self.token.balanceOf(self.user)} tokens")
+        for vault in self.vaults:
+            print(f"    {vault.address}: {vault.totalSupply()} tokens")
+        self.balance_check_fn()  # No losses
 
 
 @pytest.mark.parametrize("Wrapper", [yToken, AffiliateToken])
