@@ -59,12 +59,12 @@ def keeper(accounts):
 
 
 @pytest.fixture(params=["NoProxy", "Proxy"])
-def strategy(gov, strategist, keeper, vault, TestStrategy, request):
+def strategy(gov, strategist, keeper, rewards, vault, TestStrategy, request):
     strategy = strategist.deploy(TestStrategy, vault)
 
     if request.param == "Proxy":
         # deploy the proxy using as logic the original strategy
-        tx = strategy.clone(vault, {"from": strategist})
+        tx = strategy.clone(vault, strategist, rewards, keeper, {"from": strategist})
         # strategy proxy address is returned in the event `Cloned`
         strategyAddress = tx.events["Cloned"]["clone"]
         # redefine strategy as the new proxy deployed
