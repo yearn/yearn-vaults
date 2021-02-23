@@ -127,18 +127,19 @@ abstract contract BaseWrapper {
 
                 if (maxWithdrawal < shares) shares = maxWithdrawal;
 
-                // NOTE: use `uint256(-1)` for withdrawing everything
-                uint256 withdrawalLeft = amount
+                // NOTE: We only need to withdraw as much as neeeded to satisfy the request
+                uint256 sharesNeeded = amount
                     .sub(withdrawn) // NOTE: Changes every iteration
                     .mul(vaults[id].pricePerShare()) // NOTE: Every Vault is different
-                    .div(10**vaults[id].decimals());
-
-                if (withdrawalLeft == 0) break; // withdrawn as much as we needed
-                if (withdrawalLeft < shares) shares = withdrawalLeft;
+                    .div(vaults[id].decimals());
+                if (sharesNeeded < shares) shares = sharesNeeded;
 
                 // NOTE: No need for share transfer if we are migrating the balance of this contract
                 if (sender != address(this)) vaults[id].transferFrom(sender, address(this), shares);
                 withdrawn = withdrawn.add(vaults[id].withdraw(shares, receiver));
+
+                // NOTE: use `amount = uint256(-1)` for withdrawing everything
+                if (amount <= withdrawn) break; // withdrawn as much as we needed
             }
         }
         // `receiver` now has `withdrawn` tokens as balance
