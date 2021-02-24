@@ -21,9 +21,7 @@ def management(accounts):
     yield accounts[3]
 
 
-@pytest.fixture(
-    params=[("Normal", 18), ("NoReturn", 18), ("Normal", 8), ("NoReturn", 8)]
-)
+@pytest.fixture(params=[("Normal", 18), ("NoReturn", 18), ("Normal", 8), ("Normal", 2)])
 def token(gov, Token, request):
     (behaviour, decimal) = request.param
 

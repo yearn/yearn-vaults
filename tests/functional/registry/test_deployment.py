@@ -4,7 +4,7 @@ import brownie
 def test_deployment_management(
     gov, guardian, rewards, registry, Vault, create_token, create_vault, rando
 ):
-    token = create_token(18)
+    token = create_token()
 
     # No deployments yet for token
     with brownie.reverts():
@@ -37,7 +37,7 @@ def test_deployment_management(
 
     # Not just anyone can create a new endorsed Vault, only governance can!
     with brownie.reverts():
-        registry.newVault(create_token(18), guardian, rewards, "", "", {"from": rando})
+        registry.newVault(create_token(), guardian, rewards, "", "", {"from": rando})
 
 
 def test_experimental_deployments(
@@ -47,7 +47,7 @@ def test_experimental_deployments(
     registry.newRelease(v1_vault, {"from": gov})
 
     # Anyone can make an experiment
-    token = create_token(18)
+    token = create_token()
     registry.newExperimentalVault(token, rando, rando, rando, "", "", {"from": rando})
 
     # You can make as many experiments as you want with same api version
