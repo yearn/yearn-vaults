@@ -31,7 +31,7 @@ def other_strategy(gov, vault, TestStrategy):
 
 @pytest.fixture
 def wrong_strategy(gov, Vault, Token, TestStrategy):
-    otherToken = gov.deploy(Token)
+    otherToken = gov.deploy(Token, 18)
     otherVault = gov.deploy(Vault)
     otherVault.initialize(
         otherToken,

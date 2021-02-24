@@ -9,7 +9,7 @@ def andre(accounts):
 
 @pytest.fixture
 def create_token(andre, Token):
-    yield lambda: andre.deploy(Token)
+    yield lambda: andre.deploy(Token, 18)
 
 
 @pytest.fixture

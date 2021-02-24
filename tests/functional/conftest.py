@@ -21,11 +21,15 @@ def management(accounts):
     yield accounts[3]
 
 
-@pytest.fixture(params=["Normal", "NoReturn"])
+@pytest.fixture(
+    params=[("Normal", 18), ("NoReturn", 18), ("Normal", 8), ("NoReturn", 8)]
+)
 def token(gov, Token, request):
-    token = gov.deploy(Token)
+    (behaviour, decimal) = request.param
+
+    token = gov.deploy(Token, decimal)
     # NOTE: Run our test suite using both compliant and non-compliant ERC20 Token
-    if request.param == "NoReturn":
+    if behaviour == "NoReturn":
         token._initialized = False  # otherwise Brownie throws an `AttributeError`
         setattr(token, "transfer", token.transferWithoutReturn)
         setattr(token, "transferFrom", token.transferFromWithoutReturn)
@@ -40,6 +44,7 @@ def vault(gov, guardian, management, token, rewards, Vault):
     vault.initialize(token, gov, rewards, "", "", guardian)
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     vault.setManagement(management, {"from": gov})
+
     # Make it so vault has some AUM to start
     token.approve(vault, token.balanceOf(gov) // 2, {"from": gov})
     vault.deposit(token.balanceOf(gov) // 2, {"from": gov})

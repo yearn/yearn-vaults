@@ -5,7 +5,7 @@ import pytest
 
 @pytest.fixture
 def other_token(gov, Token):
-    yield gov.deploy(Token)
+    yield gov.deploy(Token, 18)
 
 
 def test_regular_available_deposit_limit(Vault, token, gov):

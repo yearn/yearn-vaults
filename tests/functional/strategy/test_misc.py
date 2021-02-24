@@ -83,7 +83,7 @@ def test_harvest_tend_trigger(chain, gov, vault, token, TestStrategy):
 
 @pytest.fixture
 def other_token(gov, Token):
-    yield gov.deploy(Token)
+    yield gov.deploy(Token, 18)
 
 
 def test_sweep(gov, vault, strategy, rando, token, other_token):

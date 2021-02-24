@@ -69,11 +69,11 @@ def test_migrated_strategy_can_call_harvest(token, strategy, vault, gov, TestStr
     vault.migrateStrategy(strategy, new_strategy, {"from": gov})
 
     # send profit to the old strategy
-    token.transfer(strategy, 1e18, {"from": gov})
+    token.transfer(strategy, 10 ** token.decimals(), {"from": gov})
 
     assert vault.strategies(strategy).dict()["totalGain"] == 0
     strategy.harvest({"from": gov})
-    assert vault.strategies(strategy).dict()["totalGain"] == 1e18
+    assert vault.strategies(strategy).dict()["totalGain"] == 10 ** token.decimals()
 
     # But after migrated it cannot be added back
     vault.updateStrategyDebtRatio(new_strategy, 5_000, {"from": gov})
