@@ -35,6 +35,7 @@
 - Complete peer review by at least 2 strategists.
 - Check if `want` token has a deployed vault already (>=v0.3.0) and coordinate to use that first if possible.
 - If a new vault is needed, deploy it using the registry:
+
   - Set strategists multisig (`0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7`) as governance.
   - Set Core Dev multisig (`dev.ychad.eth`) as guardian.
   - Set treasury (`treasury.ychad.eth`) as the rewards address.
@@ -141,9 +142,10 @@
   ```
 
 - [ ] Publish on yearn.rocks:
+
   - Governance dev multisig **_must_** call `vault.acceptGovernance()` first.
   - Create a PR in yearn.rocks [repo](https://github.com/fameal/yearn-rocks) adding a new element to the array in `config.js` using the example below:
-  
+
   ```javascript
     'path': { // URL path
       TITLE: "yVault", // Title of the vault, let you imagination fly
