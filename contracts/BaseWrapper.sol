@@ -64,7 +64,7 @@ abstract contract BaseWrapper {
         VaultAPI[] memory vaults = allVaults();
 
         for (uint256 id = 0; id < vaults.length; id++) {
-            balance = balance.add(vaults[id].balanceOf(account).mul(vaults[id].pricePerShare()).div(10**vaults[id].decimals()));
+            balance = balance.add(vaults[id].balanceOf(account).mul(vaults[id].pricePerShare()).div(10**uint256(vaults[id].decimals())));
         }
     }
 
@@ -98,7 +98,7 @@ abstract contract BaseWrapper {
                 .deposit(amount, reciever)
                 .mul(10**3) // Add 3 extra decimals of precision
                 .mul(best.pricePerShare()) // Adjust by price of best
-                .div(10**best.decimals())
+                .div(10**uint256(best.decimals()))
                 .div(10**3); // Add 3 extra decimals of precision
     }
 
@@ -131,7 +131,7 @@ abstract contract BaseWrapper {
                 uint256 sharesNeeded = amount
                     .sub(withdrawn) // NOTE: Changes every iteration
                     .mul(vaults[id].pricePerShare()) // NOTE: Every Vault is different
-                    .div(vaults[id].decimals());
+                    .div(uint256(vaults[id].decimals()));
                 if (sharesNeeded < shares) shares = sharesNeeded;
 
                 // NOTE: No need for share transfer if we are migrating the balance of this contract
@@ -152,7 +152,7 @@ abstract contract BaseWrapper {
     function _migrate(address account, uint256 amount) internal returns (uint256 migrated) {
         VaultAPI best = bestVault();
 
-        uint256 alreadyDeposited = best.balanceOf(account).mul(best.pricePerShare()).div(10**best.decimals());
+        uint256 alreadyDeposited = best.balanceOf(account).mul(best.pricePerShare()).div(10**uint256(best.decimals()));
         uint256 amountToMigrate = amount.sub(alreadyDeposited);
 
         uint256 depositLeft = best.depositLimit().sub(best.totalAssets());

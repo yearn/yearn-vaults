@@ -67,7 +67,7 @@ contract AffiliateToken is ERC20, BaseWrapper {
     }
 
     function pricePerShare() external view returns (uint256) {
-        return _shareValue(10**decimals());
+        return 10**uint256(decimals());
     }
 
     function _sharesForValue(uint256 amount) internal view returns (uint256) {
