@@ -5,7 +5,7 @@ from brownie import ZERO_ADDRESS
 
 @pytest.fixture
 def other_token(gov, Token):
-    yield gov.deploy(Token)
+    yield gov.deploy(Token, 18)
 
 
 @pytest.fixture
