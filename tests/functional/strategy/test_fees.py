@@ -14,11 +14,11 @@ def test_performance_fees(gov, vault, token, TestStrategy, rewards, strategist):
     assert vault.balanceOf(rewards) == 0
     assert vault.balanceOf(strategy) == 0
 
-    token.transfer(strategy, 10 ** 8, {"from": gov})
+    token.transfer(strategy, 10 ** token.decimals(), {"from": gov})
     strategy.harvest({"from": strategist})
 
-    assert vault.balanceOf(rewards) == 0.045 * 1e8
-    assert vault.balanceOf(strategy) == 0.005 * 1e8
+    assert vault.balanceOf(rewards) == 0.045 * 10 ** token.decimals()
+    assert vault.balanceOf(strategy) == 0.005 * 10 ** token.decimals()
 
 
 def test_zero_fees(gov, vault, token, TestStrategy, rewards, strategist):
@@ -31,7 +31,7 @@ def test_zero_fees(gov, vault, token, TestStrategy, rewards, strategist):
     assert vault.balanceOf(rewards) == 0
     assert vault.balanceOf(strategy) == 0
 
-    token.transfer(strategy, 10 ** 8, {"from": gov})
+    token.transfer(strategy, 10 ** token.decimals(), {"from": gov})
     strategy.harvest({"from": strategist})
 
     assert vault.managementFee() == 0

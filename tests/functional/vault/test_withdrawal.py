@@ -306,7 +306,7 @@ def test_profit_degration(chain, gov, token, vault, strategy, rando):
 
     pricePerShareBefore = vault.pricePerShare()
 
-    chain.sleep(10)
+    chain.sleep(1_000)
     chain.mine(1)
 
     assert vault.pricePerShare() > pricePerShareBefore

@@ -42,7 +42,7 @@ def test_harvest_tend_trigger(chain, gov, vault, token, TestStrategy):
     strategy.harvest({"from": gov})  # Resets the reporting
 
     # Check that trigger works if gas costs is less than profitFactor
-    profit = 10 ** 8
+    profit = 10 ** token.decimals()
     token.transfer(strategy, profit, {"from": gov})
     chain.mine(timedelta=strategy.minReportDelay())
     assert not strategy.harvestTrigger(profit // strategy.profitFactor())
@@ -83,7 +83,7 @@ def test_harvest_tend_trigger(chain, gov, vault, token, TestStrategy):
 
 @pytest.fixture
 def other_token(gov, Token):
-    yield gov.deploy(Token)
+    yield gov.deploy(Token, 18)
 
 
 def test_sweep(gov, vault, strategy, rando, token, other_token):

@@ -6,8 +6,9 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 contract Token is ERC20 {
     mapping(address => bool) public _blocked;
 
-    constructor() public ERC20("yearn.finance test token", "TEST") {
-        _mint(msg.sender, 30000 * 10**18);
+    constructor(uint8 _decimals) public ERC20("yearn.finance test token", "TEST") {
+        _setupDecimals(_decimals);
+        _mint(msg.sender, 30000 * 10**uint256(_decimals));
     }
 
     function _setBlocked(address user, bool value) public virtual {

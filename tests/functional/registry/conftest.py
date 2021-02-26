@@ -3,8 +3,8 @@ import pytest
 
 @pytest.fixture
 def create_token(gov, Token):
-    def create_token():
-        return Token.deploy({"from": gov})
+    def create_token(decimals=18):
+        return Token.deploy(decimals, {"from": gov})
 
     yield create_token
 
