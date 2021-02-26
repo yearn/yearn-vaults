@@ -60,7 +60,7 @@ contract AffiliateToken is ERC20, BaseWrapper {
         uint256 totalShares = totalSupply();
 
         if (totalShares > 0) {
-            return totalBalance(address(this)).mul(numShares).div(totalShares);
+            return totalVaultBalance(address(this)).mul(numShares).div(totalShares);
         } else {
             return numShares;
         }
@@ -71,7 +71,7 @@ contract AffiliateToken is ERC20, BaseWrapper {
     }
 
     function _sharesForValue(uint256 amount) internal view returns (uint256) {
-        uint256 totalWrapperAssets = totalBalance(address(this));
+        uint256 totalWrapperAssets = totalVaultBalance(address(this));
 
         if (totalWrapperAssets > 0) {
             return totalSupply().mul(amount).div(totalWrapperAssets);

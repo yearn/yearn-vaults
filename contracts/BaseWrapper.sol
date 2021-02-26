@@ -60,7 +60,7 @@ abstract contract BaseWrapper {
         }
     }
 
-    function totalBalance(address account) public view returns (uint256 balance) {
+    function totalVaultBalance(address account) public view returns (uint256 balance) {
         VaultAPI[] memory vaults = allVaults();
 
         for (uint256 id = 0; id < vaults.length; id++) {
@@ -146,7 +146,7 @@ abstract contract BaseWrapper {
     }
 
     function _migrate(address account) internal returns (uint256) {
-        return _migrate(account, totalBalance(account));
+        return _migrate(account, totalVaultBalance(account));
     }
 
     function _migrate(address account, uint256 amount) internal returns (uint256 migrated) {
