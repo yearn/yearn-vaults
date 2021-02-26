@@ -811,7 +811,7 @@ abstract contract BaseStrategyInitializable is BaseStrategy {
             newStrategy := create(0, clone_code, 0x37)
         }
 
-        BaseStrategyInitializable(newStrategy).initialize(_vault, msg.sender, msg.sender, msg.sender);
+        BaseStrategyInitializable(newStrategy).initialize(_vault, _strategist, _rewards, _keeper);
 
         emit Cloned(newStrategy);
     }
