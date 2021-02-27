@@ -113,7 +113,7 @@ def test_yweth_wrapper(gov, rando, registry, create_vault, weth, yWETH):
     vault1 = create_vault(version="1.0.0", token=weth)
     registry.newRelease(vault1, {"from": gov})
     assert registry.latestVault(weth) == vault1
-    yweth = yWETH.deploy(weth, {"from": gov})
+    yweth = yWETH.deploy(weth, registry, {"from": gov})
     assert yweth.token() == weth
 
     # Deposits from ETH work just fine

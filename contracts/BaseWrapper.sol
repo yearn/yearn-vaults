@@ -17,10 +17,10 @@ abstract contract BaseWrapper {
 
     RegistryAPI public registry;
 
-    constructor(address _token) public {
+    constructor(address _token, address _registry) public {
         token = ERC20(_token);
         // v2.registry.ychad.eth
-        registry = RegistryAPI(0xE15461B18EE31b7379019Dc523231C57d1Cbc18c);
+        registry = RegistryAPI(_registry);
     }
 
     function setRegistry(address _registry) external {

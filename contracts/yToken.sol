@@ -13,7 +13,7 @@ contract yToken is IERC20, BaseWrapper {
 
     mapping(address => mapping(address => uint256)) public override allowance;
 
-    constructor(address _token) public BaseWrapper(_token) {}
+    constructor(address _token, address _registry) public BaseWrapper(_token, _registry) {}
 
     function name() external view returns (string memory) {
         VaultAPI best = bestVault();
@@ -121,7 +121,7 @@ interface IWETH {
 }
 
 contract yWETH is yToken {
-    constructor(address _weth) public yToken(_weth) {}
+    constructor(address _weth, address _registry) public yToken(_weth, _registry) {}
 
     function depositETH() public payable returns (uint256) {
         uint256 amount = msg.value;
@@ -141,7 +141,7 @@ contract yWETH is yToken {
         msg.sender.transfer(address(this).balance);
     }
 
-    fallback() external payable {
+    receive() external payable {
         if (msg.sender != address(token)) {
             depositETH();
         } // else: WETH is sending us back ETH, so don't do anything (to avoid recursion)

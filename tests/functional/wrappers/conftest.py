@@ -2,9 +2,9 @@ import pytest
 
 
 @pytest.fixture
-def ytoken(token, gov, yToken):
+def ytoken(token, gov, registry, yToken):
     # Official Yearn Wrapper
-    yield gov.deploy(yToken, token)
+    yield gov.deploy(yToken, token, registry)
 
 
 @pytest.fixture
@@ -13,10 +13,14 @@ def affiliate(management):
 
 
 @pytest.fixture
-def affiliate_token(token, affiliate, AffiliateToken):
+def affiliate_token(token, affiliate, registry, AffiliateToken):
     # Affliate Wrapper
     yield affiliate.deploy(
-        AffiliateToken, token, f"Affiliate {token.symbol()}", f"af{token.symbol()}"
+        AffiliateToken,
+        token,
+        registry,
+        f"Affiliate {token.symbol()}",
+        f"af{token.symbol()}",
     )
 
 

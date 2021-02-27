@@ -96,9 +96,11 @@ def test_migration_wrapper(
     chain, state_machine, token, create_vault, whale, gov, registry, Wrapper
 ):
     if Wrapper._name == "AffiliateToken":
-        wrapper = gov.deploy(Wrapper, token, "Test Affiliate Token", "afToken")
+        wrapper = gov.deploy(
+            Wrapper, token, registry, "Test Affiliate Token", "afToken"
+        )
     else:
-        wrapper = gov.deploy(Wrapper, token)
+        wrapper = gov.deploy(Wrapper, token, registry)
 
     # NOTE: Must start with at least one vault in registry (for token)
     vault = create_vault(token=token, version="1.0.0")

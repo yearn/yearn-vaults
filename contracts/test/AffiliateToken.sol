@@ -27,9 +27,10 @@ contract AffiliateToken is ERC20, BaseWrapper {
 
     constructor(
         address _token,
+        address _registry,
         string memory name,
         string memory symbol
-    ) public BaseWrapper(_token) ERC20(name, symbol) {
+    ) public BaseWrapper(_token, _registry) ERC20(name, symbol) {
         DOMAIN_SEPARATOR = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), keccak256(bytes("1")), _getChainId(), address(this)));
         affiliate = msg.sender;
         _setupDecimals(uint8(token.decimals()));
