@@ -49,12 +49,15 @@ def test_setAffiliate(affiliate, affiliate_token, rando):
         affiliate_token.acceptAffiliate({"from": affiliate})
 
 
-def test_setRegistry(rando, affiliate, affiliate_token):
+def test_setRegistry(rando, affiliate, gov, affiliate_token):
     with brownie.reverts():
         affiliate_token.setRegistry(rando, {"from": rando})
 
-    # Only affiliate can call this method
-    affiliate_token.setRegistry(rando, {"from": affiliate})
+    with brownie.reverts():
+        affiliate_token.setRegistry(rando, {"from": affiliate})
+
+    # Only yGov can call this method
+    affiliate_token.setRegistry(rando, {"from": gov})
 
 
 def test_deposit(token, registry, vault, affiliate_token, gov, rando):

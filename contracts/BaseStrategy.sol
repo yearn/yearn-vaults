@@ -19,6 +19,8 @@ struct StrategyParams {
 }
 
 interface RegistryAPI {
+    function governance() external view returns (address);
+
     function latestVault(address token) external view returns (address);
 
     function nextDeployment(address token) external view returns (uint256);

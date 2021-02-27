@@ -23,7 +23,8 @@ abstract contract BaseWrapper {
         registry = RegistryAPI(0xE15461B18EE31b7379019Dc523231C57d1Cbc18c);
     }
 
-    function _setRegistry(address _registry) internal {
+    function setRegistry(address _registry) external {
+        require(msg.sender == registry.governance());
         // In case you want to override the registry instead of re-deploying
         registry = RegistryAPI(_registry);
     }

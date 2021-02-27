@@ -33,6 +33,14 @@ def test_config(gov, token, vault, registry, ytoken):
     assert ytoken.allVaults() == [vault]
 
 
+def test_setRegistry(rando, gov, ytoken):
+    with brownie.reverts():
+        ytoken.setRegistry(rando, {"from": rando})
+
+    # Only yGov can call this method
+    ytoken.setRegistry(rando, {"from": gov})
+
+
 def test_deposit(token, registry, vault, ytoken, gov, rando):
     registry.newRelease(vault, {"from": gov})
     token.transfer(rando, 10000, {"from": gov})
