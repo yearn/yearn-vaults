@@ -185,7 +185,7 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
     }
 
 
-def test_migrateStrategy(gov, vault, strategy, rando, TestStrategy):
+def test_migrateStrategy(gov, vault, strategy, other_strategy, rando, TestStrategy):
     vault.addStrategy(strategy, 100, 10, 20, 1000, {"from": gov})
 
     # Not just anyone can migrate
@@ -195,6 +195,10 @@ def test_migrateStrategy(gov, vault, strategy, rando, TestStrategy):
     # Can't migrate to itself
     with brownie.reverts():
         vault.migrateStrategy(strategy, strategy, {"from": gov})
+
+    # Can't migrate from an unactivated strategy
+    with brownie.reverts():
+        vault.migrateStrategy(other_strategy, strategy, {"from": gov})
 
     # Migrating not in the withdrawal queue (for coverage)
     vault.removeStrategyFromQueue(strategy, {"from": gov})
