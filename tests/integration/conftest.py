@@ -24,21 +24,8 @@ def gov(accounts):
 
 
 @pytest.fixture
-def registry(accounts, registry_deployment_txn, gov, Registry):
-    # Load account that deployed the registry on mainnet,
-    # and set the nonce to just before that transaction
-    registry_deployer = accounts.at(registry_deployment_txn.sender, force=True)
-    assert registry_deployer.nonce == 0
-    # NOTE: This sucks, but there's no `set_nonce` yet
-    while registry_deployer.nonce < registry_deployment_txn.nonce:
-        registry_deployer.transfer(registry_deployer, 0)
-
-    assert registry_deployer.nonce == registry_deployment_txn.nonce
-
-    registry = Registry.deploy({"from": registry_deployer})
-    registry.setGovernance(gov, {"from": registry_deployer})
-    registry.acceptGovernance({"from": gov})
-    yield registry
+def registry(gov, Registry):
+    yield gov.deploy(Registry)
 
 
 @pytest.fixture

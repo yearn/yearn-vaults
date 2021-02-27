@@ -9,12 +9,6 @@ from eth_account.messages import encode_structured_data
 
 from brownie import compile_source, Token, Vault
 
-
-# NOTE: Registry deployment txn of v2.registry.ychad.eth on mainnet
-REGISTRY_DEPLOYMENT_TXNHASH = (
-    "0x61db0649f50c4839010e6d4cdd0fac960f25b86c4f0328912fb96859b4827560"
-)
-
 PACKAGE_VERSION = yaml.safe_load(
     (Path(__file__).parents[1] / "ethpm-config.yaml").read_text()
 )["version"]
@@ -192,19 +186,6 @@ def sign_vault_permit():
         return owner.sign_message(permit).signature
 
     return sign_vault_permit
-
-
-@pytest.fixture(scope="session")
-def registry_deployment_txn(web3):
-    from collections import namedtuple
-
-    txn = web3._mainnet.eth.getTransaction(REGISTRY_DEPLOYMENT_TXNHASH)
-    receipt = web3._mainnet.eth.getTransactionReceipt(REGISTRY_DEPLOYMENT_TXNHASH)
-    assert receipt.contractAddress == web3._mainnet.ens.address("v2.registry.ychad.eth")
-
-    return namedtuple("Txn", ["sender", "nonce", "address"])(
-        txn["from"], txn.nonce, receipt.contractAddress
-    )
 
 
 # Function scoped isolation fixture to enable xdist.
