@@ -1,4 +1,16 @@
+from pathlib import Path
+
 import pytest
+
+# 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 on Mainnet
+WETH_BYTECODE = (Path(__file__).parent / "weth.bytecode").read_text().strip()
+
+
+@pytest.fixture
+def weth(Token, gov):
+    # WETH9 deployment bytecode
+    txn = gov.transfer(data=WETH_BYTECODE)
+    yield Token.at(txn.contract_address)
 
 
 @pytest.fixture
@@ -22,13 +34,3 @@ def affiliate_token(token, affiliate, registry, AffiliateToken):
         f"Affiliate {token.symbol()}",
         f"af{token.symbol()}",
     )
-
-
-@pytest.fixture
-def weth(web3, Token, gov):
-    # WETH9 deployment txn
-    txn = web3._mainnet.eth.getTransaction(
-        "0xb95343413e459a0f97461812111254163ae53467855c0d73e0f1e7c5b8442fa3"
-    )
-    txn = gov.transfer(data=txn["input"])
-    yield Token.at(txn.contract_address)
