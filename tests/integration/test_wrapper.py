@@ -12,47 +12,48 @@ class Migration:
     st_index = strategy("uint256")
 
     def __init__(
-        self,
-        registry,
-        token,
-        create_vault,
-        wrapper,
-        user,
-        gov,
-        initial_vault,
-        sum_deposits_fn,
-        initial_deposit,
+        self, chain, registry, token, create_vault, wrapper, first_vault, user, gov
     ):
+        self.chain = chain
         self.registry = registry
         self.token = token
-        self.create_vault = lambda s, t, v: create_vault(token=t, version=v)
+        # NOTE: Have to fakeout this call because it thinks it's a method
+        self.create_vault = lambda self, version: create_vault(
+            token=token, version=version
+        )
         self.wrapper = wrapper
         self.user = user
         self.gov = gov
-        self._initial_vault = initial_vault
-        self.sum_deposits_fn = sum_deposits_fn
-        self.returns_generated = 0
-        self._initial_deposit = initial_deposit
+        self.vaults = []
+        self._first_vault = first_vault
+        self.starting_balance = token.balanceOf(user)  # Don't touch!
 
     def setup(self):
-        self.vaults = [self._initial_vault]
-        self.deposited = self._initial_deposit
+        # NOTE: Approve wrapper for all future deposits (only once)
+        self.token.approve(self.wrapper, 2 ** 256 - 1, {"from": self.user})
+
+        # NOTE: Deposit a little bit to start (so we don't just always skip)
+        self.wrapper.deposit(self.starting_balance // 10, {"from": self.user})
+        self.vaults = [self._first_vault]
 
     def rule_new_release(self):
-        api_version = str(Version(self.registry.latestRelease()).next_major())
-        vault = self.create_vault(self.token, api_version)
+        next_version = str(Version(self.registry.latestRelease()).next_major())
+        vault = self.create_vault(next_version)
         print(f"  Registry.newRelease({vault})")
+
         self.registry.newRelease(vault, {"from": self.gov})
+
+        # NOTE: yToken's are non-custodial, so you need to authorize them
         if self.wrapper._name == "yToken":
             vault.approve(self.wrapper, 2 ** 256 - 1, {"from": self.user})
+
         self.vaults.append(vault)
 
     def rule_deposit(self, ratio="st_ratio"):
-        amount = int(ratio * self.wrapper.balanceOf(self.user))
+        amount = int(ratio * self.token.balanceOf(self.user))
         if amount > 0:
             print(f"  Wrapper.deposit({amount})")
             self.wrapper.deposit(amount, {"from": self.user})
-            self.deposited += amount
 
         else:
             print("  Wrapper.deposit: Nothing to deposit...")
@@ -62,10 +63,11 @@ class Migration:
         vaults_in_use = [v for v in self.vaults if v.totalSupply() > 0]
         if len(vaults_in_use) > 0:
             vault = vaults_in_use[index % len(vaults_in_use)]
-            print(f"  {vault}.harvest()")
             amount = int(1e17)
+            print(f"  {vault}.harvest({amount})")
             self.token.transfer(vault, amount, {"from": self.user})
-            self.returns_generated += amount
+            # NOTE: Wait enough time where "profit locking" isn't a problem (about a day)
+            self.chain.mine(timedelta=24 * 60 * 60)
 
         else:
             print("  vaults.harvest: No Vaults in use...")
@@ -78,73 +80,34 @@ class Migration:
         amount = int(ratio * self.wrapper.balanceOf(self.user))
         if amount > 0:
             print(f"  Wrapper.withdraw({amount})")
-            self.wrapper.withdraw(amount, {"from": self.user})
-            self.deposited -= amount
+            self.wrapper.withdraw(amount, {"from": self.user}).return_value
 
         else:
             print("  Wrapper.withdraw: Nothing to withdraw...")
 
     def invariant_balances(self):
-        print("  Balance Check")
-        print(f"    user: {self.token.balanceOf(self.user)} tokens")
-        for vault in self.vaults:
-            print(f"    {vault.address}: {vault.totalSupply()} tokens")
-        assert self.deposited + self.returns_generated - self.sum_deposits_fn() < 1000
+        actual_deposits = sum(v.totalAssets() for v in self.vaults)
+        expected_deposits = self.starting_balance - self.token.balanceOf(self.user)
+        assert actual_deposits == expected_deposits
 
 
-@pytest.mark.parametrize("Wrapper", [AffiliateToken, yToken])
+@pytest.mark.parametrize("Wrapper", (AffiliateToken, yToken))
 def test_migration_wrapper(
-    state_machine, token, create_vault, whale, gov, registry, Wrapper
+    chain, state_machine, token, create_vault, whale, gov, registry, Wrapper
 ):
-    starting_balance = token.balanceOf(whale)
-    assert starting_balance > 0
-
-    if Wrapper._name == "yToken":
+    if Wrapper._name == "AffiliateToken":
+        wrapper = gov.deploy(Wrapper, token, "Test Affiliate Token", "afToken")
+    else:
         wrapper = gov.deploy(Wrapper, token)
 
-        def sum_deposits_fn(self):
-            """ The token-value sum of the user's deposits in all vaults """
-            return sum(
-                v.balanceOf(self.user) * v.pricePerShare() // 10 ** v.decimals()
-                for v in self.vaults
-            )
-
-    else:
-        wrapper = gov.deploy(Wrapper, token, "Test Affiliate Token", "afToken")
-
-        def sum_deposits_fn(self):
-            """ The token-value of the user's deposits in the wrapper """
-            return (
-                self.wrapper.balanceOf(self.user)
-                * self.wrapper.pricePerShare()
-                // 10 ** self.wrapper.decimals()
-            )
-
-    token.approve(wrapper, 2 ** 256 - 1, {"from": whale})
-
-    # NOTE: Need to seed registry with at least one vault to function
+    # NOTE: Must start with at least one vault in registry (for token)
     vault = create_vault(token=token, version="1.0.0")
-    if wrapper._name == "yToken":
-        vault.approve(wrapper, 2 ** 256 - 1, {"from": whale})
     registry.newRelease(vault, {"from": gov})
 
-    # NOTE: Start with something deposited
-    wrapper.deposit(starting_balance // 10, {"from": whale})
-    # HACK: Get this function working correctly
-    Caller = namedtuple("Caller", ["vaults", "wrapper", "user"])
-    caller = Caller([vault], wrapper, whale)
-    assert starting_balance == token.balanceOf(whale) + sum_deposits_fn(caller)
-    del caller, Caller
+    # NOTE: yToken's are non-custodial, so you need to authorize them
+    if wrapper._name == "yToken":
+        vault.approve(wrapper, 2 ** 256 - 1, {"from": whale})
 
     state_machine(
-        Migration,
-        registry,
-        token,
-        create_vault,
-        wrapper,
-        whale,
-        gov,
-        vault,
-        sum_deposits_fn,
-        starting_balance // 10,
+        Migration, chain, registry, token, create_vault, wrapper, vault, whale, gov
     )
