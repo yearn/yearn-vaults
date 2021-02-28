@@ -28,23 +28,46 @@ def other_strategy(gov, vault, TestStrategy):
 
 
 @pytest.fixture
-def wrong_strategy(gov, Vault, Token, TestStrategy):
-    otherToken = gov.deploy(Token, 18)
+def other_token(gov, Token):
+    yield gov.deploy(Token, 18)
+
+
+@pytest.fixture
+def strategy_with_wrong_vault(gov, token, vault, Vault, TestStrategy):
     otherVault = gov.deploy(Vault)
     otherVault.initialize(
-        otherToken,
+        token,
         gov,
         gov,
-        otherToken.symbol() + " yVault",
-        "yv" + otherToken.symbol(),
+        token.symbol() + " yVault",
+        "yv" + token.symbol(),
         gov,
     )
+    assert otherVault.token() == token
+    assert otherVault != vault
     otherVault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     yield gov.deploy(TestStrategy, otherVault)
 
 
+@pytest.fixture
+def strategy_with_wrong_want_token(gov, vault, other_token, Token, TestStrategy):
+    strategy = gov.deploy(TestStrategy, vault)
+    assert strategy.want() == vault.token()
+    assert strategy.vault() == vault
+    strategy._setWant(other_token)
+    assert strategy.want() == other_token
+    yield strategy
+
+
 def test_addStrategy(
-    chain, gov, vault, strategy, other_strategy, wrong_strategy, rando
+    chain,
+    gov,
+    vault,
+    strategy,
+    other_strategy,
+    strategy_with_wrong_want_token,
+    strategy_with_wrong_vault,
+    rando,
 ):
 
     # Only governance can add a strategy
@@ -93,9 +116,13 @@ def test_addStrategy(
     with brownie.reverts():
         vault.addStrategy(ZERO_ADDRESS, 100, 10, 20, 1000, {"from": gov})
 
-    # Can't add a strategy with incorrect vault or want token
+    # Can't add a strategy with incorrect vault
     with brownie.reverts():
-        vault.addStrategy(wrong_strategy, 100, 10, 20, 1000, {"from": gov})
+        vault.addStrategy(strategy_with_wrong_vault, 100, 10, 20, 1000, {"from": gov})
+
+    # Can't add a strategy with incorrect want token
+    with brownie.reverts():
+        vault.addStrategy(strategy_with_wrong_want_token, 100, 10, 20, 1000, {"from": gov})
 
     # Can't add a strategy with a debt ratio more than the maximum
     leftover_ratio = 10_000 - vault.debtRatio()

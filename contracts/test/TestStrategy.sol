@@ -2,6 +2,7 @@
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {BaseStrategyInitializable, StrategyParams, VaultAPI} from "../BaseStrategy.sol";
 
 /*
@@ -31,6 +32,11 @@ contract TestStrategy is BaseStrategyInitializable {
     // NOTE: This is a test-only function to enable reentrancy on withdraw
     function _toggleReentrancyExploit() public {
         doReentrancy = !doReentrancy;
+    }
+    
+    // NOTE: This is a test-only function to simulate a wrong want token
+    function _setWant(IERC20 _want) public {
+        want = _want;
     }
 
     function estimatedTotalAssets() public override view returns (uint256) {
