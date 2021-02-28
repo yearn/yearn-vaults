@@ -371,6 +371,12 @@ def test_reporting_gains_without_fee(vault, token, strategy, gov, rando):
     vault.setPerformanceFee(0, {"from": gov})
     vault.addStrategy(strategy, 100, 10, 20, 1000, {"from": gov})
     gain = 1000000
+    assert token.balanceOf(strategy) == 0
+    
+    # Can't lie about total available to withdraw
+    with brownie.reverts():
+      vault.report(gain, 0, 0, {"from": strategy})
+    
     token.transfer(strategy, gain, {"from": gov})
     vault.report(gain, 0, 0, {"from": strategy})
 
