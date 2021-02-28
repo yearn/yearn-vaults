@@ -85,8 +85,7 @@ contract TestStrategy is BaseStrategyInitializable {
         } else {
             // NOTE: Just in case something was stolen from this contract
             if (totalDebt > totalAssets) {
-                _loss = totalDebt.sub(totalAssets);
-                if (_loss > _amountNeeded) _loss = _amountNeeded;
+                _loss = _amountNeeded;
             }
             _liquidatedAmount = _amountNeeded;
         }
