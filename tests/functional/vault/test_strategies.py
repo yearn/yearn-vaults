@@ -354,6 +354,40 @@ def test_ordering(gov, vault, TestStrategy, rando):
     with brownie.reverts():
         vault.addStrategyToQueue(removed_strategy, {"from": gov})
 
+def test_add_strategy_to_queue(gov, management, vault, TestStrategy, strategy, other_strategy, rando):
+    # Can't add an unactivated strategy to queue
+    with brownie.reverts():
+      vault.addStrategyToQueue(strategy, {"from": gov})
+
+    # Initialize strategies (keep other_strategy in queue to test the queue)
+    vault.addStrategy(strategy, 100, 10, 20, 1000, {"from": gov})
+    vault.removeStrategyFromQueue(strategy, {"from": gov})
+    vault.addStrategy(other_strategy, 100, 10, 20, 1000, {"from": gov})
+
+    # Not just anyone can add a strategy to the queue
+    with brownie.reverts():
+      vault.addStrategyToQueue(strategy, {"from": rando})
+
+    # # Governance can add a strategy to the queue
+    vault.addStrategyToQueue(strategy, {"from": gov})
+    vault.removeStrategyFromQueue(strategy, {"from": gov})
+      
+    # Managemenet can add a strategy to the queue
+    vault.addStrategyToQueue(strategy, {"from": management})
+    vault.removeStrategyFromQueue(strategy, {"from": management})
+
+    # Can't add an existing strategy to the queue
+    vault.addStrategyToQueue(strategy, {"from": gov})
+    with brownie.reverts():
+      vault.addStrategyToQueue(strategy, {"from": gov})
+    vault.removeStrategyFromQueue(strategy, {"from": gov})
+    vault.removeStrategyFromQueue(other_strategy, {"from": gov})
+
+    # Can't add a strategy to an already full queue
+    strategies = [gov.deploy(TestStrategy, vault) for _ in range(20)]
+    [vault.addStrategy(s, 100, 10, 20, 1000, {"from":gov}) for s in strategies]
+    with brownie.reverts():
+      vault.addStrategyToQueue(strategy, {"from": gov})
 
 def test_reporting(vault, token, strategy, gov, rando):
     # Not just anyone can call `Vault.report()`
