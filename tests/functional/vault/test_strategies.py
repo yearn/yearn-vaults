@@ -354,7 +354,7 @@ def test_ordering(gov, vault, TestStrategy, rando):
     with brownie.reverts():
         vault.addStrategyToQueue(removed_strategy, {"from": gov})
 
-def test_add_strategy_to_queue(gov, management, vault, TestStrategy, strategy, other_strategy, rando):
+def test_addStategyToQueue(gov, management, vault, TestStrategy, strategy, other_strategy, rando):
     # Can't add an unactivated strategy to queue
     with brownie.reverts():
       vault.addStrategyToQueue(strategy, {"from": gov})
