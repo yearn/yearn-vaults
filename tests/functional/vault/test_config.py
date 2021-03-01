@@ -196,4 +196,4 @@ def test_vault_setLockedProfitDegration_range(gov, vault):
     vault.setLockedProfitDegration(0, {"from": gov})
     vault.setLockedProfitDegration(DEGREDATION_COEFFICIENT, {"from": gov})
     with brownie.reverts():
-        vault.setLockedProfitDegration(DEGREDATION_COEFFICIENT + 1000, {"from": gov})
+        vault.setLockedProfitDegration(DEGREDATION_COEFFICIENT + 1, {"from": gov})
