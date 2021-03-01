@@ -372,7 +372,7 @@ def test_add_strategy_to_queue(gov, management, vault, TestStrategy, strategy, o
     vault.addStrategyToQueue(strategy, {"from": gov})
     vault.removeStrategyFromQueue(strategy, {"from": gov})
       
-    # Managemenet can add a strategy to the queue
+    # Management can add a strategy to the queue
     vault.addStrategyToQueue(strategy, {"from": management})
     vault.removeStrategyFromQueue(strategy, {"from": management})
 
