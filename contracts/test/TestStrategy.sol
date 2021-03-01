@@ -25,7 +25,7 @@ contract TestStrategy is BaseStrategyInitializable {
 
     // NOTE: This is a test-only function to simulate losses
     function _takeFunds(uint256 amount) public {
-        want.transfer(msg.sender, amount);
+        want.safeTransfer(msg.sender, amount);
     }
 
     // NOTE: This is a test-only function to enable reentrancy on withdraw
