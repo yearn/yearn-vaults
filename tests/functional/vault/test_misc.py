@@ -2,10 +2,43 @@ import pytest
 import brownie
 import pytest
 
+MAX_UINT256 = 2 ** 256 - 1
+
 
 @pytest.fixture
 def other_token(gov, Token):
     yield gov.deploy(Token, 18)
+
+
+@pytest.fixture
+def token_false_return(gov, TokenFalseReturn):
+    yield gov.deploy(TokenFalseReturn, 18)
+
+
+def vault(gov, management, token, Vault):
+    # NOTE: Because the fixture has tokens in it already
+    vault = gov.deploy(Vault)
+    vault.initialize(
+        token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
+    )
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    vault.setManagement(management, {"from": gov})
+    yield vault
+
+
+@pytest.fixture
+def other_vault(gov, Vault, other_token):
+    vault = gov.deploy(Vault)
+    vault.initialize(other_token, gov, gov, "", "", gov)
+    yield vault
+
+
+@pytest.fixture
+def vault_with_false_returning_token(gov, Vault, token_false_return):
+    vault = gov.deploy(Vault)
+    vault.initialize(token_false_return, gov, gov, "", "", gov)
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    yield vault
 
 
 def test_regular_available_deposit_limit(Vault, token, gov):
@@ -207,3 +240,30 @@ def test_sandwich_attack(
     print(f"Attack Profit Percent: {profit_percent}")
     # 5 rebases a day = 1780 a year. Less than 0.0004% profit on attack makes it closer to neutral EV
     assert profit_percent == pytest.approx(0, abs=10e-5)
+
+
+def test_erc20_safe_transfer(gov, other_vault, token, other_token, token_false_return):
+    # Normal ERC-20 tokens (and tokens with no return) can be swept if the vault has sweepable tokens
+    token.transfer(other_vault, token.balanceOf(gov) // 2, {"from": gov})
+    vaultBalanceOf = other_token.balanceOf(other_vault)
+    sweepAmount = vaultBalanceOf
+    other_vault.sweep(token, sweepAmount, {"from": gov})
+
+    # Tokens that return false should revert (erc20_safe_transfer failed)
+    with brownie.reverts():
+        other_vault.sweep(token_false_return, 0, {"from": gov})
+
+
+def test_erc20_safe_transferFrom(
+    gov, token, vault, token_false_return, vault_with_false_returning_token
+):
+    # Vaults with false returning tokens
+    with brownie.reverts():
+        token_false_return.approve(
+            vault_with_false_returning_token, MAX_UINT256, {"from": gov}
+        )
+        vault_with_false_returning_token.deposit(5000, {"from": gov})
+
+    # Normal ERC-20 vault deposits (via erc20_safe_transferFrom) should work
+    token.approve(vault, MAX_UINT256, {"from": gov})
+    vault.deposit(5000, {"from": gov})

@@ -78,3 +78,19 @@ contract TokenNoReturn {
         emit Transfer(sender, receiver, amount);
     }
 }
+
+contract TokenFalseReturn is Token {
+    constructor(uint8 _decimals) public Token(_decimals) {}
+
+    function transfer(address receiver, uint256 amount) public virtual override returns (bool) {
+        return false;
+    }
+
+    function transferFrom(
+        address sender,
+        address receiver,
+        uint256 amount
+    ) public virtual override returns (bool) {
+        return false;
+    }
+}
