@@ -368,7 +368,7 @@ def test_addStategyToQueue(gov, management, vault, TestStrategy, strategy, other
     with brownie.reverts():
       vault.addStrategyToQueue(strategy, {"from": rando})
 
-    # # Governance can add a strategy to the queue
+    # Governance can add a strategy to the queue
     vault.addStrategyToQueue(strategy, {"from": gov})
     vault.removeStrategyFromQueue(strategy, {"from": gov})
       
