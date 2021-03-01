@@ -355,7 +355,7 @@ def test_ordering(gov, vault, TestStrategy, rando):
         vault.addStrategyToQueue(removed_strategy, {"from": gov})
 
 
-def test_reporting(vault, strategy, gov, rando):
+def test_reporting(vault, token, strategy, gov, rando):
     # Not just anyone can call `Vault.report()`
     with brownie.reverts():
         vault.report(0, 0, 0, {"from": rando})
@@ -365,6 +365,15 @@ def test_reporting(vault, strategy, gov, rando):
     vault.addStrategy(strategy, 100, 10, 20, 1000, {"from": gov})
     vault.expectedReturn(strategy)  # Do this for coverage of `Vault._expectedReturn()`
 
+    # Can't have more loss than strategy debt
+    strategyTokenBalance = token.balanceOf(strategy)
+    assert strategyTokenBalance == 0
+    debt = vault.totalDebt()
+    loss = 1000
+    assert debt == 0
+    assert loss >= debt
+    with brownie.reverts():
+      vault.report(0, loss, 0, {"from": strategy})
 
 def test_reporting_gains_without_fee(vault, token, strategy, gov, rando):
     vault.setManagementFee(0, {"from": gov})
