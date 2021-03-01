@@ -1,5 +1,7 @@
 import pytest
 
+from brownie import Token, TokenNoReturn
+
 
 @pytest.fixture
 def gov(accounts):
@@ -22,18 +24,11 @@ def management(accounts):
 
 
 @pytest.fixture(params=[("Normal", 18), ("NoReturn", 18), ("Normal", 8), ("Normal", 2)])
-def token(gov, Token, request):
+def token(gov, request):
     (behaviour, decimal) = request.param
 
-    token = gov.deploy(Token, decimal)
     # NOTE: Run our test suite using both compliant and non-compliant ERC20 Token
-    if behaviour == "NoReturn":
-        token._initialized = False  # otherwise Brownie throws an `AttributeError`
-        setattr(token, "transfer", token.transferWithoutReturn)
-        setattr(token, "transferFrom", token.transferFromWithoutReturn)
-        setattr(token, "approve", token.approveWithoutReturn)
-        token._initialized = True  # shhh, nothing to see here...
-    yield token
+    yield gov.deploy(Token if behaviour == "Normal" else TokenNoReturn, decimal)
 
 
 @pytest.fixture
