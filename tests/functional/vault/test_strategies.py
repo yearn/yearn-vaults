@@ -2,6 +2,8 @@ import pytest
 import brownie
 from brownie import ZERO_ADDRESS
 
+MAX_UINT256 = 2 ** 256 - 1
+
 
 @pytest.fixture
 def vault(gov, management, token, Vault):
@@ -30,6 +32,36 @@ def other_strategy(gov, vault, TestStrategy):
 @pytest.fixture
 def other_token(gov, Token):
     yield gov.deploy(Token, 18)
+
+
+def test_liquidation_after_hack(chain, gov, vault, token, TestStrategy):  
+    # Deposit into vault
+    token.approve(vault, MAX_UINT256, {"from": gov})
+    vault.deposit(1000, {"from": gov})
+
+    # Deploy strategy and seed it with debt
+    strategy = gov.deploy(TestStrategy, vault)
+    vault.addStrategy(strategy, 2_000, 0, 10 ** 21, 1000, {"from":gov})
+    strategy.harvest({"from": gov})
+
+    # The strategy suffers a loss
+    stolenFunds = token.balanceOf(strategy) // 2
+    strategy._takeFunds(stolenFunds, {"from": gov})
+    strategyTotalAssetsAfterHack = token.balanceOf(strategy)
+
+    # Make sure strategy debt exceeds strategy assets
+    totalDebt = vault.strategies(strategy).dict()["totalDebt"]
+    totalAssets = token.balanceOf(strategy)
+    assert totalDebt > totalAssets
+ 
+    # Make sure the withdrawal results in liquidation
+    amountToWithdraw = 100 # amountNeeded in BaseStrategy
+    assert amountToWithdraw <= strategyTotalAssetsAfterHack
+    loss = totalDebt - totalAssets
+    assert loss <= amountToWithdraw
+  
+    # Liquidate strategy
+    strategy.withdraw(amountToWithdraw, {"from": vault})
 
 
 @pytest.fixture
