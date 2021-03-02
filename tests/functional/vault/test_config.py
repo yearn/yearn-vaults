@@ -56,9 +56,9 @@ def test_vault_name_symbol_override(guardian, gov, rewards, token, Vault):
 def test_vault_reinitialization(guardian, gov, rewards, token, Vault):
     vault = guardian.deploy(Vault)
     vault.initialize(token, gov, rewards, "crvY yVault", "yvcrvY", guardian)
-   # Can't reinitialize a vault
+    # Can't reinitialize a vault
     with brownie.reverts():
-      vault.initialize(token, gov, rewards, "crvY yVault", "yvcrvY", guardian)
+        vault.initialize(token, gov, rewards, "crvY yVault", "yvcrvY", guardian)
 
 
 @pytest.mark.parametrize(

@@ -34,14 +34,14 @@ def other_token(gov, Token):
     yield gov.deploy(Token, 18)
 
 
-def test_liquidation_after_hack(chain, gov, vault, token, TestStrategy):  
+def test_liquidation_after_hack(chain, gov, vault, token, TestStrategy):
     # Deposit into vault
     token.approve(vault, MAX_UINT256, {"from": gov})
     vault.deposit(1000, {"from": gov})
 
     # Deploy strategy and seed it with debt
     strategy = gov.deploy(TestStrategy, vault)
-    vault.addStrategy(strategy, 2_000, 0, 10 ** 21, 1000, {"from":gov})
+    vault.addStrategy(strategy, 2_000, 0, 10 ** 21, 1000, {"from": gov})
     strategy.harvest({"from": gov})
 
     # The strategy suffers a loss
@@ -53,13 +53,13 @@ def test_liquidation_after_hack(chain, gov, vault, token, TestStrategy):
     totalDebt = vault.strategies(strategy).dict()["totalDebt"]
     totalAssets = token.balanceOf(strategy)
     assert totalDebt > totalAssets
- 
+
     # Make sure the withdrawal results in liquidation
-    amountToWithdraw = 100 # amountNeeded in BaseStrategy
+    amountToWithdraw = 100  # amountNeeded in BaseStrategy
     assert amountToWithdraw <= strategyTotalAssetsAfterHack
     loss = totalDebt - totalAssets
     assert loss <= amountToWithdraw
-  
+
     # Liquidate strategy
     strategy.withdraw(amountToWithdraw, {"from": vault})
 
@@ -68,12 +68,7 @@ def test_liquidation_after_hack(chain, gov, vault, token, TestStrategy):
 def strategy_with_wrong_vault(gov, token, vault, Vault, TestStrategy):
     otherVault = gov.deploy(Vault)
     otherVault.initialize(
-        token,
-        gov,
-        gov,
-        token.symbol() + " yVault",
-        "yv" + token.symbol(),
-        gov,
+        token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov,
     )
     assert otherVault.token() == token
     assert otherVault != vault
@@ -154,7 +149,9 @@ def test_addStrategy(
 
     # Can't add a strategy with incorrect want token
     with brownie.reverts():
-        vault.addStrategy(strategy_with_wrong_want_token, 100, 10, 20, 1000, {"from": gov})
+        vault.addStrategy(
+            strategy_with_wrong_want_token, 100, 10, 20, 1000, {"from": gov}
+        )
 
     # Can't add a strategy with a debt ratio more than the maximum
     leftover_ratio = 10_000 - vault.debtRatio()
@@ -386,10 +383,13 @@ def test_ordering(gov, vault, TestStrategy, rando):
     with brownie.reverts():
         vault.addStrategyToQueue(removed_strategy, {"from": gov})
 
-def test_addStategyToQueue(gov, management, vault, TestStrategy, strategy, other_strategy, rando):
+
+def test_addStategyToQueue(
+    gov, management, vault, TestStrategy, strategy, other_strategy, rando
+):
     # Can't add an unactivated strategy to queue
     with brownie.reverts():
-      vault.addStrategyToQueue(strategy, {"from": gov})
+        vault.addStrategyToQueue(strategy, {"from": gov})
 
     # Initialize strategies (keep other_strategy in queue to test the queue)
     vault.addStrategy(strategy, 100, 10, 20, 1000, {"from": gov})
@@ -398,12 +398,12 @@ def test_addStategyToQueue(gov, management, vault, TestStrategy, strategy, other
 
     # Not just anyone can add a strategy to the queue
     with brownie.reverts():
-      vault.addStrategyToQueue(strategy, {"from": rando})
+        vault.addStrategyToQueue(strategy, {"from": rando})
 
     # Governance can add a strategy to the queue
     vault.addStrategyToQueue(strategy, {"from": gov})
     vault.removeStrategyFromQueue(strategy, {"from": gov})
-      
+
     # Management can add a strategy to the queue
     vault.addStrategyToQueue(strategy, {"from": management})
     vault.removeStrategyFromQueue(strategy, {"from": management})
@@ -411,15 +411,16 @@ def test_addStategyToQueue(gov, management, vault, TestStrategy, strategy, other
     # Can't add an existing strategy to the queue
     vault.addStrategyToQueue(strategy, {"from": gov})
     with brownie.reverts():
-      vault.addStrategyToQueue(strategy, {"from": gov})
+        vault.addStrategyToQueue(strategy, {"from": gov})
     vault.removeStrategyFromQueue(strategy, {"from": gov})
     vault.removeStrategyFromQueue(other_strategy, {"from": gov})
 
     # Can't add a strategy to an already full queue
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(20)]
-    [vault.addStrategy(s, 100, 10, 20, 1000, {"from":gov}) for s in strategies]
+    [vault.addStrategy(s, 100, 10, 20, 1000, {"from": gov}) for s in strategies]
     with brownie.reverts():
-      vault.addStrategyToQueue(strategy, {"from": gov})
+        vault.addStrategyToQueue(strategy, {"from": gov})
+
 
 def test_reporting(vault, token, strategy, gov, rando):
     # Not just anyone can call `Vault.report()`
@@ -439,7 +440,8 @@ def test_reporting(vault, token, strategy, gov, rando):
     assert debt == 0
     assert loss >= debt
     with brownie.reverts():
-      vault.report(0, loss, 0, {"from": strategy})
+        vault.report(0, loss, 0, {"from": strategy})
+
 
 def test_reporting_gains_without_fee(vault, token, strategy, gov, rando):
     vault.setManagementFee(0, {"from": gov})
@@ -447,11 +449,11 @@ def test_reporting_gains_without_fee(vault, token, strategy, gov, rando):
     vault.addStrategy(strategy, 100, 10, 20, 1000, {"from": gov})
     gain = 1000000
     assert token.balanceOf(strategy) == 0
-    
+
     # Can't lie about total available to withdraw
     with brownie.reverts():
-      vault.report(gain, 0, 0, {"from": strategy})
-    
+        vault.report(gain, 0, 0, {"from": strategy})
+
     token.transfer(strategy, gain, {"from": gov})
     vault.report(gain, 0, 0, {"from": strategy})
 
