@@ -62,10 +62,10 @@ def main():
         gov_default = dev.address
     else:
         gov_default = "ychad.eth"
-    gov = get_address("Yearn Governance", default="0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7")
+    gov = get_address("Yearn Governance", default="dev.ychad.eth")
 
     rewards = get_address(
-        "Rewards contract", default="0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde"
+        "Rewards contract", default="treasury.ychad.eth"
     )
     guardian = get_address("Vault Guardian", default="dev.ychad.eth")
     name = click.prompt(f"Set description", default=DEFAULT_VAULT_NAME(token))
