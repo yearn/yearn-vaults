@@ -16,13 +16,14 @@ def token_false_return(gov, TokenFalseReturn):
     yield gov.deploy(TokenFalseReturn, 18)
 
 
+@pytest.fixture
 def vault(gov, management, token, Vault):
     # NOTE: Because the fixture has tokens in it already
     vault = gov.deploy(Vault)
     vault.initialize(
         token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
     )
-    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    vault.setDepositLimit(MAX_UINT256, {"from": gov})
     vault.setManagement(management, {"from": gov})
     yield vault
 
@@ -38,7 +39,7 @@ def other_vault(gov, Vault, other_token):
 def vault_with_false_returning_token(gov, Vault, token_false_return):
     vault = gov.deploy(Vault)
     vault.initialize(token_false_return, gov, gov, "", "", gov)
-    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    vault.setDepositLimit(MAX_UINT256, {"from": gov})
     yield vault
 
 
@@ -49,18 +50,19 @@ def test_credit_available_minDebtPerHarvest_larger_than_available(
     vault.initialize(
         token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
     )
-    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    vault.setDepositLimit(MAX_UINT256, {"from": gov})
     strategy = gov.deploy(TestStrategy, vault)
+    minDebtPerHarvest = MAX_UINT256 - 1
     vault.addStrategy(
         strategy,
         10000,  # 100% of Vault AUM
-        2 ** 256 - 2,  # minDebtPerHarvest
-        2 ** 256 - 1,  # maxDebtPerHarvest
+        minDebtPerHarvest,  # minDebtPerHarvest
+        MAX_UINT256,  # maxDebtPerHarvest
         0,  # performanceFee
         {"from": gov},
     )
 
-    token.approve(vault, 2 ** 256 - 1, {"from": gov})
+    token.approve(vault, MAX_UINT256, {"from": gov})
     vault.deposit(500, {"from": gov})
     vault_debtLimit = vault.debtRatio() * vault.totalAssets() / MAX_BPS
     vault_totalDebt = vault.totalDebt()
@@ -80,7 +82,7 @@ def test_credit_available_minDebtPerHarvest_larger_than_available(
     available = strategy_debtLimit - strategy_totalDebt
 
     # Adjust by the global debt limit left
-    vault.updateStrategyMinDebtPerHarvest(strategy, 2 ** 256 - 2, {"from": gov})
+    vault.updateStrategyMinDebtPerHarvest(strategy, minDebtPerHarvest, {"from": gov})
     available = min(available, vault_debtLimit - vault_totalDebt)
 
     # Can only borrow up to what the contract has in reserve
@@ -225,7 +227,7 @@ def test_deposit_withdraw_faillure(token, gov, vault):
         vault.deposit({"from": gov})
 
     token._setBlocked(vault.address, False, {"from": gov})
-    token.approve(vault, 2 ** 256 - 1, {"from": gov})
+    token.approve(vault, MAX_UINT256, {"from": gov})
     vault.deposit({"from": gov})
     token._setBlocked(gov, True, {"from": gov})
 
@@ -234,6 +236,8 @@ def test_deposit_withdraw_faillure(token, gov, vault):
 
 
 def test_report_loss(token, gov, vault, strategy, accounts):
+    token.approve(vault, MAX_UINT256, {"from": gov})
+    vault.deposit({"from": gov})
     strategy.harvest()
     strategy._takeFunds(token.balanceOf(strategy), {"from": gov})
     assert token.balanceOf(strategy) == 0
@@ -260,7 +264,7 @@ def test_sandwich_attack(
     strategy = strategist.deploy(TestStrategy, vault)
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
-    vault.addStrategy(strategy, 4_000, 0, 2 ** 256 - 1, 0, {"from": gov})
+    vault.addStrategy(strategy, 4_000, 0, MAX_UINT256, 0, {"from": gov})
     vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
 
     strategy.harvest({"from": strategist})
