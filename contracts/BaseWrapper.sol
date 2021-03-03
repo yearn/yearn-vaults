@@ -7,7 +7,17 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/math/Math.sol";
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 
-import {RegistryAPI, VaultAPI} from "./BaseStrategy.sol";
+import {VaultAPI} from "./BaseStrategy.sol";
+
+interface RegistryAPI {
+    function governance() external view returns (address);
+
+    function latestVault(address token) external view returns (address);
+
+    function nextDeployment(address token) external view returns (uint256);
+
+    function vaults(address token, uint256 deploymentId) external view returns (address);
+}
 
 abstract contract BaseWrapper {
     using Math for uint256;
