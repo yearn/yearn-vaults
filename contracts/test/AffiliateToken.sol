@@ -33,7 +33,7 @@ contract AffiliateToken is ERC20, BaseWrapper {
     ) public BaseWrapper(_token, _registry) ERC20(name, symbol) {
         DOMAIN_SEPARATOR = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), keccak256(bytes("1")), _getChainId(), address(this)));
         affiliate = msg.sender;
-        _setupDecimals(uint8(token.decimals()));
+        _setupDecimals(uint8(ERC20(address(token)).decimals()));
     }
 
     function _getChainId() internal view returns (uint256) {

@@ -2,15 +2,17 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 
 import {RegistryAPI, VaultAPI} from "./BaseStrategy.sol";
 
 abstract contract BaseWrapper {
     using SafeMath for uint256;
+    using SafeERC20 for IERC20;
 
-    ERC20 public token;
+    IERC20 public token;
 
     // Reduce number of external calls (SLOADs stay the same)
     VaultAPI[] private _cachedVaults;
@@ -18,7 +20,7 @@ abstract contract BaseWrapper {
     RegistryAPI public registry;
 
     constructor(address _token, address _registry) public {
-        token = ERC20(_token);
+        token = IERC20(_token);
         // v2.registry.ychad.eth
         registry = RegistryAPI(_registry);
     }
@@ -86,11 +88,11 @@ abstract contract BaseWrapper {
         VaultAPI best = bestVault();
 
         if (pullFunds) {
-            token.transferFrom(depositor, address(this), amount);
+            token.safeTransferFrom(depositor, address(this), amount);
         }
 
         if (token.allowance(address(this), address(best)) < amount) {
-            token.approve(address(best), uint256(-1)); // Vaults are trusted
+            token.safeApprove(address(best), uint256(-1)); // Vaults are trusted
         }
 
         // `receiver` now has shares of `best` (worth `amount` tokens) as balance
@@ -160,7 +162,7 @@ abstract contract BaseWrapper {
         if (withdrawn > amount) {
             // Don't forget to approve the deposit
             if (token.allowance(address(this), address(best)) < withdrawn.sub(amount)) {
-                token.approve(address(best), uint256(-1)); // Vaults are trusted
+                token.safeApprove(address(best), uint256(-1)); // Vaults are trusted
             }
 
             best.deposit(withdrawn.sub(amount), sender);
@@ -168,7 +170,7 @@ abstract contract BaseWrapper {
         }
 
         // `receiver` now has `withdrawn` tokens as balance
-        if (receiver != address(this)) token.transfer(receiver, withdrawn);
+        if (receiver != address(this)) token.safeTransfer(receiver, withdrawn);
     }
 
     function _migrate(address account) internal returns (uint256) {
