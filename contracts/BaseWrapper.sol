@@ -4,11 +4,13 @@ pragma experimental ABIEncoderV2;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import {Math} from "@openzeppelin/contracts/math/Math.sol";
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 
 import {RegistryAPI, VaultAPI} from "./BaseStrategy.sol";
 
 abstract contract BaseWrapper {
+    using Math for uint256;
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -103,10 +105,6 @@ abstract contract BaseWrapper {
                 .div(10**uint256(best.decimals()));
     }
 
-    function min(uint256 a, uint256 b) internal pure returns (uint256) {
-        return (a < b) ? a : b;
-    }
-
     function _withdraw(
         address sender,
         address receiver,
@@ -129,11 +127,11 @@ abstract contract BaseWrapper {
             // Restrict by the allowance that `sender` has to this contract
             // NOTE: No need for allowance check if `sender` is this contract
             if (sender != address(this)) {
-                availableShares = min(availableShares, vaults[id].allowance(sender, address(this)));
+                availableShares = Math.min(availableShares, vaults[id].allowance(sender, address(this)));
             }
 
             // Limit by maximum withdrawal size from each vault
-            availableShares = min(availableShares, vaults[id].maxAvailableShares());
+            availableShares = Math.min(availableShares, vaults[id].maxAvailableShares());
 
             if (availableShares > 0) {
                 // Compute amount to withdraw fully to satisfy the request
@@ -143,7 +141,7 @@ abstract contract BaseWrapper {
                     .div(vaults[id].pricePerShare()); // NOTE: Every Vault is different
 
                 // Limit amount to withdraw to the maximum made available to this contract
-                shares = min(shares, availableShares);
+                shares = Math.min(shares, availableShares);
 
                 // Intermediate step to move shares to this contract before withdrawing
                 // NOTE: No need for share transfer if this contract is `sender`
