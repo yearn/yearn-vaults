@@ -45,4 +45,4 @@ def test_permit_bad_owner(rando, vault, sign_vault_permit):
     assert vault.allowance(owner.address, owner.address) == 0
     with brownie.reverts("dev: invalid owner"):
         # Fails because wrong `owner` provided
-        vault.permit(rando, rando, AMOUNT, 0, signature, {"from": rando})
+        vault.permit(brownie.ZERO_ADDRESS, rando, AMOUNT, 0, signature, {"from": rando})
