@@ -9,7 +9,8 @@ PACKAGE_VERSION = yaml.safe_load(
     (Path(__file__).parent.parent.parent.parent / "ethpm-config.yaml").read_text()
 )["version"]
 
-ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
+
+DEGREDATION_COEFFICIENT = 10 ** 18
 
 
 def test_api_adherrance(check_api_adherrance, Vault, interface):
@@ -52,14 +53,25 @@ def test_vault_name_symbol_override(guardian, gov, rewards, token, Vault):
     assert vault.symbol() == "yvcrvY"
 
 
+def test_vault_reinitialization(guardian, gov, rewards, token, Vault):
+    vault = guardian.deploy(Vault)
+    vault.initialize(token, gov, rewards, "crvY yVault", "yvcrvY", guardian)
+    # Can't reinitialize a vault
+    with brownie.reverts():
+        vault.initialize(token, gov, rewards, "crvY yVault", "yvcrvY", guardian)
+
+
 @pytest.mark.parametrize(
     "getter,setter,val,guard_allowed",
     [
         ("name", "setName", "NewName yVault", False),
         ("symbol", "setSymbol", "yvNEW", False),
         ("emergencyShutdown", "setEmergencyShutdown", True, True),
+        ("emergencyShutdown", "setEmergencyShutdown", False, False),
         ("guardian", "setGuardian", None, True),
+        ("guestList", "setGuestList", None, False),
         ("rewards", "setRewards", None, False),
+        ("lockedProfitDegration", "setLockedProfitDegration", 1000, False),
         ("management", "setManagement", None, False),
         ("performanceFee", "setPerformanceFee", 1000, False),
         ("managementFee", "setManagementFee", 1000, False),
@@ -69,7 +81,7 @@ def test_vault_name_symbol_override(guardian, gov, rewards, token, Vault):
 def test_vault_setParams(
     chain, gov, guardian, management, vault, rando, getter, setter, val, guard_allowed,
 ):
-    if not val:
+    if val is None:
         # Can't access fixtures, so use None to mean any random address
         val = rando
 
@@ -177,3 +189,11 @@ def test_vault_setGovernance(gov, vault, rando):
     # Only new governance can accept a change of governance
     with brownie.reverts():
         vault.acceptGovernance({"from": gov})
+
+
+def test_vault_setLockedProfitDegration_range(gov, vault):
+    # value must be between 0 and DEGREDATION_COEFFICIENT (inclusive)
+    vault.setLockedProfitDegration(0, {"from": gov})
+    vault.setLockedProfitDegration(DEGREDATION_COEFFICIENT, {"from": gov})
+    with brownie.reverts():
+        vault.setLockedProfitDegration(DEGREDATION_COEFFICIENT + 1, {"from": gov})

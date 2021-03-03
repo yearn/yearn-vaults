@@ -81,6 +81,39 @@ def test_harvest_tend_trigger(chain, gov, vault, token, TestStrategy):
     assert strategy.estimatedTotalAssets() == 0
 
 
+def test_sweep_authority(
+    gov, vault, rando, strategy, strategist, guardian, management, keeper, other_token
+):
+    assert rando != gov
+    assert strategist != gov
+    assert keeper != gov
+    assert guardian != gov
+    assert management != gov
+
+    # Random people cannot sweep
+    with brownie.reverts():
+        strategy.sweep(other_token, {"from": rando})
+
+    # Strategist cannot sweep
+    with brownie.reverts():
+        strategy.sweep(other_token, {"from": strategist})
+
+    # Keeper cannot sweep
+    with brownie.reverts():
+        strategy.sweep(other_token, {"from": keeper})
+
+    # Guardians cannot sweep
+    with brownie.reverts():
+        strategy.sweep(other_token, {"from": guardian})
+
+    # Management cannot sweep
+    with brownie.reverts():
+        strategy.sweep(other_token, {"from": management})
+
+    # Governance can sweep
+    strategy.sweep(other_token, {"from": gov})
+
+
 @pytest.fixture
 def other_token(gov, Token):
     yield gov.deploy(Token, 18)

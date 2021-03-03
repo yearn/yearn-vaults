@@ -2,10 +2,95 @@ import pytest
 import brownie
 import pytest
 
+MAX_UINT256 = 2 ** 256 - 1
+MAX_BPS = 10000
+
 
 @pytest.fixture
 def other_token(gov, Token):
     yield gov.deploy(Token, 18)
+
+
+@pytest.fixture
+def token_false_return(gov, TokenFalseReturn):
+    yield gov.deploy(TokenFalseReturn, 18)
+
+
+@pytest.fixture
+def vault(gov, management, token, Vault):
+    # NOTE: Because the fixture has tokens in it already
+    vault = gov.deploy(Vault)
+    vault.initialize(
+        token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
+    )
+    vault.setDepositLimit(MAX_UINT256, {"from": gov})
+    vault.setManagement(management, {"from": gov})
+    yield vault
+
+
+@pytest.fixture
+def other_vault(gov, Vault, other_token):
+    vault = gov.deploy(Vault)
+    vault.initialize(other_token, gov, gov, "", "", gov)
+    yield vault
+
+
+@pytest.fixture
+def vault_with_false_returning_token(gov, Vault, token_false_return):
+    vault = gov.deploy(Vault)
+    vault.initialize(token_false_return, gov, gov, "", "", gov)
+    vault.setDepositLimit(MAX_UINT256, {"from": gov})
+    yield vault
+
+
+def test_credit_available_minDebtPerHarvest_larger_than_available(
+    Vault, TestStrategy, token, gov
+):
+    vault = gov.deploy(Vault)
+    vault.initialize(
+        token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
+    )
+    vault.setDepositLimit(MAX_UINT256, {"from": gov})
+    strategy = gov.deploy(TestStrategy, vault)
+    vault.addStrategy(
+        strategy,
+        10000,  # 100% of Vault AUM
+        0,  # minDebtPerHarvest
+        MAX_UINT256,  # maxDebtPerHarvest
+        0,  # performanceFee
+        {"from": gov},
+    )
+
+    token.approve(vault, MAX_UINT256, {"from": gov})
+    vault.deposit(500, {"from": gov})
+    vault_debtLimit = vault.debtRatio() * vault.totalAssets() / MAX_BPS
+    vault_totalDebt = vault.totalDebt()
+    strategy_debtRatio = vault.strategies(strategy).dict()["debtRatio"]
+    strategy_debtLimit = strategy_debtRatio * vault.totalAssets()
+    strategy_totalDebt = vault.strategies(strategy).dict()["totalDebt"]
+
+    # Exhausted credit line
+    strategyDebtExceedsLimit = strategy_totalDebt >= strategy_debtLimit
+    vaultDebtExceedsLimit = vault_totalDebt >= vault_debtLimit
+    exhaustedCreditLine = vaultDebtExceedsLimit or strategyDebtExceedsLimit
+    assert exhaustedCreditLine == False
+
+    # Start with debt limit left for the Strategy
+    available = strategy_debtLimit - strategy_totalDebt
+
+    # Adjust by the global debt limit left
+    available = min(available, vault_debtLimit - vault_totalDebt)
+
+    # Can only borrow up to what the contract has in reserve
+    available = min(available, token.balanceOf(vault))
+
+    vault.updateStrategyMinDebtPerHarvest(strategy, available + 1, {"from": gov})
+    strategy_minDebtPerHarvest = vault.strategies(strategy).dict()["minDebtPerHarvest"]
+    minDebtPerHarvestExceedsAvailable = strategy_minDebtPerHarvest > available
+    assert minDebtPerHarvestExceedsAvailable == True
+
+    creditAvalable = vault.creditAvailable(strategy)
+    assert creditAvalable == 0
 
 
 def test_regular_available_deposit_limit(Vault, token, gov):
@@ -140,7 +225,7 @@ def test_deposit_withdraw_faillure(token, gov, vault):
         vault.deposit({"from": gov})
 
     token._setBlocked(vault.address, False, {"from": gov})
-    token.approve(vault, 2 ** 256 - 1, {"from": gov})
+    token.approve(vault, MAX_UINT256, {"from": gov})
     vault.deposit({"from": gov})
     token._setBlocked(gov, True, {"from": gov})
 
@@ -149,6 +234,8 @@ def test_deposit_withdraw_faillure(token, gov, vault):
 
 
 def test_report_loss(token, gov, vault, strategy, accounts):
+    token.approve(vault, MAX_UINT256, {"from": gov})
+    vault.deposit({"from": gov})
     strategy.harvest()
     strategy._takeFunds(token.balanceOf(strategy), {"from": gov})
     assert token.balanceOf(strategy) == 0
@@ -175,7 +262,7 @@ def test_sandwich_attack(
     strategy = strategist.deploy(TestStrategy, vault)
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
-    vault.addStrategy(strategy, 4_000, 0, 2 ** 256 - 1, 0, {"from": gov})
+    vault.addStrategy(strategy, 4_000, 0, MAX_UINT256, 0, {"from": gov})
     vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
 
     strategy.harvest({"from": strategist})
@@ -207,3 +294,30 @@ def test_sandwich_attack(
     print(f"Attack Profit Percent: {profit_percent}")
     # 5 rebases a day = 1780 a year. Less than 0.0004% profit on attack makes it closer to neutral EV
     assert profit_percent == pytest.approx(0, abs=10e-5)
+
+
+def test_erc20_safe_transfer(gov, other_vault, token, other_token, token_false_return):
+    # Normal ERC-20 tokens (and tokens with no return) can be swept if the vault has sweepable tokens
+    token.transfer(other_vault, token.balanceOf(gov) // 2, {"from": gov})
+    vaultBalanceOf = other_token.balanceOf(other_vault)
+    sweepAmount = vaultBalanceOf
+    other_vault.sweep(token, sweepAmount, {"from": gov})
+
+    # Tokens that return false should revert (erc20_safe_transfer failed)
+    with brownie.reverts():
+        other_vault.sweep(token_false_return, 0, {"from": gov})
+
+
+def test_erc20_safe_transferFrom(
+    gov, token, vault, token_false_return, vault_with_false_returning_token
+):
+    # Vaults with false returning tokens
+    with brownie.reverts():
+        token_false_return.approve(
+            vault_with_false_returning_token, MAX_UINT256, {"from": gov}
+        )
+        vault_with_false_returning_token.deposit(5000, {"from": gov})
+
+    # Normal ERC-20 vault deposits (via erc20_safe_transferFrom) should work
+    token.approve(vault, MAX_UINT256, {"from": gov})
+    vault.deposit(5000, {"from": gov})

@@ -444,7 +444,8 @@ def setLockedProfitDegration(degration: uint256):
     @param degration The rate of degration in percent per second scaled to 1e18.
     """
     assert msg.sender == self.governance
-    assert degration >= 0 and degration <= DEGREDATION_COEFFICIENT
+    # Since "degration" is of type uint256 it can never be less than zero
+    assert degration <= DEGREDATION_COEFFICIENT
     self.lockedProfitDegration = degration
 
 @external
@@ -1331,13 +1332,16 @@ def addStrategyToQueue(strategy: address):
     assert msg.sender in [self.management, self.governance]
     # Must be a current Strategy
     assert self.strategies[strategy].activation > 0
-    # Check if queue is full
-    assert self.withdrawalQueue[MAXIMUM_STRATEGIES - 1] == ZERO_ADDRESS
     # Can't already be in the queue
+    last_idx: uint256 = 0
     for s in self.withdrawalQueue:
-        if strategy == ZERO_ADDRESS:
+        if s == ZERO_ADDRESS:
             break
         assert s != strategy
+        last_idx += 1
+    # Check if queue is full
+    assert last_idx < MAXIMUM_STRATEGIES
+        
     self.withdrawalQueue[MAXIMUM_STRATEGIES - 1] = strategy
     self._organizeWithdrawalQueue()
     log StrategyAddedToQueue(strategy)
