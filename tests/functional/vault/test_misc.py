@@ -52,11 +52,10 @@ def test_credit_available_minDebtPerHarvest_larger_than_available(
     )
     vault.setDepositLimit(MAX_UINT256, {"from": gov})
     strategy = gov.deploy(TestStrategy, vault)
-    minDebtPerHarvest = MAX_UINT256 - 1
     vault.addStrategy(
         strategy,
         10000,  # 100% of Vault AUM
-        minDebtPerHarvest,  # minDebtPerHarvest
+        0,  # minDebtPerHarvest
         MAX_UINT256,  # maxDebtPerHarvest
         0,  # performanceFee
         {"from": gov},
@@ -69,8 +68,6 @@ def test_credit_available_minDebtPerHarvest_larger_than_available(
     strategy_debtRatio = vault.strategies(strategy).dict()["debtRatio"]
     strategy_debtLimit = strategy_debtRatio * vault.totalAssets()
     strategy_totalDebt = vault.strategies(strategy).dict()["totalDebt"]
-    strategy_minDebtPerHarvest = vault.strategies(strategy).dict()["minDebtPerHarvest"]
-    strategy_maxDebtPerHarvest = vault.strategies(strategy).dict()["maxDebtPerHarvest"]
 
     # Exhausted credit line
     strategyDebtExceedsLimit = strategy_totalDebt >= strategy_debtLimit
@@ -82,12 +79,13 @@ def test_credit_available_minDebtPerHarvest_larger_than_available(
     available = strategy_debtLimit - strategy_totalDebt
 
     # Adjust by the global debt limit left
-    vault.updateStrategyMinDebtPerHarvest(strategy, minDebtPerHarvest, {"from": gov})
     available = min(available, vault_debtLimit - vault_totalDebt)
 
     # Can only borrow up to what the contract has in reserve
     available = min(available, token.balanceOf(vault))
 
+    vault.updateStrategyMinDebtPerHarvest(strategy, available + 1, {"from": gov})
+    strategy_minDebtPerHarvest = vault.strategies(strategy).dict()["minDebtPerHarvest"]
     minDebtPerHarvestExceedsAvailable = strategy_minDebtPerHarvest > available
     assert minDebtPerHarvestExceedsAvailable == True
 
