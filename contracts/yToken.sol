@@ -2,6 +2,7 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
@@ -160,6 +161,8 @@ interface IWETH {
 }
 
 contract yWETH is yToken {
+    using Address for address payable;
+
     constructor(address _weth, address _registry) public yToken(_weth, _registry) {}
 
     function depositETH() public payable returns (uint256) {
@@ -177,7 +180,7 @@ contract yWETH is yToken {
         // NOTE: `BaseWrapper.token` is WETH
         IWETH(address(token)).withdraw(withdrawn);
         // NOTE: Any unintentionally
-        msg.sender.transfer(address(this).balance);
+        msg.sender.sendValue(address(this).balance);
     }
 
     receive() external payable {
