@@ -98,11 +98,19 @@ contract yToken is IERC20, BaseWrapper {
         return _withdraw(msg.sender, msg.sender, amount, true); // `true` = withdraw from `best`
     }
 
-    function permitAll(VaultAPI[] calldata vaults, bytes[] calldata signatures) external {
+    function _permitAll(
+        address user,
+        VaultAPI[] calldata vaults,
+        bytes[] calldata signatures
+    ) internal {
         require(vaults.length == signatures.length);
         for (uint256 i = 0; i < vaults.length; i++) {
-            require(vaults[i].permit(msg.sender, address(this), uint256(-1), 0, signatures[i]));
+            require(vaults[i].permit(user, address(this), uint256(-1), 0, signatures[i]));
         }
+    }
+
+    function permitAll(VaultAPI[] calldata vaults, bytes[] calldata signatures) public {
+        _permitAll(msg.sender, vaults, signatures);
     }
 
     function migrate() external returns (uint256) {
@@ -111,6 +119,37 @@ contract yToken is IERC20, BaseWrapper {
 
     function migrate(uint256 amount) external returns (uint256) {
         return _migrate(msg.sender, amount);
+    }
+
+    function migrate(VaultAPI[] calldata vaults, bytes[] calldata signatures) external returns (uint256) {
+        _permitAll(msg.sender, vaults, signatures);
+        return _migrate(msg.sender);
+    }
+
+    function migrate(
+        VaultAPI[] calldata vaults,
+        bytes[] calldata signatures,
+        uint256 amount
+    ) external returns (uint256) {
+        _permitAll(msg.sender, vaults, signatures);
+        return _migrate(msg.sender, amount);
+    }
+
+    function migrate(
+        VaultAPI[] calldata vaults,
+        bytes[] calldata signatures,
+        address user,
+        uint256 amount
+    ) external returns (uint256) {
+        _permitAll(user, vaults, signatures);
+        return _migrate(user, amount);
+    }
+
+    function revokeAll(VaultAPI[] calldata vaults, bytes[] calldata signatures) external {
+        require(vaults.length == signatures.length);
+        for (uint256 i = 0; i < vaults.length; i++) {
+            require(vaults[i].permit(msg.sender, address(this), 0, 0, signatures[i]));
+        }
     }
 }
 
