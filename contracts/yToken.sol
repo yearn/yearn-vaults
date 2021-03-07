@@ -16,18 +16,18 @@ contract yToken is IERC20, BaseWrapper {
     constructor(address _token, address _registry) public BaseWrapper(_token, _registry) {}
 
     function name() external view returns (string memory) {
-        VaultAPI best = bestVault();
-        return best.name();
+        VaultAPI _bestVault = bestVault();
+        return _bestVault.name();
     }
 
     function symbol() external view returns (string memory) {
-        VaultAPI best = bestVault();
-        return best.symbol();
+        VaultAPI _bestVault = bestVault();
+        return _bestVault.symbol();
     }
 
     function decimals() external view returns (uint256) {
-        VaultAPI best = bestVault();
-        return best.decimals();
+        VaultAPI _bestVault = bestVault();
+        return _bestVault.decimals();
     }
 
     function totalSupply() external override view returns (uint256 total) {
@@ -95,7 +95,7 @@ contract yToken is IERC20, BaseWrapper {
     }
 
     function withdraw(uint256 amount) external returns (uint256) {
-        return _withdraw(msg.sender, msg.sender, amount, true); // `true` = withdraw from `best`
+        return _withdraw(msg.sender, msg.sender, amount, true); // `true` = withdraw from `bestVault`
     }
 
     function _permitAll(
@@ -175,7 +175,7 @@ contract yWETH is yToken {
 
     function withdrawETH(uint256 amount) external returns (uint256 withdrawn) {
         // NOTE: Need to use different method to withdraw than `yToken`
-        withdrawn = _withdraw(msg.sender, address(this), amount, true); // `true` = withdraw from `best`
+        withdrawn = _withdraw(msg.sender, address(this), amount, true); // `true` = withdraw from `bestVault`
         // NOTE: `BaseWrapper.token` is WETH
         IWETH(address(token)).withdraw(withdrawn);
         // NOTE: Any unintentionally

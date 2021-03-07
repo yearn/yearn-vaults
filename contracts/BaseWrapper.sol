@@ -93,41 +93,41 @@ abstract contract BaseWrapper {
 
     function _deposit(
         address depositor,
-        address reciever,
+        address receiver,
         uint256 amount,
         bool pullFunds // If true, funds need to be pulled from `depositor` via `transferFrom`
     ) internal returns (uint256) {
-        VaultAPI best = bestVault();
+        VaultAPI _bestVault = bestVault();
 
         if (pullFunds) {
             token.safeTransferFrom(depositor, address(this), amount);
         }
 
-        if (token.allowance(address(this), address(best)) < amount) {
-            token.safeApprove(address(best), uint256(-1)); // Vaults are trusted
+        if (token.allowance(address(this), address(_bestVault)) < amount) {
+            token.safeApprove(address(_bestVault), uint256(-1)); // Vaults are trusted
         }
 
-        // `receiver` now has shares of `best` (worth `amount` tokens) as balance
+        // `receiver` now has shares of `_bestVault` (worth `amount` tokens) as balance
         return
-            best
-                .deposit(amount, reciever)
-                .mul(best.pricePerShare()) // Adjust by price of best
-                .div(10**uint256(best.decimals()));
+            _bestVault
+                .deposit(amount, receiver)
+                .mul(_bestVault.pricePerShare()) // Adjust by price of best
+                .div(10**uint256(_bestVault.decimals()));
     }
 
     function _withdraw(
         address sender,
         address receiver,
         uint256 amount,
-        bool withdrawFromBest // If true, also withdraw from `best`
+        bool withdrawFromBest // If true, also withdraw from _`bestVault`
     ) internal returns (uint256 withdrawn) {
-        VaultAPI best = bestVault();
+        VaultAPI _bestVault = bestVault();
 
         VaultAPI[] memory vaults = allVaults();
         _updateVaultCache(vaults);
 
         for (uint256 id = 0; id < vaults.length; id++) {
-            if (!withdrawFromBest && vaults[id] == best) {
+            if (!withdrawFromBest && vaults[id] == _bestVault) {
                 continue; // Don't withdraw from the best
             }
 
@@ -165,15 +165,15 @@ abstract contract BaseWrapper {
             }
         }
 
-        // If we have extra, deposit back into `best` for `sender`
+        // If we have extra, deposit back into `_bestVault` for `sender`
         // NOTE: Invariant is `withdrawn <= amount`
         if (withdrawn > amount) {
             // Don't forget to approve the deposit
-            if (token.allowance(address(this), address(best)) < withdrawn.sub(amount)) {
-                token.safeApprove(address(best), uint256(-1)); // Vaults are trusted
+            if (token.allowance(address(this), address(_bestVault)) < withdrawn.sub(amount)) {
+                token.safeApprove(address(_bestVault), uint256(-1)); // Vaults are trusted
             }
 
-            best.deposit(withdrawn.sub(amount), sender);
+            _bestVault.deposit(withdrawn.sub(amount), sender);
             withdrawn = amount;
         }
 
@@ -186,16 +186,16 @@ abstract contract BaseWrapper {
     }
 
     function _migrate(address account, uint256 amount) internal returns (uint256 migrated) {
-        VaultAPI best = bestVault();
+        VaultAPI _bestVault = bestVault();
 
-        uint256 alreadyDeposited = best.balanceOf(account).mul(best.pricePerShare()).div(10**uint256(best.decimals()));
+        uint256 alreadyDeposited = _bestVault.balanceOf(account).mul(_bestVault.pricePerShare()).div(10**uint256(_bestVault.decimals()));
         uint256 amountToMigrate = amount.sub(alreadyDeposited);
 
-        uint256 depositLeft = best.depositLimit().sub(best.totalAssets());
+        uint256 depositLeft = _bestVault.depositLimit().sub(_bestVault.totalAssets());
         if (amountToMigrate > depositLeft) amountToMigrate = depositLeft;
 
         if (amountToMigrate > 0) {
-            // NOTE: `false` = don't withdraw from `best`
+            // NOTE: `false` = don't withdraw from `_bestVault`
             uint256 withdrawn = _withdraw(account, address(this), amountToMigrate, false);
             require(withdrawn == amountToMigrate);
             // NOTE: `false` = don't do `transferFrom` because it's already local

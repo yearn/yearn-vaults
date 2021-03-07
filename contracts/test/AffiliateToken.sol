@@ -93,7 +93,7 @@ contract AffiliateToken is ERC20, BaseWrapper {
 
     function withdraw(uint256 shares) public returns (uint256) {
         _burn(msg.sender, shares);
-        return _withdraw(address(this), msg.sender, _shareValue(shares), true); // `true` = withdraw from `best`
+        return _withdraw(address(this), msg.sender, _shareValue(shares), true); // `true` = withdraw from `bestVault`
     }
 
     function migrate() external onlyAffiliate returns (uint256) {
