@@ -121,6 +121,10 @@ contract yToken is IERC20, BaseWrapper {
         return _migrate(msg.sender, amount);
     }
 
+    function migrate(uint256 amount, uint256 maxMigrationLoss) external returns (uint256) {
+        return _migrate(msg.sender, amount, maxMigrationLoss);
+    }
+
     function migrate(VaultAPI[] calldata vaults, bytes[] calldata signatures) external returns (uint256) {
         _permitAll(msg.sender, vaults, signatures);
         return _migrate(msg.sender);

@@ -186,6 +186,15 @@ abstract contract BaseWrapper {
     }
 
     function _migrate(address account, uint256 amount) internal returns (uint256 migrated) {
+        // NOTE: In practice, it was discovered that <50 was the maximum we've see for this variance
+        return _migrate(account, totalVaultBalance(account), 100);
+    }
+
+    function _migrate(
+        address account,
+        uint256 amount,
+        uint256 maxMigrationLoss
+    ) internal returns (uint256 migrated) {
         VaultAPI _bestVault = bestVault();
 
         uint256 alreadyDeposited = _bestVault.balanceOf(account).mul(_bestVault.pricePerShare()).div(10**uint256(_bestVault.decimals()));
@@ -200,8 +209,10 @@ abstract contract BaseWrapper {
             require(withdrawn == amountToMigrate);
             // NOTE: `false` = don't do `transferFrom` because it's already local
             migrated = _deposit(address(this), account, withdrawn, false);
-            // NOTE: There's some precision loss here, but should be pretty bounded unless `decimals` is a really low number
-            require(withdrawn - migrated <= 100);
+            // NOTE: Due to the precision loss of certain calculations, there is a small inefficency
+            //       on how migrations are calculated, and this could lead to a DoS issue. Hence, this
+            //       value is made to be configurable to allow the user to specify how much is acceptable
+            require(withdrawn - migrated <= maxMigrationLoss);
         } // else: nothing to migrate! (not a failure)
     }
 }
