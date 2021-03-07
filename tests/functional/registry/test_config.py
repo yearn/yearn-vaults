@@ -31,7 +31,7 @@ def test_registry_setGovernance(gov, registry, rando):
 
 def test_banksy(gov, registry, create_vault, rando):
     vault = create_vault()
-    registry.newRelease(vault)
+    registry.newRelease(vault, {"from": gov})
     assert registry.tags(vault) == ""
 
     # Not just anyone can tag a Vault, only a Banksy can!

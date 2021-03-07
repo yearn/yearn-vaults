@@ -25,7 +25,7 @@ def gov(accounts):
 
 @pytest.fixture
 def registry(gov, Registry):
-    yield Registry.deploy({"from": gov})
+    yield gov.deploy(Registry)
 
 
 @pytest.fixture
