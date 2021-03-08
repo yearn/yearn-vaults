@@ -176,9 +176,11 @@ def _newProxyVault(
     guardian: address,
     name: String[64],
     symbol: String[32],
+    releaseTarget: uint256,
 ) -> address:
-    # NOTE: Underflow if no releases created yet (this is okay)
-    vault: address = create_forwarder_to(self.releases[self.nextRelease - 1])  # dev: no releases
+    release: address = self.releases[releaseTarget]
+    assert release != ZERO_ADDRESS  # dev: unknown release
+    vault: address = create_forwarder_to(release)
 
     # NOTE: Must initialize the Vault atomically with deploying it
     Vault(vault).initialize(token, governance, rewards, name, symbol, guardian)
@@ -193,6 +195,7 @@ def newVault(
     rewards: address,
     name: String[64],
     symbol: String[32],
+    releaseDelta: uint256 = 0,  # NOTE: Uses latest by default
 ) -> address:
     """
     @notice
@@ -210,11 +213,14 @@ def newVault(
     @param rewards The address to use for collecting rewards in the new Vault
     @param name Specify a custom Vault name. Set to empty string for default choice.
     @param symbol Specify a custom Vault symbol name. Set to empty string for default choice.
+    @param releaseDelta Specify the number of releases prior to the latest to use as a target. Default is latest.
     @return The address of the newly-deployed vault
     """
     assert msg.sender == self.governance  # dev: unauthorized
 
-    vault: address = self._newProxyVault(token, msg.sender, rewards, guardian, name, symbol)
+    # NOTE: Underflow if no releases created yet, or targeting prior to release history
+    releaseTarget: uint256 = self.nextRelease - 1 - releaseDelta  # dev: no releases
+    vault: address = self._newProxyVault(token, msg.sender, rewards, guardian, name, symbol, releaseTarget)
 
     self._registerDeployment(token, vault)
 
@@ -229,6 +235,7 @@ def newExperimentalVault(
     rewards: address,
     name: String[64],
     symbol: String[32],
+    releaseDelta: uint256 = 0,  # NOTE: Uses latest by default
 ) -> address:
     """
     @notice
@@ -244,10 +251,13 @@ def newExperimentalVault(
     @param rewards The address to use for collecting rewards in the new Vault
     @param name Specify a custom Vault name. Set to empty string for default choice.
     @param symbol Specify a custom Vault symbol name. Set to empty string for default choice.
+    @param releaseDelta Specify the number of releases prior to the latest to use as a target. Default is latest.
     @return The address of the newly-deployed vault
     """
+    # NOTE: Underflow if no releases created yet, or targeting prior to release history
+    releaseTarget: uint256 = self.nextRelease - 1 - releaseDelta  # dev: no releases
     # NOTE: Anyone can call this method, as a convenience to Strategist' experiments
-    vault: address = self._newProxyVault(token, governance, rewards, guardian, name, symbol)
+    vault: address = self._newProxyVault(token, governance, rewards, guardian, name, symbol, releaseTarget)
 
     # NOTE: Not registered, so emit an "experiment" event here instead
     log NewExperimentalVault(token, msg.sender, vault, Vault(vault).apiVersion())
