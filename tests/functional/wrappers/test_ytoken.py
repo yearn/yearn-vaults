@@ -26,6 +26,7 @@ def test_config(gov, token, vault, registry, ytoken):
 
     # Now they work when we have a Vault
     registry.newRelease(vault, {"from": gov})
+    registry.endorseVault(vault, {"from": gov})
     assert ytoken.bestVault() == vault
     assert ytoken.name() == vault.name()
     assert ytoken.symbol() == vault.symbol()
@@ -43,6 +44,7 @@ def test_setRegistry(rando, gov, ytoken):
 
 def test_deposit(token, registry, vault, ytoken, gov, rando):
     registry.newRelease(vault, {"from": gov})
+    registry.endorseVault(vault, {"from": gov})
     token.transfer(rando, 10000, {"from": gov})
     assert ytoken.balanceOf(rando) == vault.balanceOf(rando) == 0
 
@@ -54,6 +56,7 @@ def test_deposit(token, registry, vault, ytoken, gov, rando):
 
 def test_transfer(token, registry, vault, ytoken, gov, rando, affiliate):
     registry.newRelease(vault, {"from": gov})
+    registry.endorseVault(vault, {"from": gov})
     token.transfer(rando, 10000, {"from": gov})
     token.approve(ytoken, 10000, {"from": rando})
     ytoken.deposit(10000, {"from": rando})
@@ -69,6 +72,7 @@ def test_transfer(token, registry, vault, ytoken, gov, rando, affiliate):
 
 def test_withdraw(token, registry, vault, ytoken, gov, rando):
     registry.newRelease(vault, {"from": gov})
+    registry.endorseVault(vault, {"from": gov})
     token.transfer(rando, 10000, {"from": gov})
     token.approve(ytoken, 10000, {"from": rando})
     ytoken.deposit(10000, {"from": rando})
@@ -87,6 +91,8 @@ def test_migrate(token, registry, create_vault, sign_vault_permit, ytoken, gov):
 
     vault1 = create_vault(version="1.0.0", token=token)
     registry.newRelease(vault1, {"from": gov})
+    registry.endorseVault(vault1, {"from": gov})
+
     assert registry.latestVault(token) == vault1
 
     ytoken.deposit(5000, {"from": rando.address})
@@ -94,6 +100,7 @@ def test_migrate(token, registry, create_vault, sign_vault_permit, ytoken, gov):
 
     vault2 = create_vault(version="2.0.0", token=token)
     registry.newRelease(vault2, {"from": gov})
+    registry.endorseVault(vault2, {"from": gov})
     assert registry.latestVault(token) == vault2
 
     ytoken.deposit(5000, {"from": rando.address})
@@ -120,6 +127,7 @@ def test_migrate(token, registry, create_vault, sign_vault_permit, ytoken, gov):
 def test_yweth_wrapper(gov, rando, registry, create_vault, weth, yWETH):
     vault1 = create_vault(version="1.0.0", token=weth)
     registry.newRelease(vault1, {"from": gov})
+    registry.endorseVault(vault1, {"from": gov})
     assert registry.latestVault(weth) == vault1
     yweth = yWETH.deploy(weth, registry, {"from": gov})
     assert yweth.token() == weth
@@ -131,6 +139,7 @@ def test_yweth_wrapper(gov, rando, registry, create_vault, weth, yWETH):
 
     vault2 = create_vault(version="2.0.0", token=weth)
     registry.newRelease(vault2, {"from": gov})
+    registry.endorseVault(vault2, {"from": gov})
     assert registry.latestVault(weth) == vault2
 
     # Migrations work just fine
