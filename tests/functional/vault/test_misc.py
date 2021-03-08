@@ -206,12 +206,12 @@ def test_reject_ether(gov, vault):
         ("sweep", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
         ("sweep", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1]),
     ]:
-        with brownie.reverts("Cannot send ether to nonpayable function"):
+        with brownie.reverts():
             # NOTE: gov can do anything
             getattr(vault, func)(*args, {"from": gov, "value": 1})
 
     # Fallback fails too
-    with brownie.reverts("Cannot send ether to nonpayable function"):
+    with brownie.reverts():
         gov.transfer(vault, 1)
 
     # NOTE: Just for coverage
