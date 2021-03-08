@@ -36,6 +36,18 @@ def test_deployment_management(
     assert proxy_vault.guardian() == guardian
     assert registry.latestVault(token) == proxy_vault
 
+    # You can deploy proxy Vaults, linked to a previous release
+    token = create_token()
+    proxy_vault = Vault.at(
+        registry.newVault(
+            token, guardian, rewards, "", "", 1, {"from": gov}
+        ).return_value
+    )
+    assert proxy_vault.apiVersion() == v1_vault.apiVersion() == "1.0.0"
+    assert proxy_vault.rewards() == rewards
+    assert proxy_vault.guardian() == guardian
+    assert registry.latestVault(token) == proxy_vault
+
     # Not just anyone can create a new endorsed Vault, only governance can!
     with brownie.reverts():
         registry.newVault(create_token(), guardian, rewards, "", "", {"from": rando})
