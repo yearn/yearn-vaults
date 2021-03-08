@@ -106,6 +106,16 @@ def test_experimental_deployments(
     registry.endorseVault(experimental_vault, {"from": gov})
     assert registry.latestVault(token) == experimental_vault
 
+    # Can create an experiment and endorse it targeting a previous version
+    token = create_token()
+    experimental_vault = Vault.at(
+        registry.newExperimentalVault(
+            token, gov, gov, gov, "", "", 1, {"from": rando}
+        ).return_value
+    )
+    registry.endorseVault(experimental_vault, 1, {"from": gov})
+    assert registry.latestVault(token) == experimental_vault
+
     # Only governance can endorse a Vault
     vault = create_vault()
     with brownie.reverts():
