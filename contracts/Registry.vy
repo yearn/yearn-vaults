@@ -266,7 +266,7 @@ def newExperimentalVault(
 
 
 @external
-def endorseVault(vault: address):
+def endorseVault(vault: address, releaseDelta: uint256 = 0):
     """
     @notice
         Adds an existing vault to the list of "endorsed" vaults for that token.
@@ -279,15 +279,15 @@ def endorseVault(vault: address):
         Throws if there already is a deployment for the vault's token with the latest api version.
         Emits a `NewVault` event.
     @param vault The vault that will be endorsed by the Registry.
+    @param releaseDelta Specify the number of releases prior to the latest to use as a target. Default is latest.
     """
     assert msg.sender == self.governance  # dev: unauthorized
     assert Vault(vault).governance() == msg.sender  # dev: not governed
 
-    # NOTE: Underflow if no releases created yet (this is okay)
-    api_version: String[28] = (
-        Vault(self.releases[self.nextRelease - 1]).apiVersion()  # dev: no releases
-    )
-    assert Vault(vault).apiVersion() == api_version  # dev: not latest release
+    # NOTE: Underflow if no releases created yet, or targeting prior to release history
+    releaseTarget: uint256 = self.nextRelease - 1 - releaseDelta  # dev: no releases
+    api_version: String[28] = Vault(self.releases[releaseTarget]).apiVersion()
+    assert Vault(vault).apiVersion() == api_version  # dev: not target release
 
     # Add to the end of the list of vaults for token
     self._registerDeployment(Vault(vault).token(), vault)
