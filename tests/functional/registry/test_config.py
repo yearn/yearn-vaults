@@ -14,6 +14,8 @@ def test_registry_setGovernance(gov, registry, rando):
         registry.setGovernance(newGov, {"from": newGov})
     # Governance doesn't change until it's accepted
     registry.setGovernance(newGov, {"from": gov})
+    assert registry.pendingGovernance() == newGov
+
     assert registry.governance() == gov
     # Only new governance can accept a change of governance
     with brownie.reverts():

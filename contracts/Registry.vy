@@ -25,7 +25,7 @@ vaults: public(HashMap[address, HashMap[uint256, address]])
 
 # 2-phase commit
 governance: public(address)
-pendingGovernance: address
+pendingGovernance: public(address)
 
 tags: public(HashMap[address, String[120]])
 banksy: public(HashMap[address, bool])  # could be anyone
