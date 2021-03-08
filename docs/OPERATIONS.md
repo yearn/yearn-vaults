@@ -35,7 +35,6 @@
 - Complete peer review by at least 2 strategists.
 - Check if `want` token has a deployed vault already (>=v0.3.0) and coordinate to use that first if possible.
 - If a new vault is needed, deploy it using the registry:
-
   - Set strategists multisig (`0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7`) as governance.
   - Set Core Dev multisig (`dev.ychad.eth`) as guardian.
   - Set treasury (`treasury.ychad.eth`) as the rewards address.
@@ -134,54 +133,35 @@
 
 ## The Manual Phase
 
-- [ ] Deposit some `want` tokens into the vault.
-- [ ] Do first `harvest` and make sure it worked correctly.
+- Deposit some `want` tokens into the vault.
+- Do first `harvest` and make sure it worked correctly.
 
   ```python
   strategy.harvest()
   ```
 
-- [ ] Publish on yearn.rocks:
+- If you need a UI to test, you can coordinate with the strategists.
 
-  - Governance dev multisig **_must_** call `vault.acceptGovernance()` first.
-  - Create a PR in yearn.rocks [repo](https://github.com/fameal/yearn-rocks) adding a new element to the array in `config.js` using the example below:
-
-  ```javascript
-    'path': { // URL path
-      TITLE: "yVault", // Title of the vault, let you imagination fly
-      LOGO: "🏆🪙", // Emojis to show on top, make it fun please
-      VAULT_ABI: yVaultV2, // Usually that one, unless doing a custom one
-      VAULT_TYPE: 'yearn', // 'yearn', 'experimental' to select in which column it should show
-      VAULT_ADDR: "0x33bd0f9618cf38fea8f7f01e1514ab63b9bde64b", // Vault address
-      WANT_ADDR: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // Token address
-      WANT_SYMBOL: "USDC", // want symbol to show in UI
-      COINGECKO_SYMBOL: "usd-coin", // Coingecko symbol, check it on their page
-      VAULT_DEV : "emilianobonassi", // Developer of the vault
-      BLOCK_ACTIVATED: 1606599919, // When the vault was activated (not implemented yet)
-      VAULT_STATUS: "active", // 'active', 'withdraw'. Not active vaults have a label to show status
-    }
-  ```
-
-- [ ] Monitor `harvest` and `tend` triggers for first few days. Call `harvest`/`tend` manually.
+- Monitor `harvest` and `tend` triggers for first few days. Call `harvest`/`tend` manually.
 
 ## Scaling up / Moving to Endorse
 
-- [ ] In additon to the 2 strategists, a Core Developer has to review the strategy before going into production.
-- [ ] Increase limits.
-- [ ] Add to experimental tab on yearn.finance.
-- [ ] Set management fee to production level:
+- In additon to the 2 strategists, a Core Developer has to review the strategy before going into production.
+- Increase limits.
+- Add to experimental tab on yearn.finance.
+- Set management fee to production level:
 
   ```python
   vault.setManagementFee(200)
   ```
 
-- [ ] Set governance to `ychad.eth`:
+- Set governance to `ychad.eth`:
 
   ```python
   vault.setGovernance(0xfeb4acf3df3cdea7399794d0869ef76a6efaff52)
   ```
 
-- [ ] yearn governance now must accept governance and endorse the vault:
+- Yearn governance now must accept governance and endorse the vault:
 
   ```python
   strategy.acceptGovernance() # from ychad.eth
@@ -190,16 +170,16 @@
 
   **Note**: Order is important. Will fail if order is wrong.
 
-- [ ] Now you are on main yearn page!
+- Now you are on main yearn page!
 
 ## Setting up Keep3r
 
-- [ ] Adjust trigger variables until they are correct:
+- Adjust trigger variables until they are correct:
   - `strategy.setProfitFactor()`
   - `strategy.setDebtThreshold()`
   - `strategy.setMaxReportDelay()`
-- [ ] Set strategy's Keep3r role to v2-keeper-contract (TBD)
-- [ ] Create an add-strategy PR in Keep3r [repo](https://github.com/iearn-finance/yearn-keeper) (TBD)
+- Set strategy's Keep3r role to v2-keeper-contract (TBD)
+- Create an add-strategy PR in Keep3r [repo](https://github.com/iearn-finance/yearn-keeper) (TBD)
 
 ## Limits per Stage
 
@@ -207,7 +187,7 @@ These are the standard deposit limits per stage. They can be adjusted on a case 
 
 | Stage                      | Limit  |
 | -------------------------- | ------ |
-| Yearn.rocks / Experimental | \$500K |
+| Experimental               | \$500K |
 | Production                 | \$10M  |
 
 ## Revoking a strategy with normal migration
