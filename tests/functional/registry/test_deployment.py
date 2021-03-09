@@ -1,4 +1,82 @@
 import brownie
+from brownie import ZERO_ADDRESS
+
+
+def test_endorsed_vault_token_tracking(
+    gov, guardian, rewards, registry, Vault, create_token, create_vault, rando
+):
+    # Create a token and vault
+    token_1 = create_token()
+    vault_1 = create_vault(token_1, version="1.0.0")
+    assert registry.nextRelease() == 0  # Make sure no releases have been deployed
+
+    # Token tracking state variables should start off uninitialized
+    assert registry.tokensList(0) == ZERO_ADDRESS
+    assert registry.tokensMap(token_1) == False
+    assert registry.tokensCount() == 0
+
+    # Endorsing a vault registers a vault token
+    registry.newRelease(vault_1, {"from": gov})
+    registry.endorseVault(vault_1, {"from": gov})
+    assert registry.nextRelease() == 1  # Make sure the release was deployed
+    assert registry.latestVault(token_1) == vault_1
+    assert registry.tokensList(0) == token_1
+    assert registry.tokensList(1) == ZERO_ADDRESS
+    assert registry.tokensMap(token_1) == True
+    assert registry.tokensCount() == 1
+
+    # Create a new release using the same token
+    vault_2 = create_vault(token_1, version="2.0.0")
+    registry.newRelease(vault_2, {"from": gov})
+    assert registry.latestVault(token_1) == vault_1
+    assert registry.nextRelease() == 2  # Make sure the release was deployed
+
+    # Endorsing a vault with the same token bumps the "latestVault" associated with the token
+    registry.endorseVault(vault_2, {"from": gov})
+    assert registry.latestVault(token_1) == vault_2
+    assert registry.latestRelease() == vault_2.apiVersion() == "2.0.0"
+
+    # Tokens can only be registered one time (no duplicates)
+    assert registry.tokensList(0) == token_1
+    assert registry.tokensList(1) == ZERO_ADDRESS
+    assert registry.tokensCount() == 1
+
+    # Create a new endorsed vault with a new token
+    token_2 = create_token()
+    registry.newVault(token_2, guardian, rewards, "", "", {"from": gov})
+
+    # New endorsed vaults should register tokens
+    assert registry.tokensList(0) == token_1
+    assert registry.tokensList(1) == token_2
+    assert registry.tokensList(2) == ZERO_ADDRESS
+    assert registry.tokensMap(token_1) == True
+    assert registry.tokensMap(token_2) == True
+    assert registry.tokensCount() == 2
+
+    # Create a new experimental vault with a new token
+    token_3 = create_token()
+    vault_3 = registry.newExperimentalVault(
+        token_3, gov, guardian, rewards, "", "", {"from": gov}
+    ).return_value
+
+    # New experimental (unendorsed) vaults should not register tokens
+    assert registry.tokensList(0) == token_1
+    assert registry.tokensList(1) == token_2
+    assert registry.tokensList(2) == ZERO_ADDRESS
+    assert registry.tokensMap(token_1) == True
+    assert registry.tokensMap(token_2) == True
+    assert registry.tokensCount() == 2
+
+    # Endorsing a vault should register a token
+    registry.endorseVault(vault_3)
+    assert registry.tokensList(0) == token_1
+    assert registry.tokensList(1) == token_2
+    assert registry.tokensList(2) == token_3
+    assert registry.tokensList(3) == ZERO_ADDRESS
+    assert registry.tokensMap(token_1) == True
+    assert registry.tokensMap(token_2) == True
+    assert registry.tokensMap(token_3) == True
+    assert registry.tokensCount() == 3
 
 
 def test_deployment_management(

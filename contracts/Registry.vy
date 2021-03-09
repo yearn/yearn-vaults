@@ -23,6 +23,11 @@ releases: public(HashMap[uint256, address])
 nextDeployment: public(HashMap[address, uint256])
 vaults: public(HashMap[address, HashMap[uint256, address]])
 
+# Maintain a list of endorsed vault tokens
+tokensList: public(address[65536])
+tokensMap: public(HashMap[address, bool])
+tokensCount: public(uint256)
+
 # 2-phase commit
 governance: public(address)
 pendingGovernance: public(address)
@@ -129,6 +134,16 @@ def _registerRelease(vault: address):
 
 
 @internal
+def _registerToken(token: address):
+    tokenExists: bool = self.tokensMap[token]
+    if tokenExists:
+      return
+    self.tokensList[self.tokensCount] = token
+    self.tokensMap[token] = True
+    self.tokensCount = self.tokensCount + 1
+
+
+@internal
 def _registerDeployment(token: address, vault: address):
     # Check if there is an existing deployment for this token at the particular api version
     # NOTE: This doesn't check for strict semver-style linearly increasing release versions
@@ -144,6 +159,9 @@ def _registerDeployment(token: address, vault: address):
     self.vaults[token][deployment_id] = vault
     self.nextDeployment[token] = deployment_id + 1
 
+    # Register tokens for endorsed vaults
+    self._registerToken(token)
+    
     # Log the deployment for external listeners (e.g. Graph)
     log NewVault(token, deployment_id, vault, Vault(vault).apiVersion())
 
