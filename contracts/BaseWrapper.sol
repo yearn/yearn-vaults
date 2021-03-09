@@ -206,13 +206,13 @@ abstract contract BaseWrapper {
         if (amountToMigrate > 0) {
             // NOTE: `false` = don't withdraw from `_bestVault`
             uint256 withdrawn = _withdraw(account, address(this), amountToMigrate, false);
-            require(withdrawn == amountToMigrate);
+            require(amountToMigrate.sub(withdrawn) <= maxMigrationLoss);
             // NOTE: `false` = don't do `transferFrom` because it's already local
             migrated = _deposit(address(this), account, withdrawn, false);
             // NOTE: Due to the precision loss of certain calculations, there is a small inefficency
             //       on how migrations are calculated, and this could lead to a DoS issue. Hence, this
             //       value is made to be configurable to allow the user to specify how much is acceptable
-            require(withdrawn - migrated <= maxMigrationLoss);
+            require(withdrawn.sub(migrated) <= maxMigrationLoss);
         } // else: nothing to migrate! (not a failure)
     }
 }
