@@ -94,9 +94,9 @@ abstract contract BaseWrapper {
     function _deposit(
         address depositor,
         address receiver,
-        uint256 amount,
+        uint256 amount, // if `MAX_UINT256`, just deposit everything
         bool pullFunds // If true, funds need to be pulled from `depositor` via `transferFrom`
-    ) internal returns (uint256) {
+    ) internal returns (uint256 deposited) {
         VaultAPI _bestVault = bestVault();
 
         if (pullFunds) {
@@ -107,19 +107,31 @@ abstract contract BaseWrapper {
             token.safeApprove(address(_bestVault), uint256(-1)); // Vaults are trusted
         }
 
-        // `receiver` now has shares of `_bestVault` (worth `amount` tokens) as balance
-        return
-            _bestVault
-                .deposit(amount, receiver)
-                .mul(_bestVault.pricePerShare()) // Adjust by price of best
-                .div(10**uint256(_bestVault.decimals()));
+        // Depositing returns number of shares deposited
+        // NOTE: Shortcut here is assuming the number of tokens deposited is equal to the
+        //       number of shares credited, which helps avoid an occasional multiplication
+        //       overflow if trying to adjust the number of shares by the share price.
+        uint256 beforeBal = token.balanceOf(address(this));
+        if (receiver != address(this)) {
+            _bestVault.deposit(amount, receiver);
+        } else if (amount < uint256(-1)) {
+            _bestVault.deposit(amount);
+        } else {
+            _bestVault.deposit();
+        }
+
+        uint256 afterBal = token.balanceOf(address(this));
+        deposited = beforeBal.sub(afterBal);
+        // `receiver` now has shares of `_bestVault` as balance, converted to `token` here
+        // Issue a refund if not everything was deposited
+        if (depositor != address(this) && afterBal > 0) token.transfer(depositor, afterBal);
     }
 
     function _withdraw(
         address sender,
         address receiver,
-        uint256 amount,
-        bool withdrawFromBest // If true, also withdraw from _`bestVault`
+        uint256 amount, // if `MAX_UINT256`, just withdraw everything
+        bool withdrawFromBest // If true, also withdraw from `_bestVault`
     ) internal returns (uint256 withdrawn) {
         VaultAPI _bestVault = bestVault();
 
@@ -144,20 +156,23 @@ abstract contract BaseWrapper {
             availableShares = Math.min(availableShares, vaults[id].maxAvailableShares());
 
             if (availableShares > 0) {
-                // Compute amount to withdraw fully to satisfy the request
-                uint256 shares = amount
-                    .sub(withdrawn) // NOTE: Changes every iteration
-                    .mul(10**uint256(vaults[id].decimals()))
-                    .div(vaults[id].pricePerShare()); // NOTE: Every Vault is different
-
-                // Limit amount to withdraw to the maximum made available to this contract
-                shares = Math.min(shares, availableShares);
-
                 // Intermediate step to move shares to this contract before withdrawing
                 // NOTE: No need for share transfer if this contract is `sender`
-                if (sender != address(this)) vaults[id].transferFrom(sender, address(this), shares);
+                if (sender != address(this)) vaults[id].transferFrom(sender, address(this), availableShares);
 
-                withdrawn = withdrawn.add(vaults[id].withdraw(shares, address(this)));
+                if (amount < uint256(-1)) {
+                    // Compute amount to withdraw fully to satisfy the request
+                    uint256 estimatedShares = amount
+                        .sub(withdrawn) // NOTE: Changes every iteration
+                        .mul(10**uint256(vaults[id].decimals()))
+                        .div(vaults[id].pricePerShare()); // NOTE: Every Vault is different
+
+                    // Limit amount to withdraw to the maximum made available to this contract
+                    uint256 shares = Math.min(estimatedShares, availableShares);
+                    withdrawn = withdrawn.add(vaults[id].withdraw(shares));
+                } else {
+                    withdrawn = withdrawn.add(vaults[id].withdraw());
+                }
 
                 // Check if we have fully satisfied the request
                 // NOTE: use `amount = uint256(-1)` for withdrawing everything
@@ -182,12 +197,13 @@ abstract contract BaseWrapper {
     }
 
     function _migrate(address account) internal returns (uint256) {
-        return _migrate(account, totalVaultBalance(account));
+        // Migrate everything (using `MAX_UINT256`)
+        return _migrate(account, uint256(-1));
     }
 
-    function _migrate(address account, uint256 amount) internal returns (uint256 migrated) {
+    function _migrate(address account, uint256 amount) internal returns (uint256) {
         // NOTE: In practice, it was discovered that <50 was the maximum we've see for this variance
-        return _migrate(account, totalVaultBalance(account), 100);
+        return _migrate(account, amount, 0);
     }
 
     function _migrate(
@@ -197,16 +213,23 @@ abstract contract BaseWrapper {
     ) internal returns (uint256 migrated) {
         VaultAPI _bestVault = bestVault();
 
-        uint256 alreadyDeposited = _bestVault.balanceOf(account).mul(_bestVault.pricePerShare()).div(10**uint256(_bestVault.decimals()));
-        uint256 amountToMigrate = amount.sub(alreadyDeposited);
+        // NOTE: Only override if we aren't migrating everything
+        uint256 _depositLimit = _bestVault.depositLimit();
+        uint256 _totalAssets = _bestVault.totalAssets();
+        if (_depositLimit <= _totalAssets) return 0; // Nothing to migrate (not a failure)
 
-        uint256 depositLeft = _bestVault.depositLimit().sub(_bestVault.totalAssets());
-        if (amountToMigrate > depositLeft) amountToMigrate = depositLeft;
+        uint256 _amount = amount;
+        if (_amount < uint256(-1) && _depositLimit < uint256(-1)) {
+            // Can only deposit up to this amount
+            uint256 _depositLeft = _depositLimit.sub(_totalAssets);
+            if (_amount > _depositLeft) _amount = _depositLeft;
+        }
 
-        if (amountToMigrate > 0) {
+        if (_amount > 0) {
             // NOTE: `false` = don't withdraw from `_bestVault`
-            uint256 withdrawn = _withdraw(account, address(this), amountToMigrate, false);
-            require(amountToMigrate.sub(withdrawn) <= maxMigrationLoss);
+            uint256 withdrawn = _withdraw(account, address(this), _amount, false);
+            if (withdrawn == 0) return 0; // Nothing to migrate (not a failure)
+
             // NOTE: `false` = don't do `transferFrom` because it's already local
             migrated = _deposit(address(this), account, withdrawn, false);
             // NOTE: Due to the precision loss of certain calculations, there is a small inefficency
