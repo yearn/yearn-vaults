@@ -4,7 +4,7 @@ import brownie
 
 def test_registry_deployment(gov, registry):
     assert registry.governance() == gov
-    assert registry.nextRelease() == 0
+    assert registry.numReleases() == 0
 
 
 def test_registry_setGovernance(gov, registry, rando):

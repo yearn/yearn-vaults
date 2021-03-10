@@ -15,12 +15,12 @@ interface Vault:
     ): nonpayable
 
 
-# len(Vault.releases)
-nextRelease: public(uint256)
+# len(releases)
+numReleases: public(uint256)
 releases: public(HashMap[uint256, address])
 
-# Token.address => len(Vault.deployments)
-nextDeployment: public(HashMap[address, uint256])
+# Token => len(vaults)
+numVaults: public(HashMap[address, uint256])
 vaults: public(HashMap[address, HashMap[uint256, address]])
 
 # 2-phase commit
@@ -37,7 +37,7 @@ event NewRelease:
 
 event NewVault:
     token: indexed(address)
-    deployment_id: indexed(uint256)
+    vault_id: indexed(uint256)
     vault: address
     api_version: String[28]
 
@@ -92,7 +92,7 @@ def latestRelease() -> String[28]:
     @return The api version of the latest release.
     """
     # NOTE: Throws if there has not been a release yet
-    return Vault(self.releases[self.nextRelease - 1]).apiVersion()  # dev: no release
+    return Vault(self.releases[self.numReleases - 1]).apiVersion()  # dev: no release
 
 
 @view
@@ -100,19 +100,19 @@ def latestRelease() -> String[28]:
 def latestVault(token: address) -> address:
     """
     @notice Returns the latest deployed vault for the given token.
-    @dev Throws if no deployments are endorsed yet for the given token.
-    @param token The token address to find the latest deployment for.
-    @return The address of the latest deployment.
+    @dev Throws if no vaults are endorsed yet for the given token.
+    @param token The token address to find the latest vault for.
+    @return The address of the latest vault for the given token.
     """
-    # NOTE: Throws if there has not been a deployment yet for this token
-    return self.vaults[token][self.nextDeployment[token] - 1]  # dev: no vault for token
+    # NOTE: Throws if there has not been a deployed vault yet for this token
+    return self.vaults[token][self.numVaults[token] - 1]  # dev: no vault for token
 
 
 @internal
 def _registerRelease(vault: address):
     # Check if the release is different from the current one
     # NOTE: This doesn't check for strict semver-style linearly increasing release versions
-    release_id: uint256 = self.nextRelease  # Next id in series
+    release_id: uint256 = self.numReleases  # Next id in series
     if release_id > 0:
         assert (
             Vault(self.releases[release_id - 1]).apiVersion()
@@ -122,30 +122,30 @@ def _registerRelease(vault: address):
 
     # Update latest release
     self.releases[release_id] = vault
-    self.nextRelease = release_id + 1
+    self.numReleases = release_id + 1
 
     # Log the release for external listeners (e.g. Graph)
     log NewRelease(release_id, vault, Vault(vault).apiVersion())
 
 
 @internal
-def _registerDeployment(token: address, vault: address):
+def _registerVault(token: address, vault: address):
     # Check if there is an existing deployment for this token at the particular api version
     # NOTE: This doesn't check for strict semver-style linearly increasing release versions
-    deployment_id: uint256 = self.nextDeployment[token]  # Next id in series
-    if deployment_id > 0:
+    vault_id: uint256 = self.numVaults[token]  # Next id in series
+    if vault_id > 0:
         assert (
-            Vault(self.vaults[token][deployment_id - 1]).apiVersion()
+            Vault(self.vaults[token][vault_id - 1]).apiVersion()
             != Vault(vault).apiVersion()
         )  # dev: same api version
     # else: we are adding a new token to the Registry
 
     # Update the latest deployment
-    self.vaults[token][deployment_id] = vault
-    self.nextDeployment[token] = deployment_id + 1
+    self.vaults[token][vault_id] = vault
+    self.numVaults[token] = vault_id + 1
 
     # Log the deployment for external listeners (e.g. Graph)
-    log NewVault(token, deployment_id, vault, Vault(vault).apiVersion())
+    log NewVault(token, vault_id, vault, Vault(vault).apiVersion())
 
 
 @external
@@ -206,7 +206,7 @@ def newVault(
         `governance` is set in the new vault as `self.governance`, with no ability to override.
         Throws if caller isn't `self.governance`.
         Throws if no releases are registered yet.
-        Throws if there already is a deployment for the given token with the latest api version.
+        Throws if there already is a registered vault for the given token with the latest api version.
         Emits a `NewVault` event.
     @param token The token that may be deposited into the new Vault.
     @param guardian The address authorized for guardian interactions in the new Vault.
@@ -219,10 +219,10 @@ def newVault(
     assert msg.sender == self.governance  # dev: unauthorized
 
     # NOTE: Underflow if no releases created yet, or targeting prior to release history
-    releaseTarget: uint256 = self.nextRelease - 1 - releaseDelta  # dev: no releases
+    releaseTarget: uint256 = self.numReleases - 1 - releaseDelta  # dev: no releases
     vault: address = self._newProxyVault(token, msg.sender, rewards, guardian, name, symbol, releaseTarget)
 
-    self._registerDeployment(token, vault)
+    self._registerVault(token, vault)
 
     return vault
 
@@ -255,7 +255,7 @@ def newExperimentalVault(
     @return The address of the newly-deployed vault
     """
     # NOTE: Underflow if no releases created yet, or targeting prior to release history
-    releaseTarget: uint256 = self.nextRelease - 1 - releaseDelta  # dev: no releases
+    releaseTarget: uint256 = self.numReleases - 1 - releaseDelta  # dev: no releases
     # NOTE: Anyone can call this method, as a convenience to Strategist' experiments
     vault: address = self._newProxyVault(token, governance, rewards, guardian, name, symbol, releaseTarget)
 
@@ -285,12 +285,12 @@ def endorseVault(vault: address, releaseDelta: uint256 = 0):
     assert Vault(vault).governance() == msg.sender  # dev: not governed
 
     # NOTE: Underflow if no releases created yet, or targeting prior to release history
-    releaseTarget: uint256 = self.nextRelease - 1 - releaseDelta  # dev: no releases
+    releaseTarget: uint256 = self.numReleases - 1 - releaseDelta  # dev: no releases
     api_version: String[28] = Vault(self.releases[releaseTarget]).apiVersion()
     assert Vault(vault).apiVersion() == api_version  # dev: not target release
 
     # Add to the end of the list of vaults for token
-    self._registerDeployment(Vault(vault).token(), vault)
+    self._registerVault(Vault(vault).token(), vault)
 
 
 @external

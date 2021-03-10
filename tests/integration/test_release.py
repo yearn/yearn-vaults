@@ -44,7 +44,7 @@ class ReleaseTest:
         else:
             self.vaults[token] = [vault]
 
-    def rule_new_deployment(self, new_token="st_bool"):
+    def rule_new_vault(self, new_token="st_bool"):
         tokens_with_stale_deployments = [
             token
             for token, deployments in self.vaults.items()
