@@ -78,7 +78,7 @@ contract AffiliateToken is ERC20, BaseWrapper {
     }
 
     function deposit() external returns (uint256) {
-        return deposit(token.balanceOf(msg.sender));
+        return deposit(uint256(-1)); // Deposit everything
     }
 
     function deposit(uint256 amount) public returns (uint256 deposited) {
