@@ -23,10 +23,14 @@ releases: public(HashMap[uint256, address])
 nextDeployment: public(HashMap[address, uint256])
 vaults: public(HashMap[address, HashMap[uint256, address]])
 
-# Maintain a list of endorsed vault tokens
-tokensList: public(address[65536])
-tokensMap: public(HashMap[address, bool])
-tokensCount: public(uint256)
+# Index of token added => token address
+tokens: public(HashMap[uint256, address])
+
+# len(tokens)
+numTokens: public(uint256)
+
+# Inclusion check for token
+isRegistered: public(HashMap[address, bool])
 
 # 2-phase commit
 governance: public(address)
@@ -135,12 +139,12 @@ def _registerRelease(vault: address):
 
 @internal
 def _registerToken(token: address):
-    tokenExists: bool = self.tokensMap[token]
-    if tokenExists:
+    tokenIsRegistered: bool = self.isRegistered[token]
+    if tokenIsRegistered:
       return
-    self.tokensList[self.tokensCount] = token
-    self.tokensMap[token] = True
-    self.tokensCount = self.tokensCount + 1
+    self.tokens[self.numTokens] = token
+    self.isRegistered[token] = True
+    self.numTokens = self.numTokens + 1
 
 
 @internal

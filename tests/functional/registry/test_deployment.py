@@ -11,19 +11,19 @@ def test_endorsed_vault_token_tracking(
     assert registry.nextRelease() == 0  # Make sure no releases have been deployed
 
     # Token tracking state variables should start off uninitialized
-    assert registry.tokensList(0) == ZERO_ADDRESS
-    assert registry.tokensMap(token_1) == False
-    assert registry.tokensCount() == 0
+    assert registry.tokens(0) == ZERO_ADDRESS
+    assert registry.isRegistered(token_1) == False
+    assert registry.numTokens() == 0
 
     # Endorsing a vault registers a vault token
     registry.newRelease(vault_1, {"from": gov})
     registry.endorseVault(vault_1, {"from": gov})
     assert registry.nextRelease() == 1  # Make sure the release was deployed
     assert registry.latestVault(token_1) == vault_1
-    assert registry.tokensList(0) == token_1
-    assert registry.tokensList(1) == ZERO_ADDRESS
-    assert registry.tokensMap(token_1) == True
-    assert registry.tokensCount() == 1
+    assert registry.tokens(0) == token_1
+    assert registry.tokens(1) == ZERO_ADDRESS
+    assert registry.isRegistered(token_1) == True
+    assert registry.numTokens() == 1
 
     # Create a new release using the same token
     vault_2 = create_vault(token_1, version="2.0.0")
@@ -37,21 +37,21 @@ def test_endorsed_vault_token_tracking(
     assert registry.latestRelease() == vault_2.apiVersion() == "2.0.0"
 
     # Tokens can only be registered one time (no duplicates)
-    assert registry.tokensList(0) == token_1
-    assert registry.tokensList(1) == ZERO_ADDRESS
-    assert registry.tokensCount() == 1
+    assert registry.tokens(0) == token_1
+    assert registry.tokens(1) == ZERO_ADDRESS
+    assert registry.numTokens() == 1
 
     # Create a new endorsed vault with a new token
     token_2 = create_token()
     registry.newVault(token_2, guardian, rewards, "", "", {"from": gov})
 
     # New endorsed vaults should register tokens
-    assert registry.tokensList(0) == token_1
-    assert registry.tokensList(1) == token_2
-    assert registry.tokensList(2) == ZERO_ADDRESS
-    assert registry.tokensMap(token_1) == True
-    assert registry.tokensMap(token_2) == True
-    assert registry.tokensCount() == 2
+    assert registry.tokens(0) == token_1
+    assert registry.tokens(1) == token_2
+    assert registry.tokens(2) == ZERO_ADDRESS
+    assert registry.isRegistered(token_1) == True
+    assert registry.isRegistered(token_2) == True
+    assert registry.numTokens() == 2
 
     # Create a new experimental vault with a new token
     token_3 = create_token()
@@ -60,23 +60,23 @@ def test_endorsed_vault_token_tracking(
     ).return_value
 
     # New experimental (unendorsed) vaults should not register tokens
-    assert registry.tokensList(0) == token_1
-    assert registry.tokensList(1) == token_2
-    assert registry.tokensList(2) == ZERO_ADDRESS
-    assert registry.tokensMap(token_1) == True
-    assert registry.tokensMap(token_2) == True
-    assert registry.tokensCount() == 2
+    assert registry.tokens(0) == token_1
+    assert registry.tokens(1) == token_2
+    assert registry.tokens(2) == ZERO_ADDRESS
+    assert registry.isRegistered(token_1) == True
+    assert registry.isRegistered(token_2) == True
+    assert registry.numTokens() == 2
 
     # Endorsing a vault should register a token
     registry.endorseVault(vault_3)
-    assert registry.tokensList(0) == token_1
-    assert registry.tokensList(1) == token_2
-    assert registry.tokensList(2) == token_3
-    assert registry.tokensList(3) == ZERO_ADDRESS
-    assert registry.tokensMap(token_1) == True
-    assert registry.tokensMap(token_2) == True
-    assert registry.tokensMap(token_3) == True
-    assert registry.tokensCount() == 3
+    assert registry.tokens(0) == token_1
+    assert registry.tokens(1) == token_2
+    assert registry.tokens(2) == token_3
+    assert registry.tokens(3) == ZERO_ADDRESS
+    assert registry.isRegistered(token_1) == True
+    assert registry.isRegistered(token_2) == True
+    assert registry.isRegistered(token_3) == True
+    assert registry.numTokens() == 3
 
 
 def test_deployment_management(
