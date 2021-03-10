@@ -87,7 +87,7 @@ abstract contract BaseWrapper {
         VaultAPI[] memory vaults = allVaults();
 
         for (uint256 id = 0; id < vaults.length; id++) {
-            assets = assets.add(vaults[id].totalAssets().mul(vaults[id].pricePerShare()).div(10**vaults[id].decimals()));
+            assets = assets.add(vaults[id].totalAssets());
         }
     }
 
