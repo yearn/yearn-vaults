@@ -244,19 +244,19 @@ abstract contract BaseStrategy {
 
     // The minimum number of seconds between harvest calls. See
     // `setMinReportDelay()` for more details.
-    uint256 public minReportDelay = 0;
+    uint256 public minReportDelay;
 
     // The maximum number of seconds between harvest calls. See
     // `setMaxReportDelay()` for more details.
-    uint256 public maxReportDelay = 86400; // ~ once a day
+    uint256 public maxReportDelay;
 
     // The minimum multiple that `callCost` must be above the credit/profit to
     // be "justifiable". See `setProfitFactor()` for more details.
-    uint256 public profitFactor = 100;
+    uint256 public profitFactor;
 
     // Use this to adjust the threshold at which running a debt causes a
     // harvest trigger. See `setDebtThreshold()` for more details.
-    uint256 public debtThreshold = 0;
+    uint256 public debtThreshold;
 
     // See note on `setEmergencyExit()`.
     bool public emergencyExit;
@@ -314,6 +314,13 @@ abstract contract BaseStrategy {
         strategist = _strategist;
         rewards = _rewards;
         keeper = _keeper;
+
+        // initialize variables
+        minReportDelay = 0;
+        maxReportDelay = 86400;
+        profitFactor = 100;
+        debtThreshold = 0;
+
         vault.approve(rewards, uint256(-1)); // Allow rewards to be pulled
     }
 
@@ -815,7 +822,7 @@ abstract contract BaseStrategyInitializable is BaseStrategy {
         address _strategist,
         address _rewards,
         address _keeper
-    ) external {
+    ) external virtual {
         _initialize(_vault, _strategist, _rewards, _keeper);
     }
 
