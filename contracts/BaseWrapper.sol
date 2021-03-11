@@ -14,7 +14,7 @@ interface RegistryAPI {
 
     function latestVault(address token) external view returns (address);
 
-    function nextDeployment(address token) external view returns (uint256);
+    function numVaults(address token) external view returns (uint256);
 
     function vaults(address token, uint256 deploymentId) external view returns (address);
 }
@@ -59,21 +59,21 @@ abstract contract BaseWrapper {
 
     function allVaults() public virtual view returns (VaultAPI[] memory) {
         uint256 cache_length = _cachedVaults.length;
-        uint256 num_deployments = registry.nextDeployment(address(token));
+        uint256 num_vaults = registry.numVaults(address(token));
 
         // Use cached
-        if (cache_length == num_deployments) {
+        if (cache_length == num_vaults) {
             return _cachedVaults;
         }
 
-        VaultAPI[] memory vaults = new VaultAPI[](num_deployments);
+        VaultAPI[] memory vaults = new VaultAPI[](num_vaults);
 
-        for (uint256 deployment_id = 0; deployment_id < cache_length; deployment_id++) {
-            vaults[deployment_id] = _cachedVaults[deployment_id];
+        for (uint256 vault_id = 0; vault_id < cache_length; vault_id++) {
+            vaults[vault_id] = _cachedVaults[vault_id];
         }
 
-        for (uint256 deployment_id = cache_length; deployment_id < num_deployments; deployment_id++) {
-            vaults[deployment_id] = VaultAPI(registry.vaults(address(token), deployment_id));
+        for (uint256 vault_id = cache_length; vault_id < num_vaults; vault_id++) {
+            vaults[vault_id] = VaultAPI(registry.vaults(address(token), vault_id));
         }
 
         return vaults;

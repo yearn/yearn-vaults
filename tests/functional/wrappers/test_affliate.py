@@ -13,7 +13,7 @@ def test_config(gov, token, vault, registry, affiliate_token):
     assert affiliate_token.decimals() == vault.decimals() == token.decimals()
 
     # No vault added to the registry yet, so these methods should fail
-    assert registry.nextDeployment(token) == 0
+    assert registry.numVaults(token) == 0
 
     with brownie.reverts():
         affiliate_token.bestVault()
