@@ -228,7 +228,7 @@ abstract contract BaseWrapper {
         if (_depositLimit <= _totalAssets) return 0; // Nothing to migrate (not a failure)
 
         uint256 _amount = amount;
-        if (_amount < WITHDRAW_EVERYTHING && _depositLimit < UNCAPPED_DEPOSITS) {
+        if (_depositLimit < UNCAPPED_DEPOSITS && _amount < WITHDRAW_EVERYTHING) {
             // Can only deposit up to this amount
             uint256 _depositLeft = _depositLimit.sub(_totalAssets);
             if (_amount > _depositLeft) _amount = _depositLeft;
