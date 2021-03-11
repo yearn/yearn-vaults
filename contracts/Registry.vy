@@ -138,16 +138,6 @@ def _registerRelease(vault: address):
 
 
 @internal
-def _registerToken(token: address):
-    tokenIsRegistered: bool = self.isRegistered[token]
-    if tokenIsRegistered:
-      return
-    self.tokens[self.numTokens] = token
-    self.isRegistered[token] = True
-    self.numTokens = self.numTokens + 1
-
-
-@internal
 def _registerDeployment(token: address, vault: address):
     # Check if there is an existing deployment for this token at the particular api version
     # NOTE: This doesn't check for strict semver-style linearly increasing release versions
@@ -164,7 +154,10 @@ def _registerDeployment(token: address, vault: address):
     self.nextDeployment[token] = deployment_id + 1
 
     # Register tokens for endorsed vaults
-    self._registerToken(token)
+    if not self.isRegistered[token]:
+        self.isRegistered[token] = True
+        self.tokens[self.numTokens] = token
+        self.numTokens += 1
     
     # Log the deployment for external listeners (e.g. Graph)
     log NewVault(token, deployment_id, vault, Vault(vault).apiVersion())
