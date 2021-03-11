@@ -25,10 +25,8 @@ vaults: public(HashMap[address, HashMap[uint256, address]])
 
 # Index of token added => token address
 tokens: public(HashMap[uint256, address])
-
 # len(tokens)
 numTokens: public(uint256)
-
 # Inclusion check for token
 isRegistered: public(HashMap[address, bool])
 
