@@ -47,6 +47,12 @@ def test_clone(
     assert new_strategy.rewards() == guardian
     assert new_strategy.keeper() == strategist
 
+    # test state variables have been initialized with default (hardcoded) values
+    assert new_strategy.minReportDelay() == 0
+    assert new_strategy.maxReportDelay() == 86400
+    assert new_strategy.profitFactor() == 100
+    assert new_strategy.debtThreshold() == 0
+
 
 def test_double_initialize(TestStrategy, vault, other_vault, gov):
     strategy = gov.deploy(TestStrategy, vault)
