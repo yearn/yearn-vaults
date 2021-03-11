@@ -23,6 +23,13 @@ releases: public(HashMap[uint256, address])
 nextDeployment: public(HashMap[address, uint256])
 vaults: public(HashMap[address, HashMap[uint256, address]])
 
+# Index of token added => token address
+tokens: public(HashMap[uint256, address])
+# len(tokens)
+numTokens: public(uint256)
+# Inclusion check for token
+isRegistered: public(HashMap[address, bool])
+
 # 2-phase commit
 governance: public(address)
 pendingGovernance: public(address)
@@ -144,6 +151,12 @@ def _registerDeployment(token: address, vault: address):
     self.vaults[token][deployment_id] = vault
     self.nextDeployment[token] = deployment_id + 1
 
+    # Register tokens for endorsed vaults
+    if not self.isRegistered[token]:
+        self.isRegistered[token] = True
+        self.tokens[self.numTokens] = token
+        self.numTokens += 1
+    
     # Log the deployment for external listeners (e.g. Graph)
     log NewVault(token, deployment_id, vault, Vault(vault).apiVersion())
 
