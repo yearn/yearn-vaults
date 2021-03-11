@@ -31,6 +31,16 @@ abstract contract BaseWrapper {
 
     RegistryAPI public registry;
 
+    // ERC20 Unlimited Approvals (short-circuits VaultAPI.transferFrom)
+    uint256 constant UNLIMITED_APPROVAL = type(uint256).max;
+    // Sentinal values used to save gas on deposit/withdraw/migrate
+    // NOTE: DEPOSIT_EVERYTHING == WITHDRAW_EVERYTHING == MIGRATE_EVERYTHING
+    uint256 constant DEPOSIT_EVERYTHING = type(uint256).max;
+    uint256 constant WITHDRAW_EVERYTHING = type(uint256).max;
+    uint256 constant MIGRATE_EVERYTHING = type(uint256).max;
+    // VaultsAPI.depositLimit is unlimited
+    uint256 constant UNCAPPED_DEPOSITS = type(uint256).max;
+
     constructor(address _token, address _registry) public {
         token = IERC20(_token);
         // v2.registry.ychad.eth
@@ -104,7 +114,7 @@ abstract contract BaseWrapper {
         }
 
         if (token.allowance(address(this), address(_bestVault)) < amount) {
-            token.safeApprove(address(_bestVault), uint256(-1)); // Vaults are trusted
+            token.safeApprove(address(_bestVault), UNLIMITED_APPROVAL); // Vaults are trusted
         }
 
         // Depositing returns number of shares deposited
@@ -114,7 +124,7 @@ abstract contract BaseWrapper {
         uint256 beforeBal = token.balanceOf(address(this));
         if (receiver != address(this)) {
             _bestVault.deposit(amount, receiver);
-        } else if (amount < uint256(-1)) {
+        } else if (amount != DEPOSIT_EVERYTHING) {
             _bestVault.deposit(amount);
         } else {
             _bestVault.deposit();
@@ -160,7 +170,7 @@ abstract contract BaseWrapper {
                 // NOTE: No need for share transfer if this contract is `sender`
                 if (sender != address(this)) vaults[id].transferFrom(sender, address(this), availableShares);
 
-                if (amount < uint256(-1)) {
+                if (amount != WITHDRAW_EVERYTHING) {
                     // Compute amount to withdraw fully to satisfy the request
                     uint256 estimatedShares = amount
                         .sub(withdrawn) // NOTE: Changes every iteration
@@ -175,7 +185,7 @@ abstract contract BaseWrapper {
                 }
 
                 // Check if we have fully satisfied the request
-                // NOTE: use `amount = uint256(-1)` for withdrawing everything
+                // NOTE: use `amount = WITHDRAW_EVERYTHING` for withdrawing everything
                 if (amount <= withdrawn) break; // withdrawn as much as we needed
             }
         }
@@ -185,7 +195,7 @@ abstract contract BaseWrapper {
         if (withdrawn > amount) {
             // Don't forget to approve the deposit
             if (token.allowance(address(this), address(_bestVault)) < withdrawn.sub(amount)) {
-                token.safeApprove(address(_bestVault), uint256(-1)); // Vaults are trusted
+                token.safeApprove(address(_bestVault), UNLIMITED_APPROVAL); // Vaults are trusted
             }
 
             _bestVault.deposit(withdrawn.sub(amount), sender);
@@ -197,8 +207,7 @@ abstract contract BaseWrapper {
     }
 
     function _migrate(address account) internal returns (uint256) {
-        // Migrate everything (using `MAX_UINT256`)
-        return _migrate(account, uint256(-1));
+        return _migrate(account, MIGRATE_EVERYTHING);
     }
 
     function _migrate(address account, uint256 amount) internal returns (uint256) {
@@ -219,7 +228,7 @@ abstract contract BaseWrapper {
         if (_depositLimit <= _totalAssets) return 0; // Nothing to migrate (not a failure)
 
         uint256 _amount = amount;
-        if (_amount < uint256(-1) && _depositLimit < uint256(-1)) {
+        if (_amount < WITHDRAW_EVERYTHING && _depositLimit < UNCAPPED_DEPOSITS) {
             // Can only deposit up to this amount
             uint256 _depositLeft = _depositLimit.sub(_totalAssets);
             if (_amount > _depositLeft) _amount = _depositLeft;
