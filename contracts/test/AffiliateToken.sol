@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity 0.8.2;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
@@ -19,6 +19,7 @@ contract AffiliateToken is ERC20, BaseWrapper {
     address public affiliate;
 
     address public pendingAffiliate;
+    uint8 private immutable _decimals;
 
     modifier onlyAffiliate() {
         require(msg.sender == affiliate);
@@ -30,10 +31,10 @@ contract AffiliateToken is ERC20, BaseWrapper {
         address _registry,
         string memory name,
         string memory symbol
-    ) public BaseWrapper(_token, _registry) ERC20(name, symbol) {
+    ) BaseWrapper(_token, _registry) ERC20(name, symbol) {
         DOMAIN_SEPARATOR = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), keccak256(bytes("1")), _getChainId(), address(this)));
         affiliate = msg.sender;
-        _setupDecimals(uint8(ERC20(address(token)).decimals()));
+        _decimals = uint8(ERC20(address(token)).decimals());
     }
 
     function _getChainId() internal view returns (uint256) {
@@ -57,7 +58,7 @@ contract AffiliateToken is ERC20, BaseWrapper {
         uint256 totalShares = totalSupply();
 
         if (totalShares > 0) {
-            return totalVaultBalance(address(this)).mul(numShares).div(totalShares);
+            return (totalVaultBalance(address(this)) * numShares) / totalShares;
         } else {
             return numShares;
         }
@@ -72,14 +73,14 @@ contract AffiliateToken is ERC20, BaseWrapper {
         uint256 totalWrapperAssets = totalVaultBalance(address(this)).sub(amount);
 
         if (totalWrapperAssets > 0) {
-            return totalSupply().mul(amount).div(totalWrapperAssets);
+            return (totalSupply() * amount) / totalWrapperAssets;
         } else {
             return amount;
         }
     }
 
     function deposit() external returns (uint256) {
-        return deposit(uint256(-1)); // Deposit everything
+        return deposit(type(uint256).max); // Deposit everything
     }
 
     function deposit(uint256 amount) public returns (uint256 deposited) {
@@ -138,5 +139,9 @@ contract AffiliateToken is ERC20, BaseWrapper {
         require(signatory == owner, "permit: unauthorized");
 
         _approve(owner, spender, amount);
+    }
+
+    function decimals() public virtual override view returns (uint8) {
+        return _decimals;
     }
 }
