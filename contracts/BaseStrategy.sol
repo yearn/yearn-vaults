@@ -770,25 +770,6 @@ abstract contract BaseStrategy {
     }
 
     /**
-     * Override this to add all tokens/tokenized positions this contract
-     * manages on a *persistent* basis (e.g. not just for swapping back to
-     * want ephemerally).
-     *
-     * NOTE: Do *not* include `want`, already included in `sweep` below.
-     *
-     * Example:
-     *
-     *    function protectedTokens() internal override view returns (address[] memory) {
-     *      address[] memory protected = new address[](3);
-     *      protected[0] = tokenA;
-     *      protected[1] = tokenB;
-     *      protected[2] = tokenC;
-     *      return protected;
-     *    }
-     */
-    function protectedTokens() internal virtual view returns (address[] memory);
-
-    /**
      * @notice
      *  Removes tokens from this Strategy that are not the type of tokens
      *  managed by this Strategy. This may be used in case of accidentally
@@ -796,21 +777,14 @@ abstract contract BaseStrategy {
      *
      *  Tokens will be sent to `governance()`.
      *
-     *  This will fail if an attempt is made to sweep `want`, or any tokens
-     *  that are protected by this Strategy.
-     *
      *  This may only be called by governance.
      * @dev
-     *  Implement `protectedTokens()` to specify any additional tokens that
-     *  should be protected from sweeping in addition to `want`.
+     *  want and shares token can't be transfered using sweep
      * @param _token The token to transfer out of this vault.
      */
     function sweep(address _token) external onlyGovernance {
         require(_token != address(want), "!want");
         require(_token != address(vault), "!shares");
-
-        address[] memory _protectedTokens = protectedTokens();
-        for (uint256 i; i < _protectedTokens.length; i++) require(_token != _protectedTokens[i], "!protected");
 
         IERC20(_token).safeTransfer(governance(), IERC20(_token).balanceOf(address(this)));
     }

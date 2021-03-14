@@ -13,11 +13,6 @@ import {BaseStrategyInitializable, StrategyParams, VaultAPI} from "../BaseStrate
 contract TestStrategy is BaseStrategyInitializable {
     bool public doReentrancy;
 
-    // Some token that needs to be protected for some reason
-    // Initialize this to some fake address, because we're just using it
-    // to test `BaseStrategy.protectedTokens()`
-    address public constant protectedToken = address(0xbad);
-
     constructor(address _vault) public BaseStrategyInitializable(_vault) {}
 
     function name() external override view returns (string memory) {
@@ -33,7 +28,7 @@ contract TestStrategy is BaseStrategyInitializable {
     function _toggleReentrancyExploit() public {
         doReentrancy = !doReentrancy;
     }
-    
+
     // NOTE: This is a test-only function to simulate a wrong want token
     function _setWant(IERC20 _want) public {
         want = _want;
@@ -100,11 +95,5 @@ contract TestStrategy is BaseStrategyInitializable {
 
     function prepareMigration(address _newStrategy) internal override {
         // Nothing needed here because no additional tokens/tokenized positions for mock
-    }
-
-    function protectedTokens() internal override view returns (address[] memory) {
-        address[] memory protected = new address[](1);
-        protected[0] = protectedToken;
-        return protected;
     }
 }

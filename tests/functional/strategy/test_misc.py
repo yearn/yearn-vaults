@@ -131,10 +131,6 @@ def test_sweep(gov, vault, strategy, rando, token, other_token):
     with brownie.reverts("!shares"):
         strategy.sweep(vault.address, {"from": gov})
 
-    # Protected token doesn't work
-    with brownie.reverts("!protected"):
-        strategy.sweep(strategy.protectedToken(), {"from": gov})
-
     # But any other random token works
     other_token.transfer(strategy, other_token.balanceOf(gov), {"from": gov})
     assert other_token.address != strategy.want()
