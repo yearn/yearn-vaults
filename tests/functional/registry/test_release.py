@@ -29,7 +29,6 @@ def test_release_management(gov, registry, create_vault, rando):
     with brownie.reverts():
         registry.endorseVault(v1_vault)
 
-    # Check that newRelease raises if vault governance is a rando
+    # Check that newRelease works even if vault governance is not gov
     bad_vault = create_vault(governance=rando)
-    with brownie.reverts():
-        registry.newRelease(bad_vault, {"from": gov})
+    registry.newRelease(bad_vault, {"from": gov})

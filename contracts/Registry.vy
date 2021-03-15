@@ -115,8 +115,22 @@ def latestVault(token: address) -> address:
     return self.vaults[token][self.numVaults[token] - 1]  # dev: no vault for token
 
 
-@internal
-def _registerRelease(vault: address):
+@external
+def newRelease(vault: address):
+    """
+    @notice
+        Add a previously deployed Vault as the template contract for the latest release,
+        to be used by further "forwarder-style" delegatecall proxy contracts that can be
+        deployed from the registry throw other methods (to save gas).
+    @dev
+        Throws if caller isn't `self.governance`.
+        Throws if `vault`'s governance isn't `self.governance`.
+        Throws if the api version is the same as the previous release.
+        Emits a `NewVault` event.
+    @param vault The vault that will be used as the template contract for the next release.
+    """
+    assert msg.sender == self.governance  # dev: unauthorized
+
     # Check if the release is different from the current one
     # NOTE: This doesn't check for strict semver-style linearly increasing release versions
     release_id: uint256 = self.numReleases  # Next id in series
@@ -133,6 +147,26 @@ def _registerRelease(vault: address):
 
     # Log the release for external listeners (e.g. Graph)
     log NewRelease(release_id, vault, Vault(vault).apiVersion())
+
+
+@internal
+def _newProxyVault(
+    token: address,
+    governance: address,
+    rewards: address,
+    guardian: address,
+    name: String[64],
+    symbol: String[32],
+    releaseTarget: uint256,
+) -> address:
+    release: address = self.releases[releaseTarget]
+    assert release != ZERO_ADDRESS  # dev: unknown release
+    vault: address = create_forwarder_to(release)
+
+    # NOTE: Must initialize the Vault atomically with deploying it
+    Vault(vault).initialize(token, governance, rewards, name, symbol, guardian)
+
+    return vault
 
 
 @internal
@@ -156,49 +190,9 @@ def _registerVault(token: address, vault: address):
         self.isRegistered[token] = True
         self.tokens[self.numTokens] = token
         self.numTokens += 1
-    
+
     # Log the deployment for external listeners (e.g. Graph)
     log NewVault(token, vault_id, vault, Vault(vault).apiVersion())
-
-
-@external
-def newRelease(vault: address):
-    """
-    @notice
-        Add a previously deployed Vault as the template contract for the latest release,
-        to be used by further "forwarder-style" delegatecall proxy contracts that can be
-        deployed from the registry throw other methods (to save gas).
-    @dev
-        Throws if caller isn't `self.governance`.
-        Throws if `vault`'s governance isn't `self.governance`.
-        Throws if the api version is the same as the previous release.
-        Emits a `NewVault` event.
-    @param vault The vault that will be used as the template contract for the next release.
-    """
-    assert msg.sender == self.governance  # dev: unauthorized
-    assert Vault(vault).governance() == msg.sender  # dev: not governed
-
-    self._registerRelease(vault)
-
-
-@internal
-def _newProxyVault(
-    token: address,
-    governance: address,
-    rewards: address,
-    guardian: address,
-    name: String[64],
-    symbol: String[32],
-    releaseTarget: uint256,
-) -> address:
-    release: address = self.releases[releaseTarget]
-    assert release != ZERO_ADDRESS  # dev: unknown release
-    vault: address = create_forwarder_to(release)
-
-    # NOTE: Must initialize the Vault atomically with deploying it
-    Vault(vault).initialize(token, governance, rewards, name, symbol, guardian)
-
-    return vault
 
 
 @external
