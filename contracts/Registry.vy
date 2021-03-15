@@ -176,7 +176,6 @@ def newRelease(vault: address):
     @param vault The vault that will be used as the template contract for the next release.
     """
     assert msg.sender == self.governance  # dev: unauthorized
-    assert Vault(vault).governance() == msg.sender  # dev: not governed
 
     self._registerRelease(vault)
 
