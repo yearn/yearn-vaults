@@ -115,32 +115,6 @@ def latestVault(token: address) -> address:
     return self.vaults[token][self.numVaults[token] - 1]  # dev: no vault for token
 
 
-@internal
-def _registerVault(token: address, vault: address):
-    # Check if there is an existing deployment for this token at the particular api version
-    # NOTE: This doesn't check for strict semver-style linearly increasing release versions
-    vault_id: uint256 = self.numVaults[token]  # Next id in series
-    if vault_id > 0:
-        assert (
-            Vault(self.vaults[token][vault_id - 1]).apiVersion()
-            != Vault(vault).apiVersion()
-        )  # dev: same api version
-    # else: we are adding a new token to the Registry
-
-    # Update the latest deployment
-    self.vaults[token][vault_id] = vault
-    self.numVaults[token] = vault_id + 1
-
-    # Register tokens for endorsed vaults
-    if not self.isRegistered[token]:
-        self.isRegistered[token] = True
-        self.tokens[self.numTokens] = token
-        self.numTokens += 1
-
-    # Log the deployment for external listeners (e.g. Graph)
-    log NewVault(token, vault_id, vault, Vault(vault).apiVersion())
-
-
 @external
 def newRelease(vault: address):
     """
@@ -193,6 +167,32 @@ def _newProxyVault(
     Vault(vault).initialize(token, governance, rewards, name, symbol, guardian)
 
     return vault
+
+
+@internal
+def _registerVault(token: address, vault: address):
+    # Check if there is an existing deployment for this token at the particular api version
+    # NOTE: This doesn't check for strict semver-style linearly increasing release versions
+    vault_id: uint256 = self.numVaults[token]  # Next id in series
+    if vault_id > 0:
+        assert (
+            Vault(self.vaults[token][vault_id - 1]).apiVersion()
+            != Vault(vault).apiVersion()
+        )  # dev: same api version
+    # else: we are adding a new token to the Registry
+
+    # Update the latest deployment
+    self.vaults[token][vault_id] = vault
+    self.numVaults[token] = vault_id + 1
+
+    # Register tokens for endorsed vaults
+    if not self.isRegistered[token]:
+        self.isRegistered[token] = True
+        self.tokens[self.numTokens] = token
+        self.numTokens += 1
+
+    # Log the deployment for external listeners (e.g. Graph)
+    log NewVault(token, vault_id, vault, Vault(vault).apiVersion())
 
 
 @external
