@@ -116,26 +116,6 @@ def latestVault(token: address) -> address:
 
 
 @internal
-def _registerRelease(vault: address):
-    # Check if the release is different from the current one
-    # NOTE: This doesn't check for strict semver-style linearly increasing release versions
-    release_id: uint256 = self.numReleases  # Next id in series
-    if release_id > 0:
-        assert (
-            Vault(self.releases[release_id - 1]).apiVersion()
-            != Vault(vault).apiVersion()
-        )  # dev: same api version
-    # else: we are adding the first release to the Registry!
-
-    # Update latest release
-    self.releases[release_id] = vault
-    self.numReleases = release_id + 1
-
-    # Log the release for external listeners (e.g. Graph)
-    log NewRelease(release_id, vault, Vault(vault).apiVersion())
-
-
-@internal
 def _registerVault(token: address, vault: address):
     # Check if there is an existing deployment for this token at the particular api version
     # NOTE: This doesn't check for strict semver-style linearly increasing release versions
@@ -156,7 +136,7 @@ def _registerVault(token: address, vault: address):
         self.isRegistered[token] = True
         self.tokens[self.numTokens] = token
         self.numTokens += 1
-    
+
     # Log the deployment for external listeners (e.g. Graph)
     log NewVault(token, vault_id, vault, Vault(vault).apiVersion())
 
@@ -177,7 +157,22 @@ def newRelease(vault: address):
     """
     assert msg.sender == self.governance  # dev: unauthorized
 
-    self._registerRelease(vault)
+    # Check if the release is different from the current one
+    # NOTE: This doesn't check for strict semver-style linearly increasing release versions
+    release_id: uint256 = self.numReleases  # Next id in series
+    if release_id > 0:
+        assert (
+            Vault(self.releases[release_id - 1]).apiVersion()
+            != Vault(vault).apiVersion()
+        )  # dev: same api version
+    # else: we are adding the first release to the Registry!
+
+    # Update latest release
+    self.releases[release_id] = vault
+    self.numReleases = release_id + 1
+
+    # Log the release for external listeners (e.g. Graph)
+    log NewRelease(release_id, vault, Vault(vault).apiVersion())
 
 
 @internal
