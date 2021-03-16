@@ -976,7 +976,7 @@ def withdraw(
     """
     shares: uint256 = maxShares  # May reduce this number below
 
-    # Max Loss is <100%, revert otherwise
+    # Max Loss is <=100%, revert otherwise
     assert maxLoss <= MAX_BPS
 
     # If _shares not specified, transfer full share balance
