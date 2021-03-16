@@ -873,6 +873,10 @@ def deposit(_amount: uint256 = MAX_UINT256, recipient: address = msg.sender) -> 
 @view
 @internal
 def _shareValue(shares: uint256) -> uint256:
+    # Returns price = 1:1 if vault is empty
+    if (self.totalSupply == 0):
+        return (shares)
+
     # Determines the current value of `shares`.
         # NOTE: if sqrt(Vault.totalAssets()) >>> 1e39, this could potentially revert
     lockedFundsRatio: uint256 = (block.timestamp - self.lastReport) * self.lockedProfitDegration
@@ -972,6 +976,9 @@ def withdraw(
     """
     shares: uint256 = maxShares  # May reduce this number below
 
+    # Max Loss is <100%, revert otherwise
+    assert maxLoss <= MAX_BPS
+
     # If _shares not specified, transfer full share balance
     if shares == MAX_UINT256:
         shares = self.balanceOf[msg.sender]
@@ -979,6 +986,9 @@ def withdraw(
     # Limit to only the shares they own
     assert shares <= self.balanceOf[msg.sender]
 
+    # Ensure we are withdrawing something
+    assert shares > 0
+    
     # See @dev note, above.
     value: uint256 = self._shareValue(shares)
 
@@ -1011,7 +1021,7 @@ def withdraw(
                 continue  # Nothing to withdraw from this Strategy, try the next one
 
             # Force withdraw amount from each Strategy in the order set by governance
-            loss: uint256 = Strategy(strategy).withdraw(amountNeeded)
+            loss: uint256 = Strategy(strategy).withdraw(amountNeeded) 
             withdrawn: uint256 = self.token.balanceOf(self) - vault_balance
 
             # NOTE: Withdrawer incurs any losses from liquidation
@@ -1058,10 +1068,7 @@ def pricePerShare() -> uint256:
     @dev See dev note on `withdraw`.
     @return The value of a single share.
     """
-    if self.totalSupply == 0:
-        return 10 ** self.decimals  # price of 1:1
-    else:
-        return self._shareValue(10 ** self.decimals)
+    return self._shareValue(10 ** self.decimals)
 
 
 @internal
