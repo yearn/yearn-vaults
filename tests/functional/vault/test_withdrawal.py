@@ -319,7 +319,7 @@ def test_profit_degration(chain, gov, token, vault, strategy, rando):
 
 def test_withdraw_zero(
     chain, token, gov, Vault, guardian, rewards, TestStrategy, rando
-): 
+):
     vault = guardian.deploy(Vault)
     vault.initialize(
         token, gov, rewards, token.symbol() + " yVault", "yv" + token.symbol(), guardian
@@ -345,7 +345,7 @@ def test_withdraw_zero(
 
     # Trying to withdraw 0 shares. It should revert
     with brownie.reverts():
-            vault.withdraw(0, {"from": rando})
+        vault.withdraw(0, {"from": rando})
 
     # Withdrawing full balance, leaving vault empty
-    vault.withdraw({'from': gov}) 
+    vault.withdraw({"from": gov})
