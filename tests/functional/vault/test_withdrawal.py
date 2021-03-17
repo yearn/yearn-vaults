@@ -315,3 +315,37 @@ def test_profit_degration(chain, gov, token, vault, strategy, rando):
     chain.sleep(21600)
     chain.mine(1)
     assert vault.pricePerShare() >= pricePerShareBefore * 2 * 0.99
+
+
+def test_withdraw_zero(
+    chain, token, gov, Vault, guardian, rewards, TestStrategy, rando
+): 
+    vault = guardian.deploy(Vault)
+    vault.initialize(
+        token, gov, rewards, token.symbol() + " yVault", "yv" + token.symbol(), guardian
+    )
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+
+    strategies = [gov.deploy(TestStrategy, vault) for _ in range(2)]
+    [vault.addStrategy(s, 1000, 0, 10, 1000, {"from": gov}) for s in strategies]
+
+    token.approve(vault, 2 ** 256 - 1, {"from": gov})
+    vault.deposit(1000, {"from": gov})
+    token.approve(gov, 2 ** 256 - 1, {"from": gov})
+    token.transferFrom(
+        gov, guardian, token.balanceOf(gov), {"from": gov}
+    )  # Remove all tokens from gov
+    assert vault.balanceOf(gov) > 0
+    assert token.balanceOf(gov) == 0
+
+    # Deposit something in strategies
+    chain.sleep(1)  # Needs to be a second ahead, at least
+    [s.harvest({"from": gov}) for s in strategies]
+    assert token.balanceOf(vault) < vault.totalAssets()  # Some debt is in strategies
+
+    # Trying to withdraw 0 shares. It should revert
+    with brownie.reverts():
+            vault.withdraw(0, {"from": rando})
+
+    # Withdrawing full balance, leaving vault empty
+    vault.withdraw({'from': gov}) 
