@@ -66,7 +66,19 @@
 - Add strategy to vault:
 
   ```python
-  vault.addStrategy(strategy, debt_ratio, rate_limit, 1000)
+  strategy = ''                     # strategy address
+  debt_ratio = 9800                 # 98%
+  minDebtPerHarvest = 0             # lower limit on debt
+  maxDebtPerHarvest = 2 ** 256 - 1  # upper limit on debt add
+  performance_fee = 1000            # strategist per fee 10%
+
+  vault.addStrategy(
+    strategy, 
+    debt_ratio, 
+    minDebtPerHarvest,
+    maxDebtPerHarvest,
+    performance_fee
+  )
   ```
 
   - `debt_ratio` should be `9800` if first strategy on vault.
