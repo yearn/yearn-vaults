@@ -179,7 +179,8 @@ abstract contract BaseWrapper {
 
                     // Limit amount to withdraw to the maximum made available to this contract
                     uint256 shares = Math.min(estimatedShares, availableShares);
-                    withdrawn = withdrawn.add(vaults[id].withdraw(shares));
+                    // If shares to be withdrawn is 0, do not try to withdraw (as it will revert)
+                    withdrawn = shares == 0 ? withdrawn : withdrawn.add(vaults[id].withdraw(shares));
                 } else {
                     withdrawn = withdrawn.add(vaults[id].withdraw());
                 }

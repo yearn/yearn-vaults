@@ -874,8 +874,8 @@ def deposit(_amount: uint256 = MAX_UINT256, recipient: address = msg.sender) -> 
 @internal
 def _shareValue(shares: uint256) -> uint256:
     # Returns price = 1:1 if vault is empty
-    if (self.totalSupply == 0):
-        return (shares)
+    if self.totalSupply == 0:
+        return shares
 
     # Determines the current value of `shares`.
         # NOTE: if sqrt(Vault.totalAssets()) >>> 1e39, this could potentially revert
