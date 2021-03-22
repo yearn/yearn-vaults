@@ -35,6 +35,7 @@
 - Complete peer review by at least 2 strategists.
 - Check if `want` token has a deployed vault already (>=v0.3.0) and coordinate to use that first if possible.
 - If a new vault is needed, deploy it using the registry:
+
   - Set strategists multisig (`0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7`) as governance.
   - Set Core Dev multisig (`dev.ychad.eth`) as guardian.
   - Set treasury (`treasury.ychad.eth`) as the rewards address.
@@ -162,13 +163,29 @@
   ```
 
 - Yearn governance now must accept governance and endorse the vault:
-
-  ```python
-  strategy.acceptGovernance() # from ychad.eth
-  registry.endorseVault(vault) # from ychad.eth
-  ```
-
   **Note**: Order is important. Will fail if order is wrong.
+
+Endorsing a vault from latest release (use instructions for previous release below) :
+
+```python
+strategy.acceptGovernance() # from ychad.eth
+registry.endorseVault(vault) # from ychad.eth
+```
+
+Or if you are endorsing a vault from previous release:
+
+1. check for latest release number in the registry contract
+2. check the apiVersion of the vault you want to endorse
+3. calculate the releaseDelta to get target release. (see registry endorseVault param details)
+   E.g: latestRelease = 0.3.3 and numReleases = 5. New vault apiVersion is 0.3.2
+   `releaseDelta = self.numReleases - 1 - releaseTarget`
+4. confirm using registry.releases(uint256) that your targetRelease has the same apiVersion as your vault.
+
+```python
+ releaseDelta = self.numReleases - 1 - releaseTarget
+ strategy.acceptGovernance() # from ychad.eth
+ registry.endorseVault(vault, releaseDelta) # from ychad.eth.
+```
 
 - Now you are on main yearn page!
 
@@ -185,10 +202,10 @@
 
 These are the standard deposit limits per stage. They can be adjusted on a case by case basis.
 
-| Stage                      | Limit  |
-| -------------------------- | ------ |
-| Experimental               | \$500K |
-| Production                 | \$10M  |
+| Stage        | Limit  |
+| ------------ | ------ |
+| Experimental | \$500K |
+| Production   | \$10M  |
 
 ## Revoking a strategy with normal migration
 
