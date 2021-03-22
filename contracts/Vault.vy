@@ -52,6 +52,7 @@ interface Strategy:
     def want() -> address: view
     def vault() -> address: view
     def isActive() -> bool: view
+    def delegatedAssets() -> uint256: view
     def estimatedTotalAssets() -> uint256: view
     def withdraw(_amount: uint256) -> uint256: nonpayable
     def migrate(_newStrategy: address): nonpayable
@@ -218,6 +219,9 @@ emergencyShutdown: public(bool)
 depositLimit: public(uint256)  # Limit for totalAssets the Vault can hold
 debtRatio: public(uint256)  # Debt ratio for the Vault across all strategies (in BPS, <= 10k)
 totalDebt: public(uint256)  # Amount of tokens that all strategies have borrowed
+delegatedAssets: public(uint256)  # Amount of tokens that all strategies delegate to other Vaults
+# NOTE: Cached value used solely for proper bookkeeping
+_strategy_delegatedAssets: HashMap[address, uint256]
 lastReport: public(uint256)  # block.timestamp of last report
 activation: public(uint256)  # block.timestamp of contract deployment
 lockedProfit: public(uint256) # how much profit is locked and cant be withdrawn
@@ -1519,7 +1523,11 @@ def _assessFees(strategy: address, gain: uint256):
     # NOTE: In effect, this reduces overall share price by the combined fee
     # NOTE: may throw if Vault.totalAssets() > 1e64, or not called for more than a year
     governance_fee: uint256 = (
-        (self.totalDebt * (block.timestamp - self.lastReport) * self.managementFee)
+        (
+            (self.totalDebt - self.delegatedAssets)
+            * (block.timestamp - self.lastReport)
+            * self.managementFee
+        )
         / MAX_BPS
         / SECS_PER_YEAR
     )
@@ -1636,6 +1644,13 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     elif totalAvail > credit:  # credit deficit, take from Strategy
         self.erc20_safe_transferFrom(self.token.address, msg.sender, self, totalAvail - credit)
     # else, don't do anything because it is balanced
+
+    # Update cached value of delegated assets
+    #   (used to properly account for mgmt fee in `_assessFees`)
+    self.delegatedAssets -= self._strategy_delegatedAssets[msg.sender]
+    delegatedAssets: uint256 = Strategy(msg.sender).delegatedAssets()
+    self.delegatedAssets += delegatedAssets
+    self._strategy_delegatedAssets[msg.sender] = delegatedAssets
 
     # Update reporting time
     self.strategies[msg.sender].lastReport = block.timestamp
