@@ -102,7 +102,7 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
     # Scenario 1: we panic, and try to get out as quickly as possible (total loss)
     assert token.balanceOf(rando) == 0
 
-    # User first try to withdraw with +100% losses, which are not allowed
+    # User first try to withdraw with more than 100% losses, which is nonsensical
     with brownie.reverts():
         vault.withdraw(1000, rando, 10_001, {"from": rando})
 
