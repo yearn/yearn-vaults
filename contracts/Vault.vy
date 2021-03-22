@@ -233,8 +233,8 @@ managementFee: public(uint256)
 # Governance Fee for performance of Vault (given to `rewards`)
 performanceFee: public(uint256)
 MAX_BPS: constant(uint256) = 10_000  # 100%, or 10k basis points
-# NOTE: A four-century period will be missing 3 of its 100 Julian leap years, leaving 97. 
-#       So the average year has 365 + 97/400 = 365.2425 days 
+# NOTE: A four-century period will be missing 3 of its 100 Julian leap years, leaving 97.
+#       So the average year has 365 + 97/400 = 365.2425 days
 #       ERROR(Julian): -0.0078
 #       ERROR(Gregorian): -0.0003
 SECS_PER_YEAR: constant(uint256) = 31_556_952  # 365.2425 days
@@ -444,7 +444,7 @@ def setRewards(rewards: address):
 def setLockedProfitDegration(degration: uint256):
     """
     @notice
-        Changes the locked profit degration. 
+        Changes the locked profit degration.
     @param degration The rate of degration in percent per second scaled to 1e18.
     """
     assert msg.sender == self.governance
@@ -887,7 +887,7 @@ def _shareValue(shares: uint256) -> uint256:
     # NOTE: using 1e3 for extra precision here, when decimals is low
     return ((10 ** 3 * (shares * freeFunds)) / self.totalSupply) / 10 ** 3
 
-    
+
 @view
 @internal
 def _sharesForAmount(amount: uint256) -> uint256:
@@ -1345,7 +1345,7 @@ def addStrategyToQueue(strategy: address):
         last_idx += 1
     # Check if queue is full
     assert last_idx < MAXIMUM_STRATEGIES
-        
+
     self.withdrawalQueue[MAXIMUM_STRATEGIES - 1] = strategy
     self._organizeWithdrawalQueue()
     log StrategyAddedToQueue(strategy)
@@ -1514,7 +1514,7 @@ def _reportLoss(strategy: address, loss: uint256):
     # Also, make sure we reduce our trust with the strategy by the same amount
     debtRatio: uint256 = self.strategies[strategy].debtRatio
     ratio_change: uint256 = min(loss * MAX_BPS / self._totalAssets(), debtRatio)
-    self.strategies[strategy].debtRatio -= ratio_change 
+    self.strategies[strategy].debtRatio -= ratio_change
     self.debtRatio -= ratio_change
 
 @internal
