@@ -175,8 +175,8 @@ registry.endorseVault(vault) # from ychad.eth
 Or if you are endorsing a vault from previous release:
 
 1. check for latest release number in the registry contract
-2. check the apiVersion of the vault you want to endorse
-3. calculate the releaseDelta to get target release. (see registry endorseVault param details)
+2. check the apiVersion of the vault you want to endorse to identify target release
+3. calculate the releaseDelta from your target release. (see registry endorseVault param details)
    E.g: latestRelease = 0.3.3 and numReleases = 5. New vault apiVersion is 0.3.2
    `releaseDelta = self.numReleases - 1 - releaseTarget`
 4. confirm using registry.releases(uint256) that your targetRelease has the same apiVersion as your vault.
