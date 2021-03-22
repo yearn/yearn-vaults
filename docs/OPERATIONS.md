@@ -182,7 +182,8 @@ Or if you are endorsing a vault from previous release:
 4. confirm using registry.releases(uint256) that your targetRelease has the same apiVersion as your vault.
 
 ```python
- releaseDelta = self.numReleases - 1 - releaseTarget
+ releaseTarget = 3 # e.g vault api version 0.3.2
+ releaseDelta = registry.numReleases() - 1 - releaseTarget # (5-1-3) = 1
  strategy.acceptGovernance() # from ychad.eth
  registry.endorseVault(vault, releaseDelta) # from ychad.eth.
 ```
