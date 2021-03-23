@@ -12,6 +12,7 @@ import {BaseStrategyInitializable, StrategyParams, VaultAPI} from "../BaseStrate
 
 contract TestStrategy is BaseStrategyInitializable {
     bool public doReentrancy;
+    bool public delegateEverything;
 
     // Some token that needs to be protected for some reason
     // Initialize this to some fake address, because we're just using it
@@ -24,6 +25,19 @@ contract TestStrategy is BaseStrategyInitializable {
         return string(abi.encodePacked("TestStrategy ", apiVersion()));
     }
 
+    // NOTE: This is a test-only function to simulate delegation
+    function _toggleDelegation() public {
+        delegateEverything = !delegateEverything;
+    }
+
+    function delegatedAssets() external override view returns (uint256) {
+        if (delegateEverything) {
+            return vault.strategies(address(this)).totalDebt;
+        } else {
+            return 0;
+        }
+    }
+
     // NOTE: This is a test-only function to simulate losses
     function _takeFunds(uint256 amount) public {
         want.safeTransfer(msg.sender, amount);
@@ -33,7 +47,7 @@ contract TestStrategy is BaseStrategyInitializable {
     function _toggleReentrancyExploit() public {
         doReentrancy = !doReentrancy;
     }
-    
+
     // NOTE: This is a test-only function to simulate a wrong want token
     function _setWant(IERC20 _want) public {
         want = _want;
