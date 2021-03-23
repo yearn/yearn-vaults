@@ -52,6 +52,7 @@ interface Strategy:
     def want() -> address: view
     def vault() -> address: view
     def isActive() -> bool: view
+    def delegatedAssets() -> uint256: view
     def estimatedTotalAssets() -> uint256: view
     def withdraw(_amount: uint256) -> uint256: nonpayable
     def migrate(_newStrategy: address): nonpayable
@@ -218,6 +219,9 @@ emergencyShutdown: public(bool)
 depositLimit: public(uint256)  # Limit for totalAssets the Vault can hold
 debtRatio: public(uint256)  # Debt ratio for the Vault across all strategies (in BPS, <= 10k)
 totalDebt: public(uint256)  # Amount of tokens that all strategies have borrowed
+delegatedAssets: public(uint256)  # Amount of tokens that all strategies delegate to other Vaults
+# NOTE: Cached value used solely for proper bookkeeping
+_strategy_delegatedAssets: HashMap[address, uint256]
 lastReport: public(uint256)  # block.timestamp of last report
 activation: public(uint256)  # block.timestamp of contract deployment
 lockedProfit: public(uint256) # how much profit is locked and cant be withdrawn
@@ -229,8 +233,8 @@ managementFee: public(uint256)
 # Governance Fee for performance of Vault (given to `rewards`)
 performanceFee: public(uint256)
 MAX_BPS: constant(uint256) = 10_000  # 100%, or 10k basis points
-# NOTE: A four-century period will be missing 3 of its 100 Julian leap years, leaving 97. 
-#       So the average year has 365 + 97/400 = 365.2425 days 
+# NOTE: A four-century period will be missing 3 of its 100 Julian leap years, leaving 97.
+#       So the average year has 365 + 97/400 = 365.2425 days
 #       ERROR(Julian): -0.0078
 #       ERROR(Gregorian): -0.0003
 SECS_PER_YEAR: constant(uint256) = 31_556_952  # 365.2425 days
@@ -440,7 +444,7 @@ def setRewards(rewards: address):
 def setLockedProfitDegration(degration: uint256):
     """
     @notice
-        Changes the locked profit degration. 
+        Changes the locked profit degration.
     @param degration The rate of degration in percent per second scaled to 1e18.
     """
     assert msg.sender == self.governance
@@ -887,7 +891,7 @@ def _shareValue(shares: uint256) -> uint256:
     # NOTE: using 1e3 for extra precision here, when decimals is low
     return ((10 ** 3 * (shares * freeFunds)) / self.totalSupply) / 10 ** 3
 
-    
+
 @view
 @internal
 def _sharesForAmount(amount: uint256) -> uint256:
@@ -1348,7 +1352,7 @@ def addStrategyToQueue(strategy: address):
         last_idx += 1
     # Check if queue is full
     assert last_idx < MAXIMUM_STRATEGIES
-        
+
     self.withdrawalQueue[MAXIMUM_STRATEGIES - 1] = strategy
     self._organizeWithdrawalQueue()
     log StrategyAddedToQueue(strategy)
@@ -1517,7 +1521,7 @@ def _reportLoss(strategy: address, loss: uint256):
     # Also, make sure we reduce our trust with the strategy by the same amount
     debtRatio: uint256 = self.strategies[strategy].debtRatio
     ratio_change: uint256 = min(loss * MAX_BPS / self._totalAssets(), debtRatio)
-    self.strategies[strategy].debtRatio -= ratio_change 
+    self.strategies[strategy].debtRatio -= ratio_change
     self.debtRatio -= ratio_change
 
 @internal
@@ -1526,7 +1530,11 @@ def _assessFees(strategy: address, gain: uint256):
     # NOTE: In effect, this reduces overall share price by the combined fee
     # NOTE: may throw if Vault.totalAssets() > 1e64, or not called for more than a year
     governance_fee: uint256 = (
-        (self.totalDebt * (block.timestamp - self.lastReport) * self.managementFee)
+        (
+            (self.totalDebt - self.delegatedAssets)
+            * (block.timestamp - self.lastReport)
+            * self.managementFee
+        )
         / MAX_BPS
         / SECS_PER_YEAR
     )
@@ -1643,6 +1651,17 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     elif totalAvail > credit:  # credit deficit, take from Strategy
         self.erc20_safe_transferFrom(self.token.address, msg.sender, self, totalAvail - credit)
     # else, don't do anything because it is balanced
+
+    # Update cached value of delegated assets
+    #   (used to properly account for mgmt fee in `_assessFees`)
+    self.delegatedAssets -= self._strategy_delegatedAssets[msg.sender]
+    # NOTE: Use `min(totalDebt, delegatedAssets)` as a guard against improper computation
+    delegatedAssets: uint256 = min(
+        self.strategies[msg.sender].totalDebt,
+        Strategy(msg.sender).delegatedAssets(),
+    )
+    self.delegatedAssets += delegatedAssets
+    self._strategy_delegatedAssets[msg.sender] = delegatedAssets
 
     # Update reporting time
     self.strategies[msg.sender].lastReport = block.timestamp
