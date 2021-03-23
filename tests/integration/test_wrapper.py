@@ -82,6 +82,7 @@ class Migration:
         if amount > 0:
             print(f"  Wrapper.withdraw({amount})")
             self.wrapper.withdraw(amount, {"from": self.user}).return_value
+            
         else:
             print("  Wrapper.withdraw: Nothing to withdraw...")
 

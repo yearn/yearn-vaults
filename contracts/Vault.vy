@@ -1021,7 +1021,7 @@ def withdraw(
                 continue  # Nothing to withdraw from this Strategy, try the next one
 
             # Force withdraw amount from each Strategy in the order set by governance
-            loss: uint256 = Strategy(strategy).withdraw(amountNeeded) 
+            loss: uint256 = Strategy(strategy).withdraw(amountNeeded)
             withdrawn: uint256 = self.token.balanceOf(self) - vault_balance
 
             # NOTE: Withdrawer incurs any losses from liquidation
