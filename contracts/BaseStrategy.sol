@@ -210,6 +210,8 @@ abstract contract BaseStrategy {
      *  Strategy is somehow delegated inside another part of of Yearn's ecosystem e.g. another Vault.
      *  Note that this value must be strictly less than or equal to the amount provided by
      *  `estimatedTotalAssets()` below, as the TVL calc will be total assets minus delegated assets.
+     *  Also note that this value is used to determine the total assets under management by this
+     *  strategy, for the purposes of computing the management fee in `Vault`
      * @return
      *  The amount of assets this strategy manages that should not be included in Yearn's Total Value
      *  Locked (TVL) calculation across it's ecosystem.
