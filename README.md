@@ -99,7 +99,7 @@ Any command `in code blocks` is meant to be executed from a Mac/Linux terminal o
     - If you're in Windows using WSL, type `code .` to launch VSCode
       - At this point install [Solidity Compiler](https://marketplace.visualstudio.com/items?itemName=JuanBlanco.solidity) - be sure to _Install in WSL_
       - Install [Vyper](https://marketplace.visualstudio.com/items?itemName=tintinweb.vscode-vyper) as well on WSL
-    - Open one of the .sol files, right click the code and click _Soldity: Change Workspace compiler version (Remote)_, Change to 0.8.2
+    - Open one of the .sol files, right click the code and click _Solidity: Change Workspace compiler version (Remote)_, Change to 0.8.2
       - Alternatively, go to File -> Preferences -> Settings
       - If you’re using WSL, go to the Remote [WSL] tab
       - Otherwise choose the Workspace tab
