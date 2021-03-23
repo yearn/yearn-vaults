@@ -101,6 +101,11 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
 
     # Scenario 1: we panic, and try to get out as quickly as possible (total loss)
     assert token.balanceOf(rando) == 0
+
+    # User first try to withdraw with more than 100% losses, which is nonsensical
+    with brownie.reverts():
+        vault.withdraw(1000, rando, 10_001, {"from": rando})
+
     vault.withdraw(1000, rando, 10_000, {"from": rando})  # Opt-in to 100% loss
     assert vault.strategies(strategies[0]).dict()["totalLoss"] == 1000
     assert token.balanceOf(rando) == 0  # 100% loss (because we didn't wait!)
@@ -141,6 +146,10 @@ def test_progressive_withdrawal(
     chain.sleep(1)  # Needs to be a second ahead, at least
     [s.harvest({"from": gov}) for s in strategies]
     assert token.balanceOf(vault) < vault.totalAssets()  # Some debt is in strategies
+
+    # Trying to withdraw 0 shares. It should revert
+    with brownie.reverts():
+        vault.withdraw(0, {"from": gov})
 
     # First withdraw everything possible without fees
     free_balance = token.balanceOf(vault)
