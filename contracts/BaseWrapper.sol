@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.2;
+pragma solidity >=0.8.0 <0.9.0;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -93,7 +93,7 @@ abstract contract BaseWrapper {
         VaultAPI[] memory vaults = allVaults();
 
         for (uint256 id = 0; id < vaults.length; id++) {
-            balance = balance + ((vaults[id].balanceOf(account) * (vaults[id].pricePerShare())) / (10**uint256(vaults[id].decimals())));
+            balance += (vaults[id].balanceOf(account) * vaults[id].pricePerShare()) / 10**uint256(vaults[id].decimals());
         }
     }
 
@@ -101,7 +101,7 @@ abstract contract BaseWrapper {
         VaultAPI[] memory vaults = allVaults();
 
         for (uint256 id = 0; id < vaults.length; id++) {
-            assets = assets + ((vaults[id].totalAssets() * (vaults[id].pricePerShare())) / (10**vaults[id].decimals()));
+            assets += vaults[id].totalAssets();
         }
     }
 
@@ -188,7 +188,7 @@ abstract contract BaseWrapper {
 
                 if (amount != WITHDRAW_EVERYTHING) {
                     // Compute amount to withdraw fully to satisfy the request
-                    uint256 estimatedShares = ((amount - withdrawn) * (10**uint256(vaults[id].decimals()))) / vaults[id].pricePerShare();
+                    uint256 estimatedShares = ((amount - withdrawn) * 10**uint256(vaults[id].decimals())) / vaults[id].pricePerShare();
 
                     // Limit amount to withdraw to the maximum made available to this contract
                     // NOTE: Avoid corner case where `estimatedShares` isn't precise enough
