@@ -959,6 +959,23 @@ def maxAvailableShares() -> uint256:
     return shares
 
 
+@internal
+def _reportLoss(strategy: address, loss: uint256):
+    # Loss can only be up the amount of debt issued to strategy
+    totalDebt: uint256 = self.strategies[strategy].totalDebt
+    assert totalDebt >= loss
+    self.strategies[strategy].totalLoss += loss
+    self.strategies[strategy].totalDebt = totalDebt - loss
+    self.totalDebt -= loss
+
+    # Also, make sure we reduce our trust with the strategy by the same amount
+    debtRatio: uint256 = self.strategies[strategy].debtRatio
+    precisionFactor: uint256 = self.precisionFactor
+    ratio_change: uint256 = min(precisionFactor * loss * MAX_BPS / self._totalAssets() / precisionFactor, debtRatio)
+    self.strategies[strategy].debtRatio -= ratio_change
+    self.debtRatio -= ratio_change
+
+
 @external
 @nonreentrant("withdraw")
 def withdraw(
@@ -1058,12 +1075,12 @@ def withdraw(
             if loss > 0:
                 value -= loss
                 totalLoss += loss
-                self.strategies[strategy].totalLoss += loss
+                self._reportLoss(strategy, loss)
 
             # Reduce the Strategy's debt by the amount withdrawn ("realized returns")
             # NOTE: This doesn't add to returns as it's not earned by "normal means"
-            self.strategies[strategy].totalDebt -= withdrawn + loss
-            self.totalDebt -= withdrawn + loss
+            self.strategies[strategy].totalDebt -= withdrawn
+            self.totalDebt -= withdrawn
 
     # NOTE: We have withdrawn everything possible out of the withdrawal queue
     #       but we still don't have enough to fully pay them back, so adjust
@@ -1548,23 +1565,6 @@ def expectedReturn(strategy: address = msg.sender) -> uint256:
         since its last report.
     """
     return self._expectedReturn(strategy)
-
-
-@internal
-def _reportLoss(strategy: address, loss: uint256):
-    # Loss can only be up the amount of debt issued to strategy
-    totalDebt: uint256 = self.strategies[strategy].totalDebt
-    assert totalDebt >= loss
-    self.strategies[strategy].totalLoss += loss
-    self.strategies[strategy].totalDebt = totalDebt - loss
-    self.totalDebt -= loss
-
-    # Also, make sure we reduce our trust with the strategy by the same amount
-    debtRatio: uint256 = self.strategies[strategy].debtRatio
-    precisionFactor: uint256 = self.precisionFactor
-    ratio_change: uint256 = min(precisionFactor * loss * MAX_BPS / self._totalAssets() / precisionFactor, debtRatio)
-    self.strategies[strategy].debtRatio -= ratio_change
-    self.debtRatio -= ratio_change
 
 
 @internal
