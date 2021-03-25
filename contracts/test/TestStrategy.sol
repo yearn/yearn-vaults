@@ -53,6 +53,10 @@ contract TestStrategy is BaseStrategyInitializable {
         want = _want;
     }
 
+    function ethToWant(uint256 amtInWei) public override view returns (uint256) {
+        return amtInWei; // 1:1 conversion for testing
+    }
+
     function estimatedTotalAssets() public override view returns (uint256) {
         // For mock, this is just everything we have
         return want.balanceOf(address(this));

@@ -468,6 +468,22 @@ abstract contract BaseStrategy {
 
     /**
      * @notice
+     *  Provide an accurate conversion from `_amtInWei` (denominated in wei)
+     *  to `want` (using the native decimal characteristics of `want`).
+     * @dev
+     *  Care must be taken when working with decimals to assure that the conversion
+     *  is compatible. As an example:
+     *
+     *      given 1e17 wei (0.1 ETH) as input, and want is USDC (6 decimals),
+     *      with USDC/ETH = 1800, this should give back 1800000000 (180 USDC)
+     *
+     * @param _amtInWei The amount (in wei/1e-18 ETH) to convert to `want`
+     * @return The amount in `want` of `_amtInEth` converted to `want`
+     **/
+    function ethToWant(uint256 _amtInWei) public virtual view returns (uint256);
+
+    /**
+     * @notice
      *  Provide an accurate estimate for the total amount of assets
      *  (principle + return) that this Strategy is currently managing,
      *  denominated in terms of `want` tokens.
@@ -573,17 +589,18 @@ abstract contract BaseStrategy {
      *  shortly, then this can return `true` even if the keeper might be
      *  "at a loss" (keepers are always reimbursed by Yearn).
      * @dev
-     *  `callCost` must be priced in terms of `want`.
+     *  `callCostInWei` must be priced in terms of `wei` (1e-18 ETH).
      *
      *  This call and `harvestTrigger()` should never return `true` at the same
      *  time.
-     * @param callCost The keeper's estimated cast cost to call `tend()`.
+     * @param callCostInWei The keeper's estimated gas cost to call `tend()` (in wei).
      * @return `true` if `tend()` should be called, `false` otherwise.
      */
-    function tendTrigger(uint256 callCost) public virtual view returns (bool) {
+    function tendTrigger(uint256 callCostInWei) public virtual view returns (bool) {
         // We usually don't need tend, but if there are positions that need
         // active maintainence, overriding this function is how you would
         // signal for that.
+        uint256 callCost = ethToWant(callCostInWei);
         return false;
     }
 
@@ -612,7 +629,7 @@ abstract contract BaseStrategy {
      *  shortly, then this can return `true` even if the keeper might be "at a
      *  loss" (keepers are always reimbursed by Yearn).
      * @dev
-     *  `callCost` must be priced in terms of `want`.
+     *  `callCostInWei` must be priced in terms of `wei` (1e-18 ETH).
      *
      *  This call and `tendTrigger` should never return `true` at the
      *  same time.
@@ -628,10 +645,11 @@ abstract contract BaseStrategy {
      *  https://github.com/iearn-finance/yearn-vaults/blob/master/scripts/keep.py),
      *  or via an integration with the Keep3r network (e.g.
      *  https://github.com/Macarse/GenericKeep3rV2/blob/master/contracts/keep3r/GenericKeep3rV2.sol).
-     * @param callCost The keeper's estimated cast cost to call `harvest()`.
+     * @param callCostInWei The keeper's estimated gas cost to call `harvest()` (in wei).
      * @return `true` if `harvest()` should be called, `false` otherwise.
      */
-    function harvestTrigger(uint256 callCost) public virtual view returns (bool) {
+    function harvestTrigger(uint256 callCostInWei) public virtual view returns (bool) {
+        uint256 callCost = ethToWant(callCostInWei);
         StrategyParams memory params = vault.strategies(address(this));
 
         // Should not trigger if Strategy is not activated
