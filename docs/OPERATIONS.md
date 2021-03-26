@@ -124,6 +124,7 @@
 - Setup rewards for your strategy by calling `sharer.addContributors`.
 - Include devs if you forked someone else's strategy.
 - Be sure to reward people who helped you.
+- You can find the sharer here: [0x2c641e14afecb16b4aa6601a40ee60c3cc792f7d](https://etherscan.io/address/0x2c641e14afecb16b4aa6601a40ee60c3cc792f7d)
 
 ### Example Script
 
