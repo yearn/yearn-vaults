@@ -59,15 +59,15 @@ def main():
     token = Token.at(get_address("ERC20 Token"))
 
     if use_proxy:
-        gov_default = dev.address
+        gov_default = (
+            "0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7"  # strategist msig, no ENS
+        )
     else:
         gov_default = "ychad.eth"
     gov = get_address("Yearn Governance", default=gov_default)
 
-    rewards = get_address(
-        "Rewards contract", default="0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde"
-    )
-    guardian = get_address("Vault Guardian", default=dev.address)
+    rewards = get_address("Rewards contract", default="treasury.ychad.eth")
+    guardian = get_address("Vault Guardian", default="dev.ychad.eth")
     name = click.prompt(f"Set description", default=DEFAULT_VAULT_NAME(token))
     symbol = click.prompt(f"Set symbol", default=DEFAULT_VAULT_SYMBOL(token))
 
