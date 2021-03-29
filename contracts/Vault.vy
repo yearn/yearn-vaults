@@ -933,6 +933,18 @@ def maxAvailableShares() -> uint256:
     return shares
 
 
+@internal
+def _updateDelegatedAssets(strategy: address):
+    self.delegatedAssets -= self._strategy_delegatedAssets[strategy]
+    # NOTE: Use `min(totalDebt, delegatedAssets)` as a guard against improper computation
+    delegatedAssets: uint256 = min(
+        self.strategies[strategy].totalDebt,
+        Strategy(strategy).delegatedAssets(),
+    )
+    self.delegatedAssets += delegatedAssets
+    self._strategy_delegatedAssets[strategy] = delegatedAssets
+
+
 @external
 @nonreentrant("withdraw")
 def withdraw(
@@ -1038,6 +1050,9 @@ def withdraw(
             # NOTE: This doesn't add to returns as it's not earned by "normal means"
             self.strategies[strategy].totalDebt -= withdrawn + loss
             self.totalDebt -= withdrawn + loss
+
+            # Ensure that delegated asset cached value is kept up to date
+            self._updateDelegatedAssets(strategy)
 
     # NOTE: We have withdrawn everything possible out of the withdrawal queue
     #       but we still don't have enough to fully pay them back, so adjust
@@ -1567,18 +1582,6 @@ def _assessFees(strategy: address, gain: uint256):
         # NOTE: Governance earns any dust leftover from flooring math above
         if self.balanceOf[self] > 0:
             self._transfer(self, self.rewards, self.balanceOf[self])
-
-
-@internal
-def _updateDelegatedAssets(strategy: address):
-    self.delegatedAssets -= self._strategy_delegatedAssets[strategy]
-    # NOTE: Use `min(totalDebt, delegatedAssets)` as a guard against improper computation
-    delegatedAssets: uint256 = min(
-        self.strategies[strategy].totalDebt,
-        Strategy(strategy).delegatedAssets(),
-    )
-    self.delegatedAssets += delegatedAssets
-    self._strategy_delegatedAssets[strategy] = delegatedAssets
 
 
 @external
