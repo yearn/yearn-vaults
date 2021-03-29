@@ -1538,6 +1538,8 @@ def _assessFees(strategy: address, gain: uint256):
         / MAX_BPS
         / SECS_PER_YEAR
     )
+    if governance_fee > gain:
+        governance_fee = gain # Prevent mgmt fee from incurring negative APY when harvest generates 0 yield
     strategist_fee: uint256 = 0  # Only applies in certain conditions
 
     # NOTE: Applies if Strategy is not shutting down, or it is but all debt paid off
