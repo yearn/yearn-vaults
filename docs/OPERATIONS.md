@@ -63,10 +63,22 @@
 
 ## After deployment
 
-- Add strategy to vault:
+- Add strategy to vault (for vault code v0.3.3+):
 
   ```python
-  vault.addStrategy(strategy, debt_ratio, rate_limit, 1000)
+  strategy = ''                     # Your strategy address
+  debt_ratio = 9800                 # 98%
+  minDebtPerHarvest = 0             # Lower limit on debt add
+  maxDebtPerHarvest = 2 ** 256 - 1  # Upper limit on debt add
+  performance_fee = 1000            # Strategist perf fee: 10%
+
+  vault.addStrategy(
+    strategy, 
+    debt_ratio, 
+    minDebtPerHarvest,
+    maxDebtPerHarvest,
+    performance_fee
+  )
   ```
 
   - `debt_ratio` should be `9800` if first strategy on vault.
@@ -275,3 +287,13 @@ It drops the credit to `0`:
 >>> vault.creditAvailable(s1)
 0
 ```
+## References
+
+### Addresses
+| Identity      | ENS | Address      |
+| ----------- | ----------- |----------- |
+| V2 Registry      | v2.registry.ychad.eth |    0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804 |
+| Yearn multisig (daddy)      | ychad.eth |    0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52 |
+| Strategist multisig      |        | 0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7       |
+| Core Dev multisig   | dev.ychad.eth        | 0x846e211e8ba920B353FB717631C015cf04061Cc9       |
+| Treasury   | treasury.ychad.eth        | 0xfeb4acf3df3cdea7399794d0869ef76a6efaff52       |
