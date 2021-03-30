@@ -44,17 +44,40 @@ def main():
     )
 
     latest_release = Version(registry.latestRelease())
+    num_releases = registry.numReleases() - 1
+    target_release_index = num_releases
+    release_delta = 0
+    click.echo(
+        f"""
+        Release Information
+
+        latest release version: {latest_release}
+          latest release index: {num_releases}
+         local package version: {PACKAGE_VERSION}
+        """
+    )
     use_proxy = False  # NOTE: Use a proxy to save on gas for experimental Vaults
-    if Version(PACKAGE_VERSION) < latest_release:
-        click.echo("Cannot deploy Vault for old API version")
-        return
+    if Version(PACKAGE_VERSION) <= latest_release:
+        click.echo(
+            f"""
+        Recommended Releases
+
+        Not Recommended => 0-2
+        0.3.2 => 3
+        0.3.3 => 4
+        0.3.4 => 5 
+        """
+        )
+        target_release_index = click.prompt(
+            "Please select a target release index from options or press enter for latest release:",
+            type=click.Choice([str(i) for i in range(num_releases + 1)]),
+            default=num_releases,
+        )
+        if click.confirm("Deploy a Proxy Vault", default="Y"):
+            use_proxy = True
     elif Version(PACKAGE_VERSION) > latest_release:
         if not click.confirm(f"Deploy {PACKAGE_VERSION} as new release"):
             return
-    else:
-        if not click.confirm("Deploy Experimental Vault"):
-            return
-        use_proxy = True
 
     token = Token.at(get_address("ERC20 Token"))
 
@@ -70,18 +93,23 @@ def main():
     guardian = get_address("Vault Guardian", default="dev.ychad.eth")
     name = click.prompt(f"Set description", default=DEFAULT_VAULT_NAME(token))
     symbol = click.prompt(f"Set symbol", default=DEFAULT_VAULT_SYMBOL(token))
+    target_release = Vault.at(registry.releases(target_release_index)).apiVersion()
+    release_delta = num_releases - target_release_index
 
     click.echo(
         f"""
-    Vault Parameters
+    Vault Deployment Parameters
 
-   version: {PACKAGE_VERSION}
-     token: {token.address}
-  governer: {gov}
-   rewards: {rewards}
-  guardian: {guardian}
-      name: '{name}'
-    symbol: '{symbol}'
+         use proxy: {use_proxy}
+    target release: {target_release}
+     release delta: {release_delta}
+     token address: {token.address}
+      token symbol: {DEFAULT_VAULT_SYMBOL(token)}
+        governance: {gov}
+           rewards: {rewards}
+          guardian: {guardian}
+              name: '{name}'
+            symbol: '{symbol}'
     """
     )
 
@@ -97,6 +125,7 @@ def main():
         if use_proxy:
             # NOTE: Must always include guardian, even if default
             args.insert(2, guardian)
+            args.append(release_delta)
             txn_receipt = registry.newExperimentalVault(*args, {"from": dev})
             vault = Vault.at(txn_receipt.events["NewExperimentalVault"]["vault"])
             click.echo(f"Experimental Vault deployed [{vault.address}]")
