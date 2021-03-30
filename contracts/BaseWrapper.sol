@@ -39,7 +39,7 @@ abstract contract BaseWrapper {
     uint256 constant UNCAPPED_DEPOSITS = type(uint256).max;
 
     constructor(address _token, address _registry) {
-    // Recommended to use a token with a `Registry.latestVault(_token) != address(0)`
+        // Recommended to use a token with a `Registry.latestVault(_token) != address(0)`
         token = IERC20(_token);
         // Recommended to use `v2.registry.ychad.eth`
         registry = RegistryAPI(_registry);
@@ -199,7 +199,7 @@ abstract contract BaseWrapper {
                         withdrawn = withdrawn + (vaults[id].withdraw(availableShares));
                     }
                 } else {
-                    withdrawn = withdrawn + vaults[id].withdraw();
+                    withdrawn += vaults[id].withdraw();
                 }
 
                 // Check if we have fully satisfied the request
