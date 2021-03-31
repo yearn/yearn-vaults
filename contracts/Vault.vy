@@ -933,6 +933,18 @@ def maxAvailableShares() -> uint256:
     return shares
 
 
+@internal
+def _updateDelegatedAssets(strategy: address):
+    self.delegatedAssets -= self._strategy_delegatedAssets[strategy]
+    # NOTE: Use `min(totalDebt, delegatedAssets)` as a guard against improper computation
+    delegatedAssets: uint256 = min(
+        self.strategies[strategy].totalDebt,
+        Strategy(strategy).delegatedAssets(),
+    )
+    self.delegatedAssets += delegatedAssets
+    self._strategy_delegatedAssets[strategy] = delegatedAssets
+
+
 @external
 @nonreentrant("withdraw")
 def withdraw(
@@ -992,7 +1004,7 @@ def withdraw(
 
     # Ensure we are withdrawing something
     assert shares > 0
-    
+
     # See @dev note, above.
     value: uint256 = self._shareValue(shares)
 
@@ -1038,6 +1050,9 @@ def withdraw(
             # NOTE: This doesn't add to returns as it's not earned by "normal means"
             self.strategies[strategy].totalDebt -= withdrawn + loss
             self.totalDebt -= withdrawn + loss
+
+            # Ensure that delegated asset cached value is kept up to date
+            self._updateDelegatedAssets(strategy)
 
     # NOTE: We have withdrawn everything possible out of the withdrawal queue
     #       but we still don't have enough to fully pay them back, so adjust
@@ -1654,14 +1669,7 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
 
     # Update cached value of delegated assets
     #   (used to properly account for mgmt fee in `_assessFees`)
-    self.delegatedAssets -= self._strategy_delegatedAssets[msg.sender]
-    # NOTE: Use `min(totalDebt, delegatedAssets)` as a guard against improper computation
-    delegatedAssets: uint256 = min(
-        self.strategies[msg.sender].totalDebt,
-        Strategy(msg.sender).delegatedAssets(),
-    )
-    self.delegatedAssets += delegatedAssets
-    self._strategy_delegatedAssets[msg.sender] = delegatedAssets
+    self._updateDelegatedAssets(msg.sender)
 
     # Update reporting time
     self.strategies[msg.sender].lastReport = block.timestamp
