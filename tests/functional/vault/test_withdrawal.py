@@ -324,3 +324,40 @@ def test_profit_degration(chain, gov, token, vault, strategy, rando):
     chain.sleep(21600)
     chain.mine(1)
     assert vault.pricePerShare() >= pricePerShareBefore * 2 * 0.99
+
+
+def test_withdraw_delegate(chain, gov, token, vault, strategy, rando):
+    # set fees to 0
+    vault.setManagementFee(0, {"from": gov})
+    vault.setPerformanceFee(0, {"from": gov})
+    vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
+
+    vault.setLockedProfitDegration(
+        1e18, {"from": gov}
+    )  # Set profit degradation to 1 sec.
+    deposit = vault.totalAssets()
+    pricePerShareBefore = vault.pricePerShare()
+    token.transfer(strategy, vault.totalAssets(), {"from": gov})  # seed some profit
+    strategy.harvest({"from": gov})
+
+    chain.sleep(1)
+    chain.mine(1)  # cant withdraw on same block
+
+    assert vault.pricePerShare() == pricePerShareBefore * 2  # profit
+    assert vault.totalAssets() == deposit * 2  # profit
+
+    # Check delegation math/logic
+    strategy._toggleDelegation()
+    assert strategy.delegatedAssets() == vault.strategies(strategy).dict()["totalDebt"]
+    assert vault.delegatedAssets() == 0  # NOTE: Cached 1 harvest period behind
+    strategy.harvest()
+    delegated_assets_before = vault.delegatedAssets()
+    assert delegated_assets_before == strategy.delegatedAssets()
+
+    vault.withdraw({"from": gov})
+
+    # check side effects on delegate assets accounting
+    assert vault.totalSupply() == 0
+    assert token.balanceOf(vault) == 0  # everything is withdrawn
+    delegated_assets_after = vault.delegatedAssets()
+    assert delegated_assets_after == 0
