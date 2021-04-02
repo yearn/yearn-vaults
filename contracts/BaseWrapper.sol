@@ -80,6 +80,9 @@ abstract contract BaseWrapper {
     }
 
     function _updateVaultCache(VaultAPI[] memory vaults) internal {
+        // NOTE: even though `registry` is update-able by Yearn, the intended behavior
+        //       is that any future upgrades to the registry will replay the version
+        //       history so that this cached value does not get out of date.
         if (vaults.length > _cachedVaults.length) {
             _cachedVaults = vaults;
         }
