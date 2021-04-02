@@ -139,7 +139,7 @@ abstract contract BaseWrapper {
         deposited = beforeBal.sub(afterBal);
         // `receiver` now has shares of `_bestVault` as balance, converted to `token` here
         // Issue a refund if not everything was deposited
-        if (depositor != address(this) && afterBal > 0) token.transfer(depositor, afterBal);
+        if (depositor != address(this) && afterBal > 0) token.safeTransfer(depositor, afterBal);
     }
 
     function _withdraw(
