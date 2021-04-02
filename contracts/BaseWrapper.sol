@@ -114,6 +114,7 @@ abstract contract BaseWrapper {
         }
 
         if (token.allowance(address(this), address(_bestVault)) < amount) {
+            token.safeApprove(address(_bestVault), 0); // Avoid issues with some tokens requiring 0
             token.safeApprove(address(_bestVault), UNLIMITED_APPROVAL); // Vaults are trusted
         }
 
