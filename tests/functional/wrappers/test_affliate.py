@@ -74,6 +74,20 @@ def test_deposit(token, registry, vault, affiliate_token, gov, rando):
     assert vault.balanceOf(rando) == 0
 
 
+def test_deposit_max_uint256(token, registry, vault, affiliate_token, gov, rando):
+    registry.newRelease(vault, {"from": gov})
+    registry.endorseVault(vault, {"from": gov})
+    token.transfer(rando, 10000, {"from": gov})
+    assert affiliate_token.balanceOf(rando) == vault.balanceOf(rando) == 0
+
+    # NOTE: Must approve affiliate_token to deposit
+    token.approve(affiliate_token, 2 ** 256 - 1, {"from": rando})
+
+    affiliate_token.deposit({"from": rando})
+    assert affiliate_token.balanceOf(rando) == 10000
+    assert vault.balanceOf(rando) == 0
+
+
 def test_migrate(token, registry, create_vault, affiliate_token, gov, rando, affiliate):
     vault1 = create_vault(version="1.0.0", token=token)
     registry.newRelease(vault1, {"from": gov})
