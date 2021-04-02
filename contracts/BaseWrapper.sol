@@ -152,6 +152,13 @@ abstract contract BaseWrapper {
         VaultAPI[] memory vaults = allVaults();
         _updateVaultCache(vaults);
 
+        // NOTE: This loop will attempt to withdraw from each Vault in `allVaults` that `sender`
+        //       is deposited in, up to `amount` tokens. The withdraw action can be expensive,
+        //       so it if there is a denial of service issue in withdrawing, the downstream usage
+        //       of this wrapper contract must give an alternative method of withdrawing using
+        //       this function so that `amount` is less than the full amount requested to withdraw
+        //       (e.g. "piece-wise withdrawals"), leading to less loop iterations such that the
+        //       DoS issue is mitigated (at a tradeoff of requiring more txns from the end user).
         for (uint256 id = 0; id < vaults.length; id++) {
             if (!withdrawFromBest && vaults[id] == _bestVault) {
                 continue; // Don't withdraw from the best
