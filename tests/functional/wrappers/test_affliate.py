@@ -50,15 +50,27 @@ def test_setAffiliate(affiliate, affiliate_token, rando):
         affiliate_token.acceptAffiliate({"from": affiliate})
 
 
-def test_setRegistry(rando, affiliate, gov, affiliate_token):
-    with brownie.reverts():
-        affiliate_token.setRegistry(rando, {"from": rando})
-
-    with brownie.reverts():
-        affiliate_token.setRegistry(rando, {"from": affiliate})
-
+def test_setRegistry(rando, affiliate, gov, affiliate_token, new_registry):
     # Only yGov can call this method
-    affiliate_token.setRegistry(rando, {"from": gov})
+    with brownie.reverts():
+        affiliate_token.setRegistry(new_registry, {"from": rando})
+
+    with brownie.reverts():
+        affiliate_token.setRegistry(new_registry, {"from": affiliate})
+
+    # Cannot set to an invalid registry
+    with brownie.reverts():
+        affiliate_token.setRegistry(rando, {"from": gov})
+
+    # yGov must be the gov on the new registry too
+    new_registry.setGovernance(rando, {"from": gov})
+    new_registry.acceptGovernance({"from": rando})
+    with brownie.reverts():
+        affiliate_token.setRegistry(new_registry, {"from": gov})
+    new_registry.setGovernance(gov, {"from": rando})
+    new_registry.acceptGovernance({"from": gov})
+
+    affiliate_token.setRegistry(new_registry, {"from": gov})
 
 
 def test_deposit(token, registry, vault, affiliate_token, gov, rando):

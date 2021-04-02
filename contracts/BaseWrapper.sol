@@ -52,6 +52,9 @@ abstract contract BaseWrapper {
         require(msg.sender == registry.governance());
         // In case you want to override the registry instead of re-deploying
         registry = RegistryAPI(_registry);
+        // Make sure there's no change in governance
+        // NOTE: Also avoid bricking the wrapper from setting a bad registry
+        require(msg.sender == registry.governance());
     }
 
     function bestVault() public virtual view returns (VaultAPI) {

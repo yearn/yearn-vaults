@@ -34,12 +34,24 @@ def test_config(gov, token, vault, registry, ytoken):
     assert ytoken.allVaults() == [vault]
 
 
-def test_setRegistry(rando, gov, ytoken):
-    with brownie.reverts():
-        ytoken.setRegistry(rando, {"from": rando})
-
+def test_setRegistry(rando, gov, ytoken, new_registry):
     # Only yGov can call this method
-    ytoken.setRegistry(rando, {"from": gov})
+    with brownie.reverts():
+        ytoken.setRegistry(new_registry, {"from": rando})
+
+    # Cannot set to an invalid registry
+    with brownie.reverts():
+        ytoken.setRegistry(rando, {"from": gov})
+
+    # yGov must be the gov on the new registry too
+    new_registry.setGovernance(rando, {"from": gov})
+    new_registry.acceptGovernance({"from": rando})
+    with brownie.reverts():
+        ytoken.setRegistry(new_registry, {"from": gov})
+    new_registry.setGovernance(gov, {"from": rando})
+    new_registry.acceptGovernance({"from": gov})
+
+    ytoken.setRegistry(new_registry, {"from": gov})
 
 
 def test_deposit(token, registry, vault, ytoken, gov, rando):
