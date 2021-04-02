@@ -2,8 +2,6 @@
 
 **Note**: This [repo](https://github.com/iearn-finance/chief-multisig-officer) is encouraged to create multiple scripts for governance and dev multisig execution of complex transactions.
 
-**IMPORTANT**: you should **NOT** create a new release with a test vault, it will be endorsed as a production.
-
 ## Process for new vault release
 
 - Check latest version in `v2.registry.ychad.eth` against the planned new release vault to be sure its an updated version.
