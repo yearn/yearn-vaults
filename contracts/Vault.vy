@@ -1526,7 +1526,7 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
     # Issue new shares to cover fees
     # NOTE: In effect, this reduces overall share price by the combined fee
     # NOTE: may throw if Vault.totalAssets() > 1e64, or not called for more than a year
-    governance_management_fee: uint256 = (
+    management_fee: uint256 = (
         (
             (self.strategies[strategy].totalDebt - Strategy(strategy).delegatedAssets())
             * (block.timestamp - self.strategies[strategy].lastReport)
@@ -1536,7 +1536,7 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
         / SECS_PER_YEAR
     )
     strategist_fee: uint256 = 0  # Only applies in certain conditions
-    governance_performance_fee: uint256 = 0
+    performance_fee: uint256 = 0
 
     # NOTE: Applies if Strategy is not shutting down, or it is but all debt paid off
     # NOTE: No fee is taken when a Strategy is unwinding it's position, until all debt is paid
@@ -1546,17 +1546,17 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
             gain * self.strategies[strategy].performanceFee
         ) / MAX_BPS
         # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
-        governance_performance_fee = gain * self.performanceFee / MAX_BPS
+        performance_fee = gain * self.performanceFee / MAX_BPS
 
     # NOTE: This must be called prior to taking new collateral,
     #       or the calculation will be wrong!
     # NOTE: This must be done at the same time, to ensure the relative
     #       ratio of governance_fee : strategist_fee is kept intact
-    total_fee: uint256 = governance_performance_fee + strategist_fee + governance_management_fee
+    total_fee: uint256 = performance_fee + strategist_fee + management_fee
     # ensure total_fee is not more than gain
     if total_fee > gain:
         total_fee = gain
-        governance_management_fee = total_fee - governance_performance_fee - strategist_fee
+        management_fee = total_fee - performance_fee - strategist_fee
     if total_fee > 0:  # NOTE: If mgmt fee is 0% and no gains were realized, skip
         reward: uint256 = self._issueSharesForAmount(self, total_fee)
 
