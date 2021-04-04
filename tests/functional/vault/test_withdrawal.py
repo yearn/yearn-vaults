@@ -325,7 +325,7 @@ def test_profit_degration(chain, gov, token, vault, strategy, rando):
     assert vault.pricePerShare() >= pricePerShareBefore * 2 * 0.99
 
 
-def test_withdraw_partial_delegate_assets(chain, gov, token, vault, strategy, rando, gov):
+def test_withdraw_partial_delegate_assets(chain, gov, token, vault, strategy, rando):
     # set fees to 0
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
