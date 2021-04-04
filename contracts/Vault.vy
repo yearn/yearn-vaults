@@ -197,7 +197,8 @@ event StrategyRemovedFromQueue:
 event StrategyAddedToQueue:
     strategy: indexed(address) # Address of the strategy that is added to the withdrawal queue
 
-
+event UpdateProfitRatio:
+    ratio: uint256 # The ratio of profit to lock after havest scaled by maxBPS
 
 # NOTE: Track the total for overhead targeting purposes
 strategies: public(HashMap[address, StrategyParams])
@@ -225,7 +226,7 @@ _strategy_delegatedAssets: HashMap[address, uint256]
 lastReport: public(uint256)  # block.timestamp of last report
 activation: public(uint256)  # block.timestamp of contract deployment
 lockedProfit: public(uint256) # how much profit is locked and cant be withdrawn
-
+lockedProfitRatio: public(uint256) # what ratio of profit is locked after harvest
 lockedProfitDegration: public(uint256) # rate per block of degration. DEGREDATION_COEFFICIENT is 100% per block
 rewards: public(address)  # Rewards contract where Governance fees are sent to
 # Governance Fee for management of Vault (given to `rewards`)
@@ -298,6 +299,8 @@ def initialize(
     log UpdatePerformanceFee(convert(1000, uint256))
     self.managementFee = 200  # 2% per year
     log UpdateManagementFee(convert(200, uint256))
+    self.lockedProfitRatio = 7500 # 75% profit is locked on harvest
+    log UpdateProfitRatio(7500)
     self.lastReport = block.timestamp
     self.activation = block.timestamp
     self.lockedProfitDegration = convert(DEGREDATION_COEFFICIENT * 46 /10 ** 6 , uint256) # 6 hours in blocks
@@ -451,6 +454,18 @@ def setLockedProfitDegration(degration: uint256):
     # Since "degration" is of type uint256 it can never be less than zero
     assert degration <= DEGREDATION_COEFFICIENT
     self.lockedProfitDegration = degration
+
+@external
+def setLockedProfitRatio(ratio: uint256):
+    """
+    @notice
+        Changes the locked profit ratio.
+    @param ratio The ratio of profit to lock after havest scaled by maxBPS.
+    """
+    assert msg.sender == self.governance
+    assert ratio <= MAX_BPS
+    self.lockedProfitRatio = ratio
+    log UpdateProfitRatio(ratio)
 
 @external
 def setDepositLimit(limit: uint256):
@@ -1674,7 +1689,7 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     # Update reporting time
     self.strategies[msg.sender].lastReport = block.timestamp
     self.lastReport = block.timestamp
-    self.lockedProfit = gain # profit is locked and gradually released per block
+    self.lockedProfit = gain * self.lockedProfitRatio / MAX_BPS  # profit is locked and gradually released per block
 
     log StrategyReported(
         msg.sender,
