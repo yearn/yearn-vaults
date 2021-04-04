@@ -197,8 +197,6 @@ event StrategyRemovedFromQueue:
 event StrategyAddedToQueue:
     strategy: indexed(address) # Address of the strategy that is added to the withdrawal queue
 
-event UpdateProfitRatio:
-    ratio: uint256 # The ratio of profit to lock after havest scaled by maxBPS
 
 # NOTE: Track the total for overhead targeting purposes
 strategies: public(HashMap[address, StrategyParams])
@@ -220,13 +218,9 @@ emergencyShutdown: public(bool)
 depositLimit: public(uint256)  # Limit for totalAssets the Vault can hold
 debtRatio: public(uint256)  # Debt ratio for the Vault across all strategies (in BPS, <= 10k)
 totalDebt: public(uint256)  # Amount of tokens that all strategies have borrowed
-delegatedAssets: public(uint256)  # Amount of tokens that all strategies delegate to other Vaults
-# NOTE: Cached value used solely for proper bookkeeping
-_strategy_delegatedAssets: HashMap[address, uint256]
 lastReport: public(uint256)  # block.timestamp of last report
 activation: public(uint256)  # block.timestamp of contract deployment
 lockedProfit: public(uint256) # how much profit is locked and cant be withdrawn
-lockedProfitRatio: public(uint256) # what ratio of profit is locked after harvest
 lockedProfitDegration: public(uint256) # rate per block of degration. DEGREDATION_COEFFICIENT is 100% per block
 rewards: public(address)  # Rewards contract where Governance fees are sent to
 # Governance Fee for management of Vault (given to `rewards`)
@@ -299,8 +293,6 @@ def initialize(
     log UpdatePerformanceFee(convert(1000, uint256))
     self.managementFee = 200  # 2% per year
     log UpdateManagementFee(convert(200, uint256))
-    self.lockedProfitRatio = 7500 # 75% profit is locked on harvest
-    log UpdateProfitRatio(7500)
     self.lastReport = block.timestamp
     self.activation = block.timestamp
     self.lockedProfitDegration = convert(DEGREDATION_COEFFICIENT * 46 /10 ** 6 , uint256) # 6 hours in blocks
@@ -443,6 +435,7 @@ def setRewards(rewards: address):
     self.rewards = rewards
     log UpdateRewards(rewards)
 
+
 @external
 def setLockedProfitDegration(degration: uint256):
     """
@@ -455,17 +448,6 @@ def setLockedProfitDegration(degration: uint256):
     assert degration <= DEGREDATION_COEFFICIENT
     self.lockedProfitDegration = degration
 
-@external
-def setLockedProfitRatio(ratio: uint256):
-    """
-    @notice
-        Changes the locked profit ratio.
-    @param ratio The ratio of profit to lock after havest scaled by maxBPS.
-    """
-    assert msg.sender == self.governance
-    assert ratio <= MAX_BPS
-    self.lockedProfitRatio = ratio
-    log UpdateProfitRatio(ratio)
 
 @external
 def setDepositLimit(limit: uint256):
@@ -948,18 +930,6 @@ def maxAvailableShares() -> uint256:
     return shares
 
 
-@internal
-def _updateDelegatedAssets(strategy: address):
-    self.delegatedAssets -= self._strategy_delegatedAssets[strategy]
-    # NOTE: Use `min(totalDebt, delegatedAssets)` as a guard against improper computation
-    delegatedAssets: uint256 = min(
-        self.strategies[strategy].totalDebt,
-        Strategy(strategy).delegatedAssets(),
-    )
-    self.delegatedAssets += delegatedAssets
-    self._strategy_delegatedAssets[strategy] = delegatedAssets
-
-
 @external
 @nonreentrant("withdraw")
 def withdraw(
@@ -1065,9 +1035,6 @@ def withdraw(
             # NOTE: This doesn't add to returns as it's not earned by "normal means"
             self.strategies[strategy].totalDebt -= withdrawn + loss
             self.totalDebt -= withdrawn + loss
-
-            # Ensure that delegated asset cached value is kept up to date
-            self._updateDelegatedAssets(strategy)
 
     # NOTE: We have withdrawn everything possible out of the withdrawal queue
     #       but we still don't have enough to fully pay them back, so adjust
@@ -1555,20 +1522,21 @@ def _reportLoss(strategy: address, loss: uint256):
     self.debtRatio -= ratio_change
 
 @internal
-def _assessFees(strategy: address, gain: uint256):
+def _assessFees(strategy: address, gain: uint256) -> uint256:
     # Issue new shares to cover fees
     # NOTE: In effect, this reduces overall share price by the combined fee
     # NOTE: may throw if Vault.totalAssets() > 1e64, or not called for more than a year
-    governance_fee: uint256 = (
+    governance_management_fee: uint256 = (
         (
-            (self.totalDebt - self.delegatedAssets)
-            * (block.timestamp - self.lastReport)
+            (self.strategies[strategy].totalDebt - Strategy(strategy).delegatedAssets())
+            * (block.timestamp - self.strategies[strategy].lastReport)
             * self.managementFee
         )
         / MAX_BPS
         / SECS_PER_YEAR
     )
     strategist_fee: uint256 = 0  # Only applies in certain conditions
+    governance_performance_fee: uint256 = 0
 
     # NOTE: Applies if Strategy is not shutting down, or it is but all debt paid off
     # NOTE: No fee is taken when a Strategy is unwinding it's position, until all debt is paid
@@ -1578,13 +1546,17 @@ def _assessFees(strategy: address, gain: uint256):
             gain * self.strategies[strategy].performanceFee
         ) / MAX_BPS
         # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
-        governance_fee += gain * self.performanceFee / MAX_BPS
+        governance_performance_fee = gain * self.performanceFee / MAX_BPS
 
     # NOTE: This must be called prior to taking new collateral,
     #       or the calculation will be wrong!
     # NOTE: This must be done at the same time, to ensure the relative
     #       ratio of governance_fee : strategist_fee is kept intact
-    total_fee: uint256 = governance_fee + strategist_fee
+    total_fee: uint256 = governance_performance_fee + strategist_fee + governance_management_fee
+    # ensure total_fee is not more than gain
+    if total_fee > gain:
+        total_fee = gain
+        governance_management_fee = total_fee - governance_performance_fee - strategist_fee
     if total_fee > 0:  # NOTE: If mgmt fee is 0% and no gains were realized, skip
         reward: uint256 = self._issueSharesForAmount(self, total_fee)
 
@@ -1597,7 +1569,7 @@ def _assessFees(strategy: address, gain: uint256):
         # NOTE: Governance earns any dust leftover from flooring math above
         if self.balanceOf[self] > 0:
             self._transfer(self, self.rewards, self.balanceOf[self])
-
+    return total_fee
 
 @external
 def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
@@ -1643,7 +1615,7 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
         self._reportLoss(msg.sender, loss)
 
     # Assess both management fee and performance fee, and issue both as shares of the vault
-    self._assessFees(msg.sender, gain)
+    totalFees: uint256 = self._assessFees(msg.sender, gain)
 
     # Returns are always "realized gains"
     self.strategies[msg.sender].totalGain += gain
@@ -1682,14 +1654,10 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
         self.erc20_safe_transferFrom(self.token.address, msg.sender, self, totalAvail - credit)
     # else, don't do anything because it is balanced
 
-    # Update cached value of delegated assets
-    #   (used to properly account for mgmt fee in `_assessFees`)
-    self._updateDelegatedAssets(msg.sender)
-
     # Update reporting time
     self.strategies[msg.sender].lastReport = block.timestamp
     self.lastReport = block.timestamp
-    self.lockedProfit = gain * self.lockedProfitRatio / MAX_BPS  # profit is locked and gradually released per block
+    self.lockedProfit = gain  - totalFees  # profit is locked and gradually released per block
 
     log StrategyReported(
         msg.sender,
