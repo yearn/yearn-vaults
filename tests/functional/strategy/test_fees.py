@@ -67,26 +67,29 @@ def test_max_fees(gov, vault, token, TestStrategy, rewards, strategist):
         )
 
 
-def test_delegated_fees(chain, rewards, vault, strategy):
+def test_delegated_fees(chain, rewards, vault, strategy, gov, token):
     # Make sure funds are in the strategy
     strategy.harvest()
     assert strategy.estimatedTotalAssets() > 0
 
+    # Make sure that no performance fees are charged
+    vault.setPerformanceFee(0, {'from': gov})
+    vault.updateStrategyPerformanceFee(strategy, 0, {'from': gov})
+
     # Management fee is active...
     bal_before = vault.balanceOf(rewards)
-    chain.mine(timedelta=60 * 60 * 24 * 365)  # Mine a year at 0% mgmt fee
+    chain.mine(timedelta=60 * 60 * 24 * 365)  # Mine a year at 2% mgmt fee
+    token.transfer(strategy, 10 ** token.decimals())
     strategy.harvest()
-    assert vault.balanceOf(rewards) > bal_before  # No increase in mgmt fees
+    assert vault.balanceOf(rewards) > bal_before  # increase in mgmt fees
 
     # Check delegation math/logic
     strategy._toggleDelegation()
     assert strategy.delegatedAssets() == vault.strategies(strategy).dict()["totalDebt"]
-    assert vault.delegatedAssets() == 0  # NOTE: Cached 1 harvest period behind
-    strategy.harvest()
-    assert vault.delegatedAssets() == strategy.delegatedAssets()
 
     # Delegated assets pay no fees (everything is delegated now)
     bal_before = vault.balanceOf(rewards)
     chain.mine(timedelta=60 * 60 * 24 * 365)  # Mine a year at 0% mgmt fee
+    token.transfer(strategy, 10 ** token.decimals())
     strategy.harvest()
     assert vault.balanceOf(rewards) == bal_before  # No increase in mgmt fees
