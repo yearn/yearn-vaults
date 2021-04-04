@@ -73,8 +73,8 @@ def test_delegated_fees(chain, rewards, vault, strategy, gov, token):
     assert strategy.estimatedTotalAssets() > 0
 
     # Make sure that no performance fees are charged
-    vault.setPerformanceFee(0, {'from': gov})
-    vault.updateStrategyPerformanceFee(strategy, 0, {'from': gov})
+    vault.setPerformanceFee(0, {"from": gov})
+    vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
 
     # Management fee is active...
     bal_before = vault.balanceOf(rewards)
