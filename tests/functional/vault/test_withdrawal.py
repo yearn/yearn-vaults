@@ -302,6 +302,7 @@ def test_profit_degration(chain, gov, token, vault, strategy, rando):
     deposit = vault.totalAssets()
     token.transfer(strategy, deposit, {"from": gov})  # seed some profit
 
+    vault.setLockedProfitRatio(10_000, {"from": gov})
     strategy.harvest({"from": gov})
 
     vault.withdraw({"from": gov})
@@ -324,6 +325,19 @@ def test_profit_degration(chain, gov, token, vault, strategy, rando):
     chain.sleep(21600)
     chain.mine(1)
     assert vault.pricePerShare() >= pricePerShareBefore * 2 * 0.99
+
+    vault.withdraw(vault.balanceOf(gov)/2, {"from": gov})
+    
+    pricePerShareBefore = vault.pricePerShare()
+
+    token.transfer(strategy, deposit, {"from": gov})  # seed some profit
+
+    vault.setLockedProfitRatio(5_000, {"from": gov})
+    strategy.harvest({"from": gov})
+
+    # 50% increase in pricePerShare due to double profit and half locked
+    assert vault.pricePerShare() >= pricePerShareBefore * 1.5 * 0.99
+    assert vault.pricePerShare() <= pricePerShareBefore * 1.5 * 1.01
 
 
 def test_withdraw_delegate_assets(chain, gov, token, vault, strategy, rando):
