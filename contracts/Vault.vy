@@ -797,7 +797,7 @@ def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
     if totalSupply > 0:
         # Mint amount of shares based on what the Vault is managing overall
         # NOTE: if sqrt(token.totalSupply()) > 1e39, this could potentially revert
-        precisionFactor: uint256 = self.precisionFactor 
+        precisionFactor: uint256 = self.precisionFactor
         shares = precisionFactor * amount * totalSupply / self._totalAssets() / precisionFactor
     else:
         # No existing shares, so mint 1:1
@@ -889,7 +889,7 @@ def _shareValue(shares: uint256) -> uint256:
         # NOTE: if sqrt(Vault.totalAssets()) >>> 1e39, this could potentially revert
     lockedFundsRatio: uint256 = (block.timestamp - self.lastReport) * self.lockedProfitDegration
     freeFunds: uint256 = self._totalAssets()
-    precisionFactor: uint256 = self.precisionFactor 
+    precisionFactor: uint256 = self.precisionFactor
     if(lockedFundsRatio < DEGREDATION_COEFFICIENT):
         freeFunds -= (
             self.lockedProfit
@@ -918,7 +918,7 @@ def _sharesForAmount(amount: uint256) -> uint256:
     # See dev note on `deposit`.
     if self._totalAssets() > 0:
         # NOTE: if sqrt(token.totalSupply()) > 1e37, this could potentially revert
-        precisionFactor: uint256 = self.precisionFactor  
+        precisionFactor: uint256 = self.precisionFactor
         return  (
             precisionFactor
             * amount
@@ -957,6 +957,23 @@ def maxAvailableShares() -> uint256:
         shares += self._sharesForAmount(self.strategies[strategy].totalDebt)
 
     return shares
+
+
+@internal
+def _reportLoss(strategy: address, loss: uint256):
+    # Loss can only be up the amount of debt issued to strategy
+    totalDebt: uint256 = self.strategies[strategy].totalDebt
+    assert totalDebt >= loss
+    self.strategies[strategy].totalLoss += loss
+    self.strategies[strategy].totalDebt = totalDebt - loss
+    self.totalDebt -= loss
+
+    # Also, make sure we reduce our trust with the strategy by the same amount
+    debtRatio: uint256 = self.strategies[strategy].debtRatio
+    precisionFactor: uint256 = self.precisionFactor
+    ratio_change: uint256 = min(precisionFactor * loss * MAX_BPS / self._totalAssets() / precisionFactor, debtRatio)
+    self.strategies[strategy].debtRatio -= ratio_change
+    self.debtRatio -= ratio_change
 
 
 @external
@@ -1058,12 +1075,12 @@ def withdraw(
             if loss > 0:
                 value -= loss
                 totalLoss += loss
-                self.strategies[strategy].totalLoss += loss
+                self._reportLoss(strategy, loss)
 
             # Reduce the Strategy's debt by the amount withdrawn ("realized returns")
             # NOTE: This doesn't add to returns as it's not earned by "normal means"
-            self.strategies[strategy].totalDebt -= withdrawn + loss
-            self.totalDebt -= withdrawn + loss
+            self.strategies[strategy].totalDebt -= withdrawn
+            self.totalDebt -= withdrawn
 
     # NOTE: We have withdrawn everything possible out of the withdrawal queue
     #       but we still don't have enough to fully pay them back, so adjust
@@ -1077,7 +1094,7 @@ def withdraw(
 
     # NOTE: This loss protection is put in place to revert if losses from
     #       withdrawing are more than what is considered acceptable.
-    precisionFactor: uint256 = self.precisionFactor 
+    precisionFactor: uint256 = self.precisionFactor
     assert totalLoss <= precisionFactor * maxLoss * (value + totalLoss) / MAX_BPS / precisionFactor
 
     # Burn shares (full value of what is being withdrawn)
@@ -1411,7 +1428,7 @@ def removeStrategyFromQueue(strategy: address):
 @internal
 def _debtOutstanding(strategy: address) -> uint256:
     # See note on `debtOutstanding()`.
-    precisionFactor: uint256 = self.precisionFactor 
+    precisionFactor: uint256 = self.precisionFactor
     strategy_debtLimit: uint256 = (
         precisionFactor
         * self.strategies[strategy].debtRatio
@@ -1448,7 +1465,7 @@ def _creditAvailable(strategy: address) -> uint256:
     # See note on `creditAvailable()`.
     if self.emergencyShutdown:
         return 0
-    precisionFactor: uint256 = self.precisionFactor 
+    precisionFactor: uint256 = self.precisionFactor
     vault_totalAssets: uint256 = self._totalAssets()
     vault_debtLimit: uint256 = precisionFactor * self.debtRatio * vault_totalAssets / MAX_BPS / precisionFactor
     vault_totalDebt: uint256 = self.totalDebt
@@ -1513,7 +1530,7 @@ def _expectedReturn(strategy: address) -> uint256:
     if timeSinceLastHarvest > 0 and totalHarvestTime > 0 and Strategy(strategy).isActive():
         # NOTE: Unlikely to throw unless strategy accumalates >1e68 returns
         # NOTE: Calculate average over period of time where harvests have occured in the past
-        precisionFactor: uint256 = self.precisionFactor 
+        precisionFactor: uint256 = self.precisionFactor
         return (
             precisionFactor
             * self.strategies[strategy].totalGain
@@ -1551,27 +1568,11 @@ def expectedReturn(strategy: address = msg.sender) -> uint256:
 
 
 @internal
-def _reportLoss(strategy: address, loss: uint256):
-    # Loss can only be up the amount of debt issued to strategy
-    totalDebt: uint256 = self.strategies[strategy].totalDebt
-    assert totalDebt >= loss
-    self.strategies[strategy].totalLoss += loss
-    self.strategies[strategy].totalDebt = totalDebt - loss
-    self.totalDebt -= loss
-
-    # Also, make sure we reduce our trust with the strategy by the same amount
-    debtRatio: uint256 = self.strategies[strategy].debtRatio
-    precisionFactor: uint256 = self.precisionFactor 
-    ratio_change: uint256 = min(precisionFactor * loss * MAX_BPS / self._totalAssets() / precisionFactor, debtRatio)
-    self.strategies[strategy].debtRatio -= ratio_change
-    self.debtRatio -= ratio_change
-
-@internal
 def _assessFees(strategy: address, gain: uint256) -> uint256:
     # Issue new shares to cover fees
     # NOTE: In effect, this reduces overall share price by the combined fee
     # NOTE: may throw if Vault.totalAssets() > 1e64, or not called for more than a year
-    precisionFactor: uint256 = self.precisionFactor 
+    precisionFactor: uint256 = self.precisionFactor
     management_fee: uint256 = (
         precisionFactor *
         (
@@ -1631,6 +1632,7 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
         if self.balanceOf[self] > 0:
             self._transfer(self, self.rewards, self.balanceOf[self])
     return total_fee
+
 
 @external
 def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
