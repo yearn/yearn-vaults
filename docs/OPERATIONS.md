@@ -89,7 +89,7 @@
   strategy.setKeeper(keep3r_manager)
   ```
 
-  - `keep3r_manager` = `0x13dAda6157Fee283723c0254F43FF1FdADe4EEd6`
+  - `keep3r_manager` = `0x736D7e3c5a6CB2CE3B764300140ABF476F6CFCCF`
 
 - Set rewards:
 
