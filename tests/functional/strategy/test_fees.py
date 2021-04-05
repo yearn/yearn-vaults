@@ -118,4 +118,7 @@ def test_gain_less_than_fees(chain, rewards, vault, strategy, gov, token):
     strategy.harvest()
 
     # Share price should not have changed because 100% of profit goes too fees. No more no less
+    # Price per share has not changed but rewards have been distributed to rewards and strategy
     assert vault.pricePerShare() == price_per_share_before
+    assert vault.balanceOf(rewards) > 0
+    assert vault.balanceOf(strategy) > 0
