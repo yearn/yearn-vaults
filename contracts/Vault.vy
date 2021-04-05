@@ -1535,7 +1535,9 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
         / MAX_BPS
         / SECS_PER_YEAR
     )
-    strategist_fee: uint256 = 0  # Only applies in certain conditions
+
+    # Only applies in certain conditions
+    strategist_fee: uint256 = 0
     performance_fee: uint256 = 0
 
     # NOTE: Applies if Strategy is not shutting down, or it is but all debt paid off
