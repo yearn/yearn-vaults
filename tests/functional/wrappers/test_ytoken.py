@@ -11,7 +11,6 @@ def test_config(gov, token, vault, registry, ytoken):
 
     # No vault added to the registry yet, so these methods should fail
     assert registry.numVaults(token) == 0
-
     # This won't revert though, there's no Vaults yet
     assert ytoken.allVaults() == []
 
