@@ -1,5 +1,5 @@
 package_name: vault
-version: 0.3.4
+version: 0.3.5
 settings:
   deployment_networks:
     - mainnet
