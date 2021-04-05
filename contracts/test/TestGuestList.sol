@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity >=0.6.0 <0.7.0;
-pragma experimental ABIEncoderV2;
+pragma solidity 0.8.3;
 
 /**
  * @notice A basic guest list contract for testing.
@@ -18,7 +17,7 @@ contract TestGuestList {
      * @dev Note that since this is just for testing, you're unable to change
      * `bouncer`.
      */
-    constructor() public {
+    constructor() {
         bouncer = msg.sender;
     }
 
