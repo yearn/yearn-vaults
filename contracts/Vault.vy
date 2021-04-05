@@ -1556,7 +1556,7 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
     # ensure total_fee is not more than gain
     if total_fee > gain:
         total_fee = gain
-        management_fee = total_fee - performance_fee - strategist_fee
+        management_fee = gain - performance_fee - strategist_fee
     if total_fee > 0:  # NOTE: If mgmt fee is 0% and no gains were realized, skip
         reward: uint256 = self._issueSharesForAmount(self, total_fee)
 
