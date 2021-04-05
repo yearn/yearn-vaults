@@ -93,3 +93,29 @@ def test_delegated_fees(chain, rewards, vault, strategy, gov, token):
     token.transfer(strategy, 10 ** token.decimals())
     strategy.harvest()
     assert vault.balanceOf(rewards) == bal_before  # No increase in mgmt fees
+
+
+def test_gain_less_than_fees(chain, rewards, vault, strategy, gov, token):
+    # Make sure funds are in the strategy
+    strategy.harvest()
+    assert strategy.estimatedTotalAssets() > 0
+
+    # Performance fees higher than 100%
+    vault.updateStrategyPerformanceFee(strategy, 9000, {"from": gov})
+    vault.setPerformanceFee(9000, {"from": gov})
+
+    token.transfer(strategy, 10 ** token.decimals())
+
+    # Revert expected due to fees too high
+    with brownie.reverts():
+        strategy.harvest()
+    
+    # Performance fees set to standard 10%
+    vault.setPerformanceFee(1000, {"from": gov})
+    vault.updateStrategyPerformanceFee(strategy, 1000, {"from": gov})
+    chain.mine(timedelta=60 * 60 * 24 * 365)  # Mine a year at 2% mgmt fee
+    price_per_share_before = vault.pricePerShare()
+    strategy.harvest()
+
+    # Share price should not have changed because 100% of profit goes too fees. No more no less
+    assert vault.pricePerShare() == price_per_share_before
