@@ -34,3 +34,8 @@ def affiliate_token(token, affiliate, registry, AffiliateToken):
         f"Affiliate {token.symbol()}",
         f"af{token.symbol()}",
     )
+
+
+@pytest.fixture
+def new_registry(Registry, gov):
+    yield gov.deploy(Registry)

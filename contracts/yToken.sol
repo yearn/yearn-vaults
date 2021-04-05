@@ -5,6 +5,7 @@ pragma experimental ABIEncoderV2;
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import {VaultAPI, BaseWrapper} from "./BaseWrapper.sol";
 
@@ -163,7 +164,7 @@ interface IWETH {
     function withdraw(uint256 wad) external;
 }
 
-contract yWETH is yToken {
+contract yWETH is ReentrancyGuard, yToken {
     using Address for address payable;
 
     constructor(address _weth, address _registry) public yToken(_weth, _registry) {}
@@ -177,7 +178,7 @@ contract yWETH is yToken {
         return _deposit(address(this), msg.sender, amount, false); // `false` = pull from `this`
     }
 
-    function withdrawETH(uint256 amount) external returns (uint256 withdrawn) {
+    function withdrawETH(uint256 amount) external nonReentrant returns (uint256 withdrawn) {
         // NOTE: Need to use different method to withdraw than `yToken`
         withdrawn = _withdraw(msg.sender, address(this), amount, true); // `true` = withdraw from `bestVault`
         // NOTE: `BaseWrapper.token` is WETH
