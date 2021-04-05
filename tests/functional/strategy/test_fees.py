@@ -109,7 +109,7 @@ def test_gain_less_than_fees(chain, rewards, vault, strategy, gov, token):
     # Revert expected due to fees too high
     with brownie.reverts():
         strategy.harvest()
-    
+
     # Performance fees set to standard 10%
     vault.setPerformanceFee(1000, {"from": gov})
     vault.updateStrategyPerformanceFee(strategy, 1000, {"from": gov})
