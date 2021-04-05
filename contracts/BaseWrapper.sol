@@ -193,8 +193,13 @@ abstract contract BaseWrapper {
                         .div(vaults[id].pricePerShare()); // NOTE: Every Vault is different
 
                     // Limit amount to withdraw to the maximum made available to this contract
-                    uint256 shares = Math.min(estimatedShares, availableShares);
-                    withdrawn = withdrawn.add(vaults[id].withdraw(shares));
+                    // NOTE: Avoid corner case where `estimatedShares` isn't precise enough
+                    // NOTE: If `0 < estimatedShares < 1` but `availableShares > 1`, this will withdraw more than necessary
+                    if (estimatedShares > 0 && estimatedShares < availableShares) {
+                        withdrawn = withdrawn.add(vaults[id].withdraw(estimatedShares));
+                    } else {
+                        withdrawn = withdrawn.add(vaults[id].withdraw(availableShares));
+                    }
                 } else {
                     withdrawn = withdrawn.add(vaults[id].withdraw());
                 }
