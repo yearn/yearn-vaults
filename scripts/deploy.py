@@ -62,10 +62,11 @@ def main():
             f"""
         Recommended Releases
 
-        Not Recommended => 0-2
+        DO NOT USE => 0-2
         0.3.2 => 3
         0.3.3 => 4
-        0.3.4 => 5 
+        0.3.4 => 5 (DO NOT USE) 
+        0.3.5 => 6
         """
         )
         target_release_index = click.prompt(
