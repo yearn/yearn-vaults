@@ -110,6 +110,10 @@ def test_gain_less_than_fees(chain, rewards, vault, strategy, gov, token):
     with brownie.reverts():
         strategy.harvest()
 
+    # Governance and strategist have not earned any fees yet
+    assert vault.balanceOf(rewards) == 0
+    assert vault.balanceOf(strategy) == 0
+
     # Performance fees set to standard 10%
     vault.setPerformanceFee(1000, {"from": gov})
     vault.updateStrategyPerformanceFee(strategy, 1000, {"from": gov})
