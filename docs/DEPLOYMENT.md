@@ -2,40 +2,13 @@
 
 **Note**: This [repo](https://github.com/iearn-finance/chief-multisig-officer) is encouraged to create multiple scripts for governance and dev multisig execution of complex transactions.
 
-## Deploying a new Vault
+## Deploying a new Experimental Vault
 
-- Check latest version in `v2.registry.ychad.eth` against the planned new release vault to be sure its an updated version.
-- Deploy vault for production using the new version (this should not be an experimental vault since it will be endorsed with this process).
-- Set governance to `ychad.eth`:
-
-  ```python
-  vault.setGovernance(0xfeb4acf3df3cdea7399794d0869ef76a6efaff52)
-  ```
-
-- Let multisig accept governance:
-
-  ```python
-  vault.acceptGovernance()
-  ```
-
-- Let governance create a new release on `v2.registry.ychad.eth`:
-
-  ```python
-  registry.newRelease(vault)
-  ```
-
-**Note**: Last two steps may need to be done in different transactions since it sometimes can fail in practice using multisig from Gnosis.
-
-## Deploying a new Strategy
-
-1. Create a new issue in the strategies' [repo](https://github.com/iearn-finance/yearn-strategies/issues) using the template `Strategy Review`. **Complete all the fields**.
-1. Coordinate with Core Dev strategist for getting a review on [board](https://github.com/orgs/iearn-finance/projects/5).
-1. Complete peer review by at least 2 strategists.
-1. Check if `want` token has a deployed vault already (>=v0.3.0) and coordinate to use that first if possible.
-1. If a new vault is needed, deploy it using the registry:
+1. Check latest version in `v2.registry.ychad.eth` against the planned new release vault to be sure its an updated version.
+1. Deploy the new vault using the registry:
    - Set Strategists multisig (`0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7`) as governance.
    - Set Core Dev multisig (`dev.ychad.eth`) as guardian.
-   - Set treasury (`treasury.ychad.eth`) as the rewards address.
+   - Set Treasury (`treasury.ychad.eth`) as the rewards address.
 
    ```python
    token = want
@@ -49,8 +22,15 @@
    ```
 
 1. Check new vault has ABI setup on etherscan (until verification with Vyper and proxy is fixed on Etherscan).
+
+## Deploying a new Strategy
+
+1. Create a new issue in the strategies' [repo](https://github.com/iearn-finance/yearn-strategies/issues) using the template `Strategy Review`. **Complete all the fields**.
+1. Coordinate with Core Dev strategist for getting a review on [board](https://github.com/orgs/iearn-finance/projects/5).
+1. Complete peer review by at least 2 strategists.
+1. Check if `want` token has a deployed vault already (>=v0.3.0) and coordinate to use that first if possible.
 1. Coordinate with core developer to set proper deposit limit and other settings for new vault. See the table below: [Limits per Stage](#limits-per-stage).
-1. Set a deposit limit to \$50k USD converted to your `want` token. Example below is 50k DAI
+1. Set a deposit according to the table, converted to your `want` token. Example below is 50k DAI
 
    ```python
    vault.setDepositLimit(50_000 * 1e18)
@@ -104,10 +84,10 @@
    vault.setManagementFee(0)
    ```
 
-1. Set `dev.ychad.eth` as governance
+1. Set Strategists multisig as governance.
 
    ```python
-   multisig = '0x846e211e8ba920b353fb717631c015cf04061cc9'
+   multisig = '0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7'
    vault.setGovernance(multisig)
    ```
 
@@ -123,18 +103,6 @@
    - Check that tokens in the strategy cannot be sweeped by dust collection.
 
    - **Example**: Hegic strat [repo](https://github.com/Macarse/yhegic/tree/master/tests/development).
-
-1. Tag vault as "experimental" in `v2.registry.ychad.eth`
-   - `registry.tagVault(vaultAddr, "https://meta.yearn.network/vaults/${vaultAddr}/vault.json")`
-
-### Sharer contract (optional)
-
-"Sharer" is a contract for distributing/splitting strategist rewards. For boarding school graduates suggested split is 34% to strategist multisig and 66% to strategist – [repo](https://github.com/Grandthrax/Sharer).
-
-- Setup rewards for your strategy by calling `sharer.addContributors`.
-- Include devs if you forked someone else's strategy.
-- Be sure to reward people who helped you.
-- You can find the sharer here: [0x2c641e14afecb16b4aa6601a40ee60c3cc792f7d](https://etherscan.io/address/0x2c641e14afecb16b4aa6601a40ee60c3cc792f7d)
 
 ## Test harvesting manually
 
@@ -166,12 +134,7 @@ In additon to the 2 strategists, a Core Developer has to review the strategy bef
    vault.setGovernance(0xfeb4acf3df3cdea7399794d0869ef76a6efaff52)
    ```
 
-Yearn governance now must accept governance and endorse the vault:
-  **Note**: Order is important. Will fail if order is wrong.
-
-### Endorsing a vault from latest release
-
-This must be done from the multisig
+1. Yearn governance now must accept governance and endorse the vault:
 
 ```python
 strategy.acceptGovernance()
@@ -193,8 +156,6 @@ registry.endorseVault(vault)
    strategy.acceptGovernance() # from ychad.eth
    registry.endorseVault(vault, releaseDelta) # from ychad.eth.
    ```
-
-1. Now you are on the main site!
 
 ## Setting up Keep3r
 
@@ -224,6 +185,15 @@ These are the standard deposit limits per stage. They can be adjusted on a case 
 | ------------ | ------ |
 | Experimental | \$500K |
 | Production   | \$10M  |
+
+### Sharer contract
+
+"Sharer" is a contract for distributing/splitting strategist rewards. For boarding school graduates suggested split is 34% to strategist multisig and 66% to strategist – [repo](https://github.com/Grandthrax/Sharer).
+
+- Setup rewards for your strategy by calling `sharer.addContributors`.
+- Include devs if you forked someone else's strategy.
+- Be sure to reward people who helped you.
+- You can find the sharer here: [0x2c641e14afecb16b4aa6601a40ee60c3cc792f7d](https://etherscan.io/address/0x2c641e14afecb16b4aa6601a40ee60c3cc792f7d)
 
 ### Addresses
 
