@@ -106,9 +106,11 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
     with brownie.reverts():
         vault.withdraw(1000, rando, 10_001, {"from": rando})
 
+    pricePerShareBefore = vault.pricePerShare()
     vault.withdraw(1000, rando, 10_000, {"from": rando})  # Opt-in to 100% loss
     assert vault.strategies(strategies[0]).dict()["totalLoss"] == 1000
     assert token.balanceOf(rando) == 0  # 100% loss (because we didn't wait!)
+    assert pricePerShareBefore == vault.pricePerShare()
 
     chain.revert()  # Back before the withdrawal
 
