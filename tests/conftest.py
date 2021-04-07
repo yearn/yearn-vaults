@@ -7,7 +7,7 @@ import yaml
 from eth_account import Account
 from eth_account.messages import encode_structured_data
 
-from brownie import compile_source, Token, Vault
+from brownie import compile_source, Token, Vault, web3, chain
 
 PACKAGE_VERSION = yaml.safe_load(
     (Path(__file__).parents[1] / "ethpm-config.yaml").read_text()
@@ -82,6 +82,12 @@ def patch_vault_version():
     return patch_vault_version
 
 
+def chain_id():
+    # BUG: ganache-cli provides mismatching chain.id and chainid()
+    # https://github.com/trufflesuite/ganache/issues/1643
+    return 1 if web3.clientVersion.startswith("EthereumJS") else chain.id
+
+
 @pytest.fixture
 def sign_token_permit():
     def sign_token_permit(
@@ -92,7 +98,6 @@ def sign_token_permit():
         deadline: int = 0,  # 0 means no time limit
         override_nonce: int = None,
     ):
-        chain_id = 1  # ganache bug https://github.com/trufflesuite/ganache/issues/1643
         if override_nonce:
             nonce = override_nonce
         else:
@@ -116,7 +121,7 @@ def sign_token_permit():
             "domain": {
                 "name": token.name(),
                 "version": "1",
-                "chainId": chain_id,
+                "chainId": chain_id(),
                 "verifyingContract": str(token),
             },
             "primaryType": "Permit",
@@ -146,7 +151,6 @@ def sign_vault_permit():
     ):
         name = "Yearn Vault"
         version = vault.apiVersion()
-        chain_id = 1  # ganache bug https://github.com/trufflesuite/ganache/issues/1643
         if override_nonce:
             nonce = override_nonce
         else:
@@ -170,7 +174,7 @@ def sign_vault_permit():
             "domain": {
                 "name": name,
                 "version": version,
-                "chainId": chain_id,
+                "chainId": chain_id(),
                 "verifyingContract": str(vault),
             },
             "primaryType": "Permit",
