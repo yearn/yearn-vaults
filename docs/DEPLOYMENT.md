@@ -4,15 +4,15 @@
 
 ## Deploying a new Experimental Vault
 
-1. Check latest version in `v2.registry.ychad.eth` against the planned new release vault to be sure its an updated version.
+1. Check latest version in `v2.registry.ychad.eth` against the planned new release vault to be sure its an updated version. If you want to deploy a different version of the vault speak to Doug.
 1. Deploy the new vault using the registry:
-   - Set Strategists multisig (`0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7`) as governance.
+   - Set youself as governance.
    - Set Core Dev multisig (`dev.ychad.eth`) as guardian.
    - Set Treasury (`treasury.ychad.eth`) as the rewards address.
 
    ```python
    token = want
-   governance = '0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7'
+   governance = yourwallet
    guardian = '0x846e211e8ba920B353FB717631C015cf04061Cc9'
    treasury = '0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde'
    name = ''
@@ -23,6 +23,29 @@
 
 1. Check new vault has ABI setup on etherscan (until verification with Vyper and proxy is fixed on Etherscan).
 
+1. Set up the vault with correct deposit limit:
+
+   ```python
+   vault.setDepositLimit(limit)
+   ```
+1. Set management fee to 0:
+
+   ```python
+   vault.setManagementFee(0)
+   ```
+1. Set management to strategist ms:
+  - multisig_strategists (`0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7`)
+
+   ```python
+   vault.setManagement(multisig_strategists)
+   ```
+1. Set governance to ychad.eth (0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52):
+  - Note you can still make changes to the vault after setting governance up until governance is accepted
+
+   ```python
+   vault.setManagementFee(0)
+   ```
+
 ## Deploying a new Strategy
 
 1. Create a new issue in the strategies' [repo](https://github.com/iearn-finance/yearn-strategies/issues) using the template `Strategy Review`. **Complete all the fields**.
@@ -30,12 +53,6 @@
 1. Complete peer review by at least 2 strategists.
 1. Check if `want` token has a deployed vault already (>=v0.3.0) and coordinate to use that first if possible.
 1. Coordinate with core developer to set proper deposit limit and other settings for new vault. See the table below: [Limits per Stage](#limits-per-stage).
-1. Set a deposit according to the table, converted to your `want` token. Example below is 50k DAI
-
-   ```python
-   vault.setDepositLimit(50_000 * 1e18)
-   ```
-
 1. Deploy strategy and upload code to Etherscan for verification.
 1. Tag GitHub review issue with deployed version and add mainnet address(es) to the [board](https://github.com/orgs/iearn-finance/projects/5).
 
@@ -78,21 +95,6 @@
 
    - Read [below](<#Sharer-contract-(optional)>) if you want to use the sharer contract.
 
-1. Set management fee to 0:
-
-   ```python
-   vault.setManagementFee(0)
-   ```
-
-1. Set Strategists multisig as governance.
-
-   ```python
-   multisig = '0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7'
-   vault.setGovernance(multisig)
-   ```
-
-   - Governance needs to be accepted before it is in place. After you set this you will still have control over the strategy.
-
 1. Run tests against "live" vault and strategy in mainnet-fork:
 
    - Harvest.
@@ -126,12 +128,6 @@ In additon to the 2 strategists, a Core Developer has to review the strategy bef
 
    ```python
    vault.setManagementFee(200)
-   ```
-
-1. Set governance to `ychad.eth`:
-
-   ```python
-   vault.setGovernance(0xfeb4acf3df3cdea7399794d0869ef76a6efaff52)
    ```
 
 1. Yearn governance now must accept governance and endorse the vault:
