@@ -246,6 +246,7 @@ def initialize(
     token: address,
     governance: address,
     rewards: address,
+    management: address,
     nameOverride: String[64],
     symbolOverride: String[32],
     guardian: address = msg.sender,
@@ -289,8 +290,8 @@ def initialize(
 
     self.governance = governance
     log UpdateGovernance(governance)
-    self.management = governance
-    log UpdateManagement(governance)
+    self.management = management
+    log UpdateManagement(management)
     self.rewards = rewards
     log UpdateRewards(rewards)
     self.guardian = guardian

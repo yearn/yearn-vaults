@@ -107,6 +107,7 @@ def main():
      token address: {token.address}
       token symbol: {DEFAULT_VAULT_SYMBOL(token)}
         governance: {gov}
+        management: {gov}
            rewards: {rewards}
           guardian: {guardian}
               name: '{name}'
@@ -119,6 +120,7 @@ def main():
             token,
             gov,
             rewards,
+            gov,
             # NOTE: Empty string `""` means no override (don't use click default tho)
             name if name != DEFAULT_VAULT_NAME(token) else "",
             symbol if symbol != DEFAULT_VAULT_SYMBOL(token) else "",
