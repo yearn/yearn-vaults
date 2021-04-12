@@ -92,6 +92,7 @@ def main():
 
     rewards = get_address("Rewards contract", default="treasury.ychad.eth")
     guardian = get_address("Vault Guardian", default="dev.ychad.eth")
+    management = get_address("Vault Management", default="ychad.eth")
     name = click.prompt(f"Set description", default=DEFAULT_VAULT_NAME(token))
     symbol = click.prompt(f"Set symbol", default=DEFAULT_VAULT_SYMBOL(token))
     target_release = Vault.at(registry.releases(target_release_index)).apiVersion()
@@ -107,7 +108,7 @@ def main():
      token address: {token.address}
       token symbol: {DEFAULT_VAULT_SYMBOL(token)}
         governance: {gov}
-        management: {gov}
+        management: {management}
            rewards: {rewards}
           guardian: {guardian}
               name: '{name}'
@@ -120,7 +121,7 @@ def main():
             token,
             gov,
             rewards,
-            gov,
+            management,
             # NOTE: Empty string `""` means no override (don't use click default tho)
             name if name != DEFAULT_VAULT_NAME(token) else "",
             symbol if symbol != DEFAULT_VAULT_SYMBOL(token) else "",
