@@ -11,7 +11,7 @@ def other_token(gov, Token):
 @pytest.fixture
 def other_vault(gov, Vault, other_token):
     vault = gov.deploy(Vault)
-    vault.initialize(other_token, gov, gov, "", "", gov)
+    vault.initialize(other_token, gov, gov, gov, "", "", gov)
     yield vault
 
 

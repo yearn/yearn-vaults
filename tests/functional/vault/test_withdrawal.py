@@ -8,6 +8,7 @@ def test_multiple_withdrawals(token, gov, Vault, TestStrategy, chain):
         token,
         gov,
         gov,
+        gov,
         token.symbol() + " yVault",
         "yv" + token.symbol(),
         gov,
@@ -130,7 +131,13 @@ def test_progressive_withdrawal(
 ):
     vault = guardian.deploy(Vault)
     vault.initialize(
-        token, gov, rewards, token.symbol() + " yVault", "yv" + token.symbol(), guardian
+        token,
+        gov,
+        rewards,
+        gov,
+        token.symbol() + " yVault",
+        "yv" + token.symbol(),
+        guardian,
     )
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
 
@@ -189,7 +196,13 @@ def test_withdrawal_with_empty_queue(
 ):
     vault = guardian.deploy(Vault)
     vault.initialize(
-        token, gov, rewards, token.symbol() + " yVault", "yv" + token.symbol(), guardian
+        token,
+        gov,
+        rewards,
+        gov,
+        token.symbol() + " yVault",
+        "yv" + token.symbol(),
+        guardian,
     )
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
 
@@ -245,7 +258,13 @@ def test_withdrawal_with_reentrancy(
 ):
     vault = guardian.deploy(Vault)
     vault.initialize(
-        token, gov, rewards, token.symbol() + " yVault", "yv" + token.symbol(), guardian
+        token,
+        gov,
+        rewards,
+        gov,
+        token.symbol() + " yVault",
+        "yv" + token.symbol(),
+        guardian,
     )
 
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
