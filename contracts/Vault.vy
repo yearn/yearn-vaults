@@ -785,6 +785,24 @@ def totalAssets() -> uint256:
     return self._totalAssets()
 
 
+@view
+@internal
+def _calculateLockedProfit() -> uint256:
+    lockedProfitCalculated: uint256 = 0
+    lockedFundsRatio: uint256 = (block.timestamp - self.lastReport) * self.lockedProfitDegration
+    precisionFactor: uint256 = self.precisionFactor
+    if(lockedFundsRatio < DEGREDATION_COEFFICIENT):
+        lockedProfitCalculated = self.lockedProfit - (
+                precisionFactor
+                * lockedFundsRatio
+                * self.lockedProfit
+                / DEGREDATION_COEFFICIENT
+                / precisionFactor
+            )
+            
+    return lockedProfitCalculated
+
+
 @internal
 def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
     # Issues `amount` Vault shares to `to`.
@@ -798,7 +816,10 @@ def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
         # Mint amount of shares based on what the Vault is managing overall
         # NOTE: if sqrt(token.totalSupply()) > 1e39, this could potentially revert
         precisionFactor: uint256 = self.precisionFactor
-        shares = precisionFactor * amount * totalSupply / self._totalAssets() / precisionFactor
+
+        lockedFundsRatio: uint256 = (block.timestamp - self.lastReport) * self.lockedProfitDegration
+        freeFunds: uint256 = self._totalAssets() - self._calculateLockedProfit()
+        shares = precisionFactor * amount * totalSupply / freeFunds / precisionFactor
     else:
         # No existing shares, so mint 1:1
         shares = amount
@@ -888,19 +909,9 @@ def _shareValue(shares: uint256) -> uint256:
     # Determines the current value of `shares`.
         # NOTE: if sqrt(Vault.totalAssets()) >>> 1e39, this could potentially revert
     lockedFundsRatio: uint256 = (block.timestamp - self.lastReport) * self.lockedProfitDegration
-    freeFunds: uint256 = self._totalAssets()
+    freeFunds: uint256 = self._totalAssets() - self._calculateLockedProfit()
     precisionFactor: uint256 = self.precisionFactor
-    if(lockedFundsRatio < DEGREDATION_COEFFICIENT):
-        freeFunds -= (
-            self.lockedProfit
-             - (
-                 precisionFactor
-                 * lockedFundsRatio
-                 * self.lockedProfit
-                 / DEGREDATION_COEFFICIENT
-                 / precisionFactor
-             )
-         )
+
     # NOTE: using 1e3 for extra precision here, when decimals is low
     return (
         precisionFactor
@@ -1720,7 +1731,7 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     # Update reporting time
     self.strategies[msg.sender].lastReport = block.timestamp
     self.lastReport = block.timestamp
-    self.lockedProfit = gain  - totalFees  # profit is locked and gradually released per block
+    self.lockedProfit = self._calculateLockedProfit() + gain - totalFees
 
     log StrategyReported(
         msg.sender,
