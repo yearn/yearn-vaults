@@ -787,6 +787,21 @@ def totalAssets() -> uint256:
     return self._totalAssets()
 
 
+@view
+@internal
+def _calculateLockedProfit() -> uint256:
+    lockedProfitCalculated: uint256 = 0
+    lockedFundsRatio: uint256 = (block.timestamp - self.lastReport) * self.lockedProfitDegradation
+    if(lockedFundsRatio < DEGRADATION_COEFFICIENT):
+        lockedProfitCalculated = self.lockedProfit - (
+                lockedFundsRatio
+                * self.lockedProfit
+                / DEGRADATION_COEFFICIENT
+            )
+            
+    return lockedProfitCalculated
+
+
 @internal
 def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
     # Issues `amount` Vault shares to `to`.
@@ -799,7 +814,9 @@ def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
     if totalSupply > 0:
         # Mint amount of shares based on what the Vault is managing overall
         # NOTE: if sqrt(token.totalSupply()) > 1e39, this could potentially revert
-        shares =  amount * totalSupply / self._totalAssets()
+        lockedFundsRatio: uint256 = (block.timestamp - self.lastReport) * self.lockedProfitDegradation
+        freeFunds: uint256 = self._totalAssets() - self._calculateLockedProfit()
+        shares =  amount * totalSupply / freeFunds
     else:
         # No existing shares, so mint 1:1
         shares = amount
@@ -884,19 +901,8 @@ def _shareValue(shares: uint256) -> uint256:
     if self.totalSupply == 0:
         return shares
 
-    # Determines the current value of `shares`.
-        # NOTE: if sqrt(Vault.totalAssets()) >>> 1e39, this could potentially revert
-    lockedFundsRatio: uint256 = (block.timestamp - self.lastReport) * self.lockedProfitDegradation
-    freeFunds: uint256 = self._totalAssets()
-    if(lockedFundsRatio < DEGRADATION_COEFFICIENT):
-        freeFunds -= (
-            self.lockedProfit
-             - (
-                 lockedFundsRatio
-                 * self.lockedProfit
-                 / DEGRADATION_COEFFICIENT
-             )
-         )
+    freeFunds: uint256 = self._totalAssets() - self._calculateLockedProfit()
+
     # NOTE: using 1e3 for extra precision here, when decimals is low
     return (
        shares
@@ -1715,7 +1721,7 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     # Update reporting time
     self.strategies[msg.sender].lastReport = block.timestamp
     self.lastReport = block.timestamp
-    self.lockedProfit = gain  - totalFees  # profit is locked and gradually released per block
+    self.lockedProfit = self._calculateLockedProfit() + gain - totalFees
 
     log StrategyReported(
         msg.sender,
