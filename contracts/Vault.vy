@@ -817,7 +817,6 @@ def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
         # NOTE: if sqrt(token.totalSupply()) > 1e39, this could potentially revert
         precisionFactor: uint256 = self.precisionFactor
 
-        lockedFundsRatio: uint256 = (block.timestamp - self.lastReport) * self.lockedProfitDegration
         freeFunds: uint256 = self._totalAssets() - self._calculateLockedProfit()
         shares = precisionFactor * amount * totalSupply / freeFunds / precisionFactor
     else:
