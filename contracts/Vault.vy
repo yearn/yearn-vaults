@@ -97,6 +97,7 @@ struct StrategyParams:
     minDebtPerHarvest: uint256  # Lower limit on the increase of debt since last harvest
     maxDebtPerHarvest: uint256  # Upper limit on the increase of debt since last harvest
     lastReport: uint256  # block.timestamp of the last time a report occured
+    lockedProfit: uint256 # how much profit is locked and cant be withdrawn
     totalDebt: uint256  # Total outstanding debt that Strategy has
     totalGain: uint256  # Total returns that Strategy has realized for Vault
     totalLoss: uint256  # Total losses that Strategy has realized for Vault
@@ -201,6 +202,7 @@ event StrategyAddedToQueue:
 
 # NOTE: Track the total for overhead targeting purposes
 strategies: public(HashMap[address, StrategyParams])
+strategies_addresses: public(address[MAXIMUM_STRATEGIES])
 MAXIMUM_STRATEGIES: constant(uint256) = 20
 DEGREDATION_COEFFICIENT: constant(uint256) = 10 ** 18
 
@@ -219,9 +221,7 @@ emergencyShutdown: public(bool)
 depositLimit: public(uint256)  # Limit for totalAssets the Vault can hold
 debtRatio: public(uint256)  # Debt ratio for the Vault across all strategies (in BPS, <= 10k)
 totalDebt: public(uint256)  # Amount of tokens that all strategies have borrowed
-lastReport: public(uint256)  # block.timestamp of last report
 activation: public(uint256)  # block.timestamp of contract deployment
-lockedProfit: public(uint256) # how much profit is locked and cant be withdrawn
 lockedProfitDegration: public(uint256) # rate per block of degration. DEGREDATION_COEFFICIENT is 100% per block
 rewards: public(address)  # Rewards contract where Governance fees are sent to
 # Governance Fee for management of Vault (given to `rewards`)
@@ -299,7 +299,6 @@ def initialize(
     log UpdatePerformanceFee(convert(1000, uint256))
     self.managementFee = 200  # 2% per year
     log UpdateManagementFee(convert(200, uint256))
-    self.lastReport = block.timestamp
     self.activation = block.timestamp
     self.lockedProfitDegration = convert(DEGREDATION_COEFFICIENT * 46 /10 ** 6 , uint256) # 6 hours in blocks
     # EIP-712
@@ -789,17 +788,20 @@ def totalAssets() -> uint256:
 @internal
 def _calculateLockedProfit() -> uint256:
     lockedProfitCalculated: uint256 = 0
-    lockedFundsRatio: uint256 = (block.timestamp - self.lastReport) * self.lockedProfitDegration
-    precisionFactor: uint256 = self.precisionFactor
-    if(lockedFundsRatio < DEGREDATION_COEFFICIENT):
-        lockedProfitCalculated = self.lockedProfit - (
-                precisionFactor
-                * lockedFundsRatio
-                * self.lockedProfit
-                / DEGREDATION_COEFFICIENT
-                / precisionFactor
-            )
-            
+    for strategy in self.strategies_addresses:
+        if strategy == ZERO_ADDRESS:
+            break
+        lockedFundsRatio: uint256 = (block.timestamp - self.strategies[strategy].lastReport) * self.lockedProfitDegration
+        precisionFactor: uint256 = self.precisionFactor
+        if(lockedFundsRatio < DEGREDATION_COEFFICIENT):
+            lockedProfitCalculated += self.strategies[strategy].lockedProfit - (
+                    precisionFactor
+                    * lockedFundsRatio
+                    * self.strategies[strategy].lockedProfit
+                    / DEGREDATION_COEFFICIENT
+                    / precisionFactor
+                )
+                
     return lockedProfitCalculated
 
 
@@ -907,7 +909,6 @@ def _shareValue(shares: uint256) -> uint256:
 
     # Determines the current value of `shares`.
         # NOTE: if sqrt(Vault.totalAssets()) >>> 1e39, this could potentially revert
-    lockedFundsRatio: uint256 = (block.timestamp - self.lastReport) * self.lockedProfitDegration
     freeFunds: uint256 = self._totalAssets() - self._calculateLockedProfit()
     precisionFactor: uint256 = self.precisionFactor
 
@@ -1197,10 +1198,19 @@ def addStrategy(
         minDebtPerHarvest: minDebtPerHarvest,
         maxDebtPerHarvest: maxDebtPerHarvest,
         lastReport: block.timestamp,
+        lockedProfit: 0,
         totalDebt: 0,
         totalGain: 0,
         totalLoss: 0,
     })
+
+    next_entry_in_array: uint256 = 0
+    for i in range(MAXIMUM_STRATEGIES):
+        if  self.strategies_addresses[i] == ZERO_ADDRESS:
+            next_entry_in_array = i
+            break
+
+    self.strategies_addresses[next_entry_in_array] = strategy 
     log StrategyAdded(strategy, debtRatio, minDebtPerHarvest, maxDebtPerHarvest, performanceFee)
 
     # Update Vault parameters
@@ -1343,6 +1353,7 @@ def migrateStrategy(oldVersion: address, newVersion: address):
         minDebtPerHarvest: strategy.minDebtPerHarvest,
         maxDebtPerHarvest: strategy.maxDebtPerHarvest,
         lastReport: strategy.lastReport,
+        lockedProfit: 0,
         totalDebt: strategy.totalDebt,
         totalGain: 0,
         totalLoss: 0,
@@ -1729,8 +1740,7 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
 
     # Update reporting time
     self.strategies[msg.sender].lastReport = block.timestamp
-    self.lastReport = block.timestamp
-    self.lockedProfit = self._calculateLockedProfit() + gain - totalFees
+    self.strategies[msg.sender].lockedProfit = gain - totalFees
 
     log StrategyReported(
         msg.sender,

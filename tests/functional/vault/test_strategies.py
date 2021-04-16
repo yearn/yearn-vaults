@@ -115,6 +115,7 @@ def test_addStrategy(
         "minDebtPerHarvest": 0,
         "maxDebtPerHarvest": 0,
         "lastReport": 0,
+        "lockedProfit": 0,
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
@@ -129,6 +130,7 @@ def test_addStrategy(
         "minDebtPerHarvest": 10,
         "maxDebtPerHarvest": 20,
         "lastReport": activation_timestamp,
+        "lockedProfit": 0,
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
@@ -196,6 +198,7 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
         "minDebtPerHarvest": 10,
         "maxDebtPerHarvest": 20,
         "lastReport": activation_timestamp,
+        "lockedProfit": 0,
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
@@ -209,6 +212,7 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
         "minDebtPerHarvest": 15,  # This changed
         "maxDebtPerHarvest": 20,
         "lastReport": activation_timestamp,
+        "lockedProfit": 0,
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
@@ -222,6 +226,7 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
         "minDebtPerHarvest": 15,
         "maxDebtPerHarvest": 15,  # This changed
         "lastReport": activation_timestamp,
+        "lockedProfit": 0,
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
@@ -235,6 +240,7 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
         "minDebtPerHarvest": 15,
         "maxDebtPerHarvest": 15,
         "lastReport": activation_timestamp,
+        "lockedProfit": 0,
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
@@ -292,6 +298,7 @@ def test_revokeStrategy(chain, gov, vault, strategy, rando):
         "minDebtPerHarvest": 10,
         "maxDebtPerHarvest": 20,
         "lastReport": activation_timestamp,
+        "lockedProfit": 0,
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
@@ -513,3 +520,49 @@ def test_update_debtRatio_to_add_second_strategy(gov, vault, strategy, other_str
 
     # But 50% should work
     vault.addStrategy(other_strategy, 5_000, 0, 0, 0, {"from": gov})
+
+
+def test_multiple_strategies_harvest(
+    chain, gov, management, vault, strategy, other_strategy, token
+):
+    vault.addStrategy(strategy, 5_000, 0, 2 ** 256 - 1, 0, {"from": gov})
+    vault.addStrategy(other_strategy, 5_000, 0, 2 ** 256 - 1, 0, {"from": gov})
+
+    # set fees to 0
+    vault.setManagementFee(0, {"from": gov})
+    vault.setPerformanceFee(0, {"from": gov})
+    vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
+    vault.updateStrategyPerformanceFee(other_strategy, 0, {"from": gov})
+    # add some funds
+    token.approve(vault, MAX_UINT256, {"from": gov})
+    vault.deposit(1000, {"from": gov})
+    strategy.harvest({"from": gov})
+    other_strategy.harvest({"from": gov})
+
+    vault.setLockedProfitDegration(
+        1e15, {"from": gov}
+    )  # Set profit degradation to 1000 sec.
+
+    deposit = vault.totalAssets()
+    pricePerShareBefore = vault.pricePerShare()
+    token.transfer(strategy, 100, {"from": gov})  # seed some profit
+    strategy.harvest({"from": gov})
+
+    chain.sleep(1)
+    chain.mine(1)
+
+    assert pytest.approx(pricePerShareBefore, rel=0.001) == vault.pricePerShare()
+
+    chain.sleep(100)
+    chain.mine(1)
+    assert pytest.approx(pricePerShareBefore, rel=0.01) == vault.pricePerShare()
+    assert vault.totalAssets() == 1100
+
+    token.transfer(other_strategy, 100, {"from": gov})  # seed some profit
+    other_strategy.harvest({"from": gov})
+
+    chain.sleep(1)
+    chain.mine(1)
+
+    assert pytest.approx(pricePerShareBefore, rel=0.011) == vault.pricePerShare()
+    assert vault.totalAssets() == 1200

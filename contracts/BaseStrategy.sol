@@ -13,6 +13,7 @@ struct StrategyParams {
     uint256 minDebtPerHarvest;
     uint256 maxDebtPerHarvest;
     uint256 lastReport;
+    uint256 lockedProfit;
     uint256 totalDebt;
     uint256 totalGain;
     uint256 totalLoss;
