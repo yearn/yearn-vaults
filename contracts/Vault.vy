@@ -790,16 +790,17 @@ def totalAssets() -> uint256:
 @view
 @internal
 def _calculateLockedProfit() -> uint256:
-    lockedProfitCalculated: uint256 = 0
-    lockedFundsRatio: uint256 = (block.timestamp - self.lastReport) * self.lockedProfitDegradation
-    if(lockedFundsRatio < DEGRADATION_COEFFICIENT):
-        lockedProfitCalculated = self.lockedProfit - (
-                lockedFundsRatio
+    lockedFundsRatio: uint256 = (block.timestamp - self.lastReport) * self.lockedProfitDegration
+
+    if(lockedFundsRatio < DEGREDATION_COEFFICIENT):
+        lockedProfit: uint256 = self.lockedProfit
+        return lockedProfit - (
+                * lockedFundsRatio
                 * self.lockedProfit
                 / DEGRADATION_COEFFICIENT
             )
-            
-    return lockedProfitCalculated
+    else:        
+        return 0
 
 
 @internal
@@ -901,6 +902,8 @@ def _shareValue(shares: uint256) -> uint256:
     if self.totalSupply == 0:
         return shares
 
+    # Determines the current value of `shares`.
+        # NOTE: if sqrt(Vault.totalAssets()) >>> 1e39, this could potentially revert
     freeFunds: uint256 = self._totalAssets() - self._calculateLockedProfit()
 
     # NOTE: using 1e3 for extra precision here, when decimals is low
@@ -1718,10 +1721,13 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
         self.erc20_safe_transferFrom(self.token.address, msg.sender, self, totalAvail - credit)
     # else, don't do anything because it is balanced
 
+    # Profit is locked and gradually released per block
+    # NOTE: compute current locked profit and replace with sum of current and new
+    self.lockedProfit = self._calculateLockedProfit() + gain - totalFees
+
     # Update reporting time
     self.strategies[msg.sender].lastReport = block.timestamp
     self.lastReport = block.timestamp
-    self.lockedProfit = self._calculateLockedProfit() + gain - totalFees
 
     log StrategyReported(
         msg.sender,
