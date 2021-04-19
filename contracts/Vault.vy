@@ -795,13 +795,12 @@ def _calculateLockedProfit() -> uint256:
     if(lockedFundsRatio < DEGREDATION_COEFFICIENT):
         lockedProfit: uint256 = self.lockedProfit
         return lockedProfit - (
-                * lockedFundsRatio
-                * self.lockedProfit
-                / DEGRADATION_COEFFICIENT
+                lockedFundsRatio
+                * lockedProfit
+                / DEGREDATION_COEFFICIENT
             )
     else:        
         return 0
-
 
 @internal
 def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
