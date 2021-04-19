@@ -48,13 +48,13 @@ def test_harvest_tend_trigger(chain, gov, vault, token, TestStrategy):
     # Check that trigger works if gas costs is less than profitFactor
     profit = 10 ** token.decimals()
     token.transfer(strategy, profit, {"from": gov})
-    chain.mine(timedelta=strategy.minReportDelay())
+    chain.mine(timedelta=strategy.minReportDelay() + 5)
     assert not strategy.harvestTrigger(profit // strategy.profitFactor())
     assert strategy.harvestTrigger(profit // strategy.profitFactor() - 1)
     strategy.harvest({"from": gov})
 
     # Check that trigger works if strategy is in debt using debt threshold
-    chain.mine(timedelta=strategy.minReportDelay())
+    chain.mine(timedelta=strategy.minReportDelay() + 5)
     assert vault.debtOutstanding(strategy) == 0
     vault.revokeStrategy(strategy, {"from": gov})
     assert vault.debtOutstanding(strategy) > strategy.debtThreshold()
