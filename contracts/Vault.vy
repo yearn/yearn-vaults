@@ -282,6 +282,7 @@ def initialize(
     else:
         self.symbol = symbolOverride
     self.decimals = DetailedERC20(token).decimals()
+    assert self.decimals < 256 # dev: see VVE-2020-0001
     if self.decimals < 18:
       self.precisionFactor = 10 ** (18 - self.decimals)
     else:
