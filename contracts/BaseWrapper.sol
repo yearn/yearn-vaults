@@ -19,6 +19,16 @@ interface RegistryAPI {
     function vaults(address token, uint256 deploymentId) external view returns (address);
 }
 
+/**
+ * @title Yearn Base Wrapper
+ * @author yearn.finance
+ * @notice
+ *  BaseWrapper implements all of the required functionality to interoperate
+ *  closely with the Vault contract. This contract should be inherited and the
+ *  abstract methods implemented to adapt the Wrapper.
+ *  A good starting point to build a wrapper is https://github.com/yearn/brownie-wrapper-mix
+ *
+ */
 abstract contract BaseWrapper {
     using Math for uint256;
     using SafeMath for uint256;
@@ -48,6 +58,11 @@ abstract contract BaseWrapper {
         registry = RegistryAPI(_registry);
     }
 
+    /**
+     * @notice
+     *  Used to update the yearn registry.
+     * @param _registry The new _registry address.
+     */
     function setRegistry(address _registry) external {
         require(msg.sender == registry.governance());
         // In case you want to override the registry instead of re-deploying
@@ -57,10 +72,20 @@ abstract contract BaseWrapper {
         require(msg.sender == registry.governance());
     }
 
+    /**
+     * @notice
+     *  Used to get the most revent vault for the token using the registry.
+     * @return An instance of a VaultAPI
+     */
     function bestVault() public virtual view returns (VaultAPI) {
         return VaultAPI(registry.latestVault(address(token)));
     }
 
+    /**
+     * @notice
+     *  Used to get all vaults from the registery for the token
+     * @return An array containing instances of VaultAPI
+     */
     function allVaults() public virtual view returns (VaultAPI[] memory) {
         uint256 cache_length = _cachedVaults.length;
         uint256 num_vaults = registry.numVaults(address(token));
@@ -92,6 +117,13 @@ abstract contract BaseWrapper {
         }
     }
 
+    /**
+     * @notice
+     *  Used to get the balance of an account accross all the vaults for a token.
+     *  @dev will be used to get the wrapper balance using totalVaultBalance(address(this)).
+     *  @param account The address of the account.
+     *  @return balance of token for the account accross all the vaults.
+     */
     function totalVaultBalance(address account) public view returns (uint256 balance) {
         VaultAPI[] memory vaults = allVaults();
 
@@ -100,6 +132,11 @@ abstract contract BaseWrapper {
         }
     }
 
+    /**
+     * @notice
+     *  Used to get the TVL on the underlying vaults.
+     *  @return assets the sum of all the assets managed by the underlying vaults.
+     */
     function totalAssets() public view returns (uint256 assets) {
         VaultAPI[] memory vaults = allVaults();
 
