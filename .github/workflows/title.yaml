@@ -20,7 +20,7 @@ jobs:
               python-version: 3.8
 
         - name: Install Dependencies
-          run: pip install commitzen
+          run: pip install commitizen
 
         - name: Check PR Title
           run: cz check --message "${{ github.event.pull_request.title }}"
