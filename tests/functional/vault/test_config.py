@@ -203,3 +203,6 @@ def test_vault_setLockedProfitDegration_range(gov, vault):
 def test_vault_setParams_bad_vals(gov, vault):
     with brownie.reverts():
         vault.setRewards(ZERO_ADDRESS, {"from": gov})
+
+    with brownie.reverts():
+        vault.setRewards(vault, {"from": gov})
