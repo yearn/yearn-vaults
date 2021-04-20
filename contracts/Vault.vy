@@ -268,6 +268,7 @@ def initialize(
     @param token The token that may be deposited into this Vault.
     @param governance The address authorized for governance interactions.
     @param rewards The address to distribute rewards to.
+    @param management The address of the vault manager.
     @param nameOverride Specify a custom Vault name. Leave empty for default choice.
     @param symbolOverride Specify a custom Vault symbol name. Leave empty for default choice.
     @param guardian The address authorized for guardian interactions. Defaults to caller.
