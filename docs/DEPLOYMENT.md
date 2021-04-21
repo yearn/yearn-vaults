@@ -6,6 +6,8 @@
 
 Make sure you have the brownie environment setup before trying to deploy a vault. Check out the [Readme MD](https://github.com/yearn/yearn-vaults/blob/master/README.md) for instructions.
 
+The below instructions show some python commands that assume you are using the brownie console or a brownie script setup is in place.
+
 ## Deploying a new Experimental Vault
 
 1. Clone this repo and run `brownie run scripts/deploy.py --network <network-to-deploy-vault>`
@@ -22,7 +24,7 @@ Make sure you have the brownie environment setup before trying to deploy a vault
    - Set description and symbol for vault or use suggested as default (can be changed on chain later)
 1. Confirm the Parameters are set correctly and press `y`and ENTER to deploy vault. 
    
-1. Check new vault has ABI setup on Etherscan (until verification with Vyper and proxy is fixed on Etherscan).
+1. Check new vault has ABI setup on Etherscan (Some vault versions from older releases may have verification issues with Vyper and proxy detection on Etherscan, consider using latest releases >0.3.5 to ensure verification works).
 
 1. Set up the vault with correct deposit limit:
 
@@ -34,13 +36,8 @@ Make sure you have the brownie environment setup before trying to deploy a vault
    ```python
    vault.setManagementFee(0)
    ```
-1. Set management to strategist ms:
-  - multisig_strategists (`0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7`)
 
-   ```python
-   vault.setManagement(multisig_strategists)
-   ```
-1. Set governance to ychad.eth (0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52):
+1. (Optional) Set governance to ychad.eth (0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52) if vault is planned to be endorsed soon:
   - Note you can still make changes to the vault after setting governance up until governance is accepted
 
    ```python
@@ -48,10 +45,11 @@ Make sure you have the brownie environment setup before trying to deploy a vault
    ```
 
 
-
 ## Deploying a new Strategy
 
 1. Create a new issue in the strategies' [repo](https://github.com/iearn-finance/yearn-strategies/issues) using the template `Strategy Review`. **Complete all the fields**.
+1. If the strategy is targeting a new protocol/new chain, not currently approved by yearn (used in production), a due diligence and path to production plan documents may also be required for the strategy to be considered for endorsing. [PATH TO PROD](PATH_TO_PROD.md)
+Examples [SNX](https://hackmd.io/0w1RZh7DSc27A9EyzlHbJQ?view), [VESPER](https://hackmd.io/@Ap_76vwNTg-vxJxbiaLMMQ/SkXEzic7O) 
 1. Coordinate with Core Dev strategist for getting a review on [board](https://github.com/orgs/iearn-finance/projects/5).
 1. Complete peer review by at least 2 strategists.
 1. Check if `want` token has a deployed vault already (>=v0.3.0) and coordinate to use that first if possible.
@@ -194,7 +192,7 @@ These are the standard deposit limits per stage. They can be adjusted on a case 
 
 ### Sharer contract
 
-"Sharer" is a contract for distributing/splitting strategist rewards. For boarding school graduates suggested split is 34% to strategist multisig and 66% to strategist – [repo](https://github.com/Grandthrax/Sharer).
+"Sharer" is a contract for distributing/splitting strategist rewards. For boarding school graduates suggested split is 34% to strategist multisig and 66% to strategist – [Sharer Contract](https://github.com/Grandthrax/Sharer).
 
 - Setup rewards for your strategy by calling `sharer.addContributors`.
 - Include devs if you forked someone else's strategy.
@@ -207,6 +205,6 @@ These are the standard deposit limits per stage. They can be adjusted on a case 
 | ---------------------- | --------------------- |------------------------------------------- |
 | V2 Registry            | v2.registry.ychad.eth | 0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804 |
 | Yearn multisig (daddy) | ychad.eth             | 0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52 |
-| Strategist multisig    |                       | 0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7 |
+| Strategist multisig    |   brain.ychad.eth                    | 0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7 |
 | Core Dev multisig      | dev.ychad.eth         | 0x846e211e8ba920B353FB717631C015cf04061Cc9 |
 | Treasury               | treasury.ychad.eth    | 0xfeb4acf3df3cdea7399794d0869ef76a6efaff52 |
