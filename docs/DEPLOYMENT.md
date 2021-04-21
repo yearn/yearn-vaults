@@ -2,26 +2,27 @@
 
 **Note**: This [repo](https://github.com/iearn-finance/chief-multisig-officer) is encouraged to create multiple scripts for governance and dev multisig execution of complex transactions.
 
+## Requirements
+
+Make sure you have the brownie environment setup before trying to deploy a vault. Check out the [Readme MD](https://github.com/yearn/yearn-vaults/blob/master/README.md) for instructions.
+
 ## Deploying a new Experimental Vault
 
-1. Check latest version in `v2.registry.ychad.eth` against the planned new release vault to be sure its an updated version. If you want to deploy a different version of the vault speak to Doug.
-1. Deploy the new vault using the registry:
-   - Set youself as governance.
-   - Set Core Dev multisig (`dev.ychad.eth`) as guardian.
+1. Clone this repo and run `brownie run scripts/deploy.py --network <network-to-deploy-vault>`
+1. Choose the brownie account for deploying your vault. This account needs to have balance to pay for the deploy transaction.
+1. Confirm the script is using the latest version of registry `v2.registry.ychad.eth` against the planned new release vault to be sure its an updated version. (Can validate on Etherscan for latest address)
+1. Select the version of vault to deploy or press enter to use latest release.
+1. Enter `Y` when prompt to deploy Proxy Vault
+1. Enter the checksummed address of the ERC20 token the vault will use. 
+1. Enter the vault Parameters (Below are some suggested values):
+   - Set your address or an address you control as governance.
    - Set Treasury (`treasury.ychad.eth`) as the rewards address.
-
-   ```python
-   token = want
-   governance = yourwallet
-   guardian = '0x846e211e8ba920B353FB717631C015cf04061Cc9'
-   treasury = '0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde'
-   name = ''
-   symbol = ''
-
-   registry.newExperimentalVault(token, governance, guardian, treasury, name, symbol)
-   ```
-
-1. Check new vault has ABI setup on etherscan (until verification with Vyper and proxy is fixed on Etherscan).
+   - Set Core Dev multisig (`dev.ychad.eth`) as guardian.
+   - Set Strategist multisig (`brain.ychad.eth`) as management.
+   - Set description and symbol for vault or use suggested as default (can be changed on chain later)
+1. Confirm the Parameters are set correctly and press `y`and ENTER to deploy vault. 
+   
+1. Check new vault has ABI setup on Etherscan (until verification with Vyper and proxy is fixed on Etherscan).
 
 1. Set up the vault with correct deposit limit:
 
@@ -45,6 +46,8 @@
    ```python
    vault.setManagementFee(0)
    ```
+
+
 
 ## Deploying a new Strategy
 
@@ -121,7 +124,7 @@ If you need a UI to test, you can coordinate with the strategists.
 
 ## Scaling up / Moving to Endorse
 
-In additon to the 2 strategists, a Core Developer has to review the strategy before going into production.
+In addition to the 2 strategists, a Core Developer has to review the strategy before going into production.
 
 1. Increase deposit limit according to the table [below](#Limits-per-Stage)
 1. Set management fee to production level:
@@ -129,6 +132,13 @@ In additon to the 2 strategists, a Core Developer has to review the strategy bef
    ```python
    vault.setManagementFee(200)
    ```
+
+1. Set parameters for vault correctly before endorse:
+   - Set Governance to (`ychad.eth`) 
+   - Set Treasury (`treasury.ychad.eth`) as the rewards address.
+   - Set Core Dev multisig (`dev.ychad.eth`) as guardian.
+   - Set Strategist multisig (`brain.ychad.eth`) as management.
+   - Set description and symbol for vault or use suggested as default (can be changed on chain later)
 
 1. Yearn governance now must accept governance and endorse the vault:
 
