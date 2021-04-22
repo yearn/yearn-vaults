@@ -440,6 +440,7 @@ def setRewards(rewards: address):
     @param rewards The address to use for collecting rewards.
     """
     assert msg.sender == self.governance
+    assert not (rewards in [self, ZERO_ADDRESS])
     self.rewards = rewards
     log UpdateRewards(rewards)
 
