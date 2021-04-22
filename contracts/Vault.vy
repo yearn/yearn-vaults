@@ -804,6 +804,7 @@ def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
     else:
         # No existing shares, so mint 1:1
         shares = amount
+    assert shares != 0 # dev: division rounding resulted in zero
 
     # Mint new shares
     self.totalSupply = totalSupply + shares
