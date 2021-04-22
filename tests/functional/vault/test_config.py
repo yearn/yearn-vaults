@@ -4,6 +4,7 @@ import yaml
 import pytest
 import brownie
 
+from brownie import ZERO_ADDRESS
 
 PACKAGE_VERSION = yaml.safe_load(
     (Path(__file__).parent.parent.parent.parent / "ethpm-config.yaml").read_text()
@@ -197,3 +198,11 @@ def test_vault_setLockedProfitDegration_range(gov, vault):
     vault.setLockedProfitDegration(DEGREDATION_COEFFICIENT, {"from": gov})
     with brownie.reverts():
         vault.setLockedProfitDegration(DEGREDATION_COEFFICIENT + 1, {"from": gov})
+
+
+def test_vault_setParams_bad_vals(gov, vault):
+    with brownie.reverts():
+        vault.setRewards(ZERO_ADDRESS, {"from": gov})
+
+    with brownie.reverts():
+        vault.setRewards(vault, {"from": gov})
