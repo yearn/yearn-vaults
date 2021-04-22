@@ -281,9 +281,11 @@ def initialize(
         self.symbol = concat("yv", DetailedERC20(token).symbol())
     else:
         self.symbol = symbolOverride
-    self.decimals = DetailedERC20(token).decimals()
-    if self.decimals < 18:
-      self.precisionFactor = 10 ** (18 - self.decimals)
+    decimals: uint256 = DetailedERC20(token).decimals()
+    self.decimals = decimals
+    assert decimals < 256 # dev: see VVE-2020-0001
+    if decimals < 18:
+      self.precisionFactor = 10 ** (18 - decimals)
     else:
       self.precisionFactor = 1
 
