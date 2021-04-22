@@ -41,7 +41,7 @@ The below instructions show some python commands that assume you are using the b
   - Note you can still make changes to the vault after setting governance up until governance is accepted
 
    ```python
-   vault.setManagementFee(0)
+   vault.setGovernance(ychad.eth)
    ```
 
 
