@@ -32,6 +32,15 @@ def test_deposit_with_wrong_amount(vault, token, gov):
         vault.deposit(balance, {"from": gov})
 
 
+def test_deposit_with_wrong_recipient(vault, token, gov):
+    balance = token.balanceOf(gov)
+    token.approve(vault, 2 ** 256 - 1, {"from": gov})
+    with brownie.reverts():
+        vault.deposit(
+            balance, "0x0000000000000000000000000000000000000000", {"from": gov}
+        )
+
+
 def test_deposit_with_guest_list(vault, guest_list, token, gov, rando, history):
     # Make sure we're attempting to deposit something
     token.transfer(rando, token.balanceOf(gov) // 2, {"from": gov})
