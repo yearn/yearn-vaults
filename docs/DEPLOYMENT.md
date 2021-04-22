@@ -37,7 +37,7 @@ The below instructions show some python commands that assume you are using the b
    vault.setManagementFee(0)
    ```
 
-1. (Optional) Set governance to ychad.eth (0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52) if vault is planned to be endorsed soon:
+1. (Optional) Set governance to ychad.eth (`0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52`) if vault is planned to be endorsed soon:
   - Note you can still make changes to the vault after setting governance up until governance is accepted
 
    ```python
