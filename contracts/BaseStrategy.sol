@@ -758,9 +758,9 @@ abstract contract BaseStrategy {
      * Do anything necessary to prepare this Strategy for migration, such as
      * transferring any reserve or LP tokens, CDPs, or other tokens or stores of
      * value. This function may be used as an escape hatch from broken code in
-     * either the strategy or underlying protocol, and therefore should avoid any
-     * non-critical logic (e.g. claiming rewards) to avoid a scenario where a revert
-     * blocks ability to migrate.
+     * either the strategy or underlying protocol, and therefore should avoid 
+     * any non-critical logic (e.g. claiming rewards) to prevent a scenario 
+     * where a revert blocks our ability to successfully migrate.
      */
     function prepareMigration(address _newStrategy) internal virtual;
 
