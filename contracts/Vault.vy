@@ -283,9 +283,11 @@ def initialize(
         self.symbol = concat("yv", DetailedERC20(token).symbol())
     else:
         self.symbol = symbolOverride
-    self.decimals = DetailedERC20(token).decimals()
-    if self.decimals < 18:
-      self.precisionFactor = 10 ** (18 - self.decimals)
+    decimals: uint256 = DetailedERC20(token).decimals()
+    self.decimals = decimals
+    assert decimals < 256 # dev: see VVE-2020-0001
+    if decimals < 18:
+      self.precisionFactor = 10 ** (18 - decimals)
     else:
       self.precisionFactor = 1
 
@@ -440,6 +442,7 @@ def setRewards(rewards: address):
     @param rewards The address to use for collecting rewards.
     """
     assert msg.sender == self.governance
+    assert not (rewards in [self, ZERO_ADDRESS])
     self.rewards = rewards
     log UpdateRewards(rewards)
 
@@ -624,7 +627,7 @@ def _transfer(sender: address, receiver: address, amount: uint256):
     # See note on `transfer()`.
 
     # Protect people from accidentally sending their shares to bad places
-    assert not (receiver in [self, ZERO_ADDRESS])
+    assert receiver not in [self, ZERO_ADDRESS]
     self.balanceOf[sender] -= amount
     self.balanceOf[receiver] += amount
     log Transfer(sender, receiver, amount)
@@ -804,6 +807,7 @@ def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
     else:
         # No existing shares, so mint 1:1
         shares = amount
+    assert shares != 0 # dev: division rounding resulted in zero
 
     # Mint new shares
     self.totalSupply = totalSupply + shares
@@ -848,6 +852,7 @@ def deposit(_amount: uint256 = MAX_UINT256, recipient: address = msg.sender) -> 
     @return The issued Vault shares.
     """
     assert not self.emergencyShutdown  # Deposits are locked out
+    assert recipient not in [self, ZERO_ADDRESS]
 
     amount: uint256 = _amount
 
