@@ -145,22 +145,22 @@ The primary goal of the team implementing these guidelines is to minimized as mu
 
 This checklist should be complemented with the [steps](#emergency-steps)
 
-- War room with audio created
-- Key roles are covered in the War Room
-- Strategist or expert related to issue is available or a backup instead
-- Is Multi sig queue clear or actions started to clear it
-- Issue has been confirmed and identified
-- Immediate corrective/preventive actions are put in place and risk of loss of funds prevented
-- Communications of current situation
-- Research causes
-- Brainstorm solutions
-- Implement and validate solutions
-- Prioritize solutions
-- Team Quorum on solution reached
-- Coordination and Execution of solution
-- Monitoring and incident resolution confirmed
-- Assign Disclosure Task and Owner to collect events and timelines
-- Disband War Room
+- [ ] War room with audio created
+- [ ] Key roles are covered in the War Room
+- [ ] Strategist or expert related to issue is available or a backup instead
+- [ ] Is Multi sig queue clear or actions started to clear it
+- [ ] Issue has been confirmed and identified
+- [ ] Immediate corrective/preventive actions are put in place and risk of loss of funds prevented
+- [ ] Communications of current situation
+- [ ] Research causes
+- [ ] Brainstorm solutions
+- [ ] Implement and validate solutions
+- [ ] Prioritize solutions
+- [ ] Team Quorum on solution reached
+- [ ] Coordination and Execution of solution
+- [ ] Monitoring and incident resolution confirmed
+- [ ] Assign Disclosure Task and Owner to collect events and timelines
+- [ ] Disband War Room
 
 ### Tools
 
