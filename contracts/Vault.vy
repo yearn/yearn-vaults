@@ -1374,6 +1374,8 @@ def revokeStrategy(strategy: address = msg.sender):
     @param strategy The Strategy to revoke.
     """
     assert msg.sender in [strategy, self.governance, self.guardian]
+    assert self.strategies[strategy].debtRatio != 0 # dev: already zero
+
     self._revokeStrategy(strategy)
 
 

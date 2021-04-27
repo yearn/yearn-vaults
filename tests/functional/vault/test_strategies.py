@@ -285,6 +285,13 @@ def test_revokeStrategy(chain, gov, vault, strategy, rando):
         vault.revokeStrategy(strategy, {"from": rando})
 
     vault.revokeStrategy(strategy, {"from": gov})
+    # do not revoke twice
+    with brownie.reverts():
+        vault.revokeStrategy(strategy, {"from": gov})
+    # do not revoke not existing strategy
+    with brownie.reverts():
+        vault.revokeStrategy(ZERO_ADDRESS, {"from": gov})
+
     assert vault.strategies(strategy).dict() == {
         "performanceFee": 1000,
         "activation": activation_timestamp,
