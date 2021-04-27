@@ -345,6 +345,11 @@ def test_ordering(gov, vault, TestStrategy, rando):
         strategies + [ZERO_ADDRESS] * (20 - len(strategies)),
         {"from": gov},
     )
+    # can't use the same strategy twice
+    with brownie.reverts():
+        vault.setWithdrawalQueue(
+            [strategies[0], strategies[0]] + [ZERO_ADDRESS] * 18, {"from": rando},
+        )
 
     for idx, strategy in enumerate(strategies):
         assert vault.withdrawalQueue(idx) == strategy
