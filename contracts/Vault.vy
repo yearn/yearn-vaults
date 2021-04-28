@@ -1019,6 +1019,11 @@ def withdraw(
         entitled to, if the Vault's estimated value were otherwise measured
         through external means, accounting for whatever exceptional scenarios
         exist for the Vault (that aren't covered by the Vault's own design.)
+
+        In the situation where a large withdrawal happens, it can empty the 
+        vault balance and the strategies in the withdrawal queue. 
+        Strategies not in the withdrawal queue will have to be harvested to 
+        rebalance the funds and make the funds available again to withdraw.
     @param maxShares
         How many shares to try and redeem for tokens, defaults to all.
     @param recipient
