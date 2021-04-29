@@ -86,7 +86,16 @@ def test_vault_reinitialization(guardian, gov, rewards, token, Vault):
     ],
 )
 def test_vault_setParams(
-    chain, gov, guardian, management, vault, rando, getter, setter, val, guard_allowed,
+    chain,
+    gov,
+    guardian,
+    management,
+    vault,
+    rando,
+    getter,
+    setter,
+    val,
+    guard_allowed,
 ):
     if val is None:
         # Can't access fixtures, so use None to mean any random address
