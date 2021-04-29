@@ -842,6 +842,7 @@ abstract contract BaseStrategy {
 }
 
 abstract contract BaseStrategyInitializable is BaseStrategy {
+    bool public isOriginal = true;
     event Cloned(address indexed clone);
 
     constructor(address _vault) BaseStrategy(_vault) {}
@@ -856,6 +857,7 @@ abstract contract BaseStrategyInitializable is BaseStrategy {
     }
 
     function clone(address _vault) external returns (address) {
+        require(isOriginal, "!clone");
         return this.clone(_vault, msg.sender, msg.sender, msg.sender);
     }
 
