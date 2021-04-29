@@ -560,8 +560,9 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
         for j in range(MAXIMUM_STRATEGIES):
             if queue[j] == ZERO_ADDRESS:
                 break
-            if queue[i] == queue[j] and i != j:
-                raise "duplicates in queue"
+            if i == j:
+                continue
+            assert queue[i] != queue[j]:
 
         self.withdrawalQueue[i] = queue[i]
     log UpdateWithdrawalQueue(queue)
