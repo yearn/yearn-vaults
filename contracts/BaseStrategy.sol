@@ -271,6 +271,14 @@ abstract contract BaseStrategy {
         _;
     }
 
+    modifier onlyEmergencyAuthorized() {
+        require(
+            msg.sender == strategist || msg.sender == governance() || msg.sender == vault.guardian() || msg.sender == vault.management(),
+            "!authorized"
+        );
+        _;
+    }
+
     modifier onlyStrategist() {
         require(msg.sender == strategist, "!strategist");
         _;
@@ -787,7 +795,7 @@ abstract contract BaseStrategy {
      * @dev
      *  See `vault.setEmergencyShutdown()` and `harvest()` for further details.
      */
-    function setEmergencyExit() external onlyAuthorized {
+    function setEmergencyExit() external onlyEmergencyAuthorized {
         emergencyExit = true;
         vault.revokeStrategy();
 
