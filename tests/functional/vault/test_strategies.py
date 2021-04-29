@@ -288,7 +288,7 @@ def test_revokeStrategy(chain, gov, vault, strategy, rando):
     # do not revoke twice
     with brownie.reverts():
         vault.revokeStrategy(strategy, {"from": gov})
-    # do not revoke not existing strategy
+    # do not revoke non-existing strategy
     with brownie.reverts():
         vault.revokeStrategy(ZERO_ADDRESS, {"from": gov})
 
