@@ -757,13 +757,13 @@ abstract contract BaseStrategy {
      * @notice
      *  Transfers all `want` from this Strategy to `_newStrategy`.
      *
-     *  This may only be called by governance or the Vault.
+     *  This may only be called by the Vault.
      * @dev
      *  The new Strategy's Vault must be the same as this Strategy's Vault.
      * @param _newStrategy The Strategy to migrate to.
      */
     function migrate(address _newStrategy) external {
-        require(msg.sender == address(vault) || msg.sender == governance());
+        require(msg.sender == address(vault));
         require(BaseStrategy(_newStrategy).vault() == vault);
         prepareMigration(_newStrategy);
         SafeERC20.safeTransfer(want, _newStrategy, want.balanceOf(address(this)));
