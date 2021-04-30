@@ -584,12 +584,18 @@ abstract contract BaseStrategy {
      * liquidation. If there is a difference between them, `_loss` indicates whether the
      * difference is due to a realized loss, or if there is some other sitution at play
      * (e.g. locked funds) where the amount made available is less than what is needed.
-     * This function is used during emergency exit instead of `prepareReturn()` to
-     * liquidate all of the Strategy's positions back to the Vault.
      *
      * NOTE: The invariant `_liquidatedAmount + _loss <= _amountNeeded` should always be maintained
      */
     function liquidatePosition(uint256 _amountNeeded) internal virtual returns (uint256 _liquidatedAmount, uint256 _loss);
+
+    /**
+     * Liquidate everything and returns the amount that got freed.
+     * This function is used during emergency exit instead of `prepareReturn()` to
+     * liquidate all of the Strategy's positions back to the Vault.
+     */
+
+    function liquidateEverything() internal virtual returns (uint256 _amountFreed);
 
     /**
      * @notice
@@ -720,14 +726,7 @@ abstract contract BaseStrategy {
         uint256 debtPayment = 0;
         if (emergencyExit) {
             // Free up as much capital as possible
-            uint256 totalAssets = estimatedTotalAssets();
-            // NOTE: use the larger of total assets or debt outstanding to book losses properly
-            (debtPayment, loss) = liquidatePosition(totalAssets > debtOutstanding ? totalAssets : debtOutstanding);
-            // NOTE: take up any remainder here as profit
-            if (debtPayment > debtOutstanding) {
-                profit = debtPayment.sub(debtOutstanding);
-                debtPayment = debtOutstanding;
-            }
+            (profit, loss, debtPayment) = liquidateEverything(debtOutstanding);
         } else {
             // Free up returns for Vault to pull
             (profit, loss, debtPayment) = prepareReturn(debtOutstanding);
@@ -846,6 +845,25 @@ abstract contract BaseStrategy {
         for (uint256 i; i < _protectedTokens.length; i++) require(_token != _protectedTokens[i], "!protected");
 
         IERC20(_token).safeTransfer(governance(), IERC20(_token).balanceOf(address(this)));
+    }
+
+    function liquidateEverything(uint256 debtOutstanding)
+        internal
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        uint256 loss = 0;
+        uint256 profit = 0;
+        uint256 amountFreed = liquidateEverything();
+        if (amountFreed < debtOutstanding) {
+            loss = debtOutstanding.sub(amountFreed);
+        } else if (amountFreed > debtOutstanding) {
+            profit = amountFreed.sub(debtOutstanding);
+        }
+        return (profit, loss, debtOutstanding.sub(loss));
     }
 }
 
