@@ -759,7 +759,10 @@ abstract contract BaseStrategy {
      *
      *  This may only be called by the Vault.
      * @dev
-     *  The new Strategy's Vault must be the same as this Strategy's Vault.
+     * The new Strategy's Vault must be the same as this Strategy's Vault.
+     * the migration process should be carefully performed to make sure all
+     * the assets are migrated to the new address, which should have never
+     * interacted with the vault before.
      * @param _newStrategy The Strategy to migrate to.
      */
     function migrate(address _newStrategy) external {

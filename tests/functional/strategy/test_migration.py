@@ -34,8 +34,8 @@ def test_good_migration(
         == strategy_debt
     )
 
-    # Also, governance can migrate directly
-    new_strategy.migrate(strategy, {"from": gov})
+    with brownie.reverts():
+        new_strategy.migrate(strategy, {"from": gov})
 
 
 def test_bad_migration(
