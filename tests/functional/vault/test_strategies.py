@@ -68,7 +68,12 @@ def test_liquidation_after_hack(chain, gov, vault, token, TestStrategy):
 def strategy_with_wrong_vault(gov, token, vault, Vault, TestStrategy):
     otherVault = gov.deploy(Vault)
     otherVault.initialize(
-        token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov,
+        token,
+        gov,
+        gov,
+        token.symbol() + " yVault",
+        "yv" + token.symbol(),
+        gov,
     )
     assert otherVault.token() == token
     assert otherVault != vault
@@ -319,7 +324,8 @@ def test_ordering(gov, vault, TestStrategy, rando):
     # Can't add un-approved strategies
     with brownie.reverts():
         vault.setWithdrawalQueue(
-            strategies + [ZERO_ADDRESS] * (20 - len(strategies)), {"from": gov},
+            strategies + [ZERO_ADDRESS] * (20 - len(strategies)),
+            {"from": gov},
         )
 
     [vault.addStrategy(s, 100, 10, 20, 1000, {"from": gov}) for s in strategies]
@@ -332,10 +338,12 @@ def test_ordering(gov, vault, TestStrategy, rando):
     # NOTE: Not just anyone can do this
     with brownie.reverts():
         vault.setWithdrawalQueue(
-            strategies + [ZERO_ADDRESS] * (20 - len(strategies)), {"from": rando},
+            strategies + [ZERO_ADDRESS] * (20 - len(strategies)),
+            {"from": rando},
         )
     vault.setWithdrawalQueue(
-        strategies + [ZERO_ADDRESS] * (20 - len(strategies)), {"from": gov},
+        strategies + [ZERO_ADDRESS] * (20 - len(strategies)),
+        {"from": gov},
     )
 
     for idx, strategy in enumerate(strategies):
