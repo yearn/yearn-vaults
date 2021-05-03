@@ -556,7 +556,7 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
             break
         assert self.strategies[queue[i]].activation > 0
 
-        for j in range(MAXIMUM_STRATEGIES):
+        for j in range(min(i, MAXIMUM_STRATEGIES)):
             if queue[j] == ZERO_ADDRESS:
                 break
             if i == j:

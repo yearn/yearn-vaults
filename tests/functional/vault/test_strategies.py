@@ -348,7 +348,8 @@ def test_ordering(gov, vault, TestStrategy, rando):
     # can't use the same strategy twice
     with brownie.reverts():
         vault.setWithdrawalQueue(
-            [strategies[0], strategies[0]] + [ZERO_ADDRESS] * 18, {"from": rando},
+            [strategies[0], strategies[0]] + [ZERO_ADDRESS] * 18,
+            {"from": rando},
         )
 
     for idx, strategy in enumerate(strategies):
