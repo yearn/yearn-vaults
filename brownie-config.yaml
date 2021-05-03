@@ -18,7 +18,6 @@ compiler:
 reports:
   exclude_paths:
     - contracts/test/Token.sol
-    - contracts/test/TestGuestList.sol
   exclude_contracts:
     - SafeERC20
     - Address
