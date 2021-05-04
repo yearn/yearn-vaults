@@ -551,12 +551,19 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
     """
     assert msg.sender in [self.management, self.governance]
     # HACK: Temporary until Vyper adds support for Dynamic arrays
+    old_queue: address[MAXIMUM_STRATEGIES] = empty(address[MAXIMUM_STRATEGIES])
     for i in range(MAXIMUM_STRATEGIES):
-        if queue[i] == ZERO_ADDRESS and self.withdrawalQueue[i] == ZERO_ADDRESS:
+        old_queue[i] = self.withdrawalQueue[i]  # `old_queue` is defined before loop
+        if queue[i] == ZERO_ADDRESS:
+            # NOTE: Cannot use this method to remove entries from the queue
+            assert old_queue[i] == ZERO_ADDRESS
             break
+        # NOTE: Cannot use this method to add more entries to the queue
+        assert old_queue[i] != ZERO_ADDRESS
+
         assert self.strategies[queue[i]].activation > 0
 
-        for j in range(min(i, MAXIMUM_STRATEGIES)):
+        for j in range(MAXIMUM_STRATEGIES):
             if queue[j] == ZERO_ADDRESS:
                 break
             if i == j:
