@@ -797,7 +797,7 @@ def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
     # calculation will be wrong. This means that only *trusted* tokens
     # (with no capability for exploitative behavior) can be used.
     shares: uint256 = 0
-    # HACK: Saves 2 SLOADs (~4000 gas)
+    # HACK: Saves 2 SLOADs (~200 gas, post-Berlin)
     totalSupply: uint256 = self.totalSupply
     if totalSupply > 0:
         # Mint amount of shares based on what the Vault is managing overall
