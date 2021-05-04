@@ -263,7 +263,7 @@ def initialize(
         If `nameOverride` is not specified, the name will be 'yearn'
         combined with the name of `token`.
 
-        If `symbolOverride` is not specified, the symbol will be 'y'
+        If `symbolOverride` is not specified, the symbol will be 'yv'
         combined with the symbol of `token`.
     @param token The token that may be deposited into this Vault.
     @param governance The address authorized for governance interactions.
