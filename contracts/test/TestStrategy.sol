@@ -126,7 +126,7 @@ contract TestStrategy is BaseStrategyInitializable {
         return protected;
     }
 
-    function liquidateEverything() internal override returns (uint256 amountFreed) {
+    function liquidateAllPositions() internal override returns (uint256 amountFreed) {
         uint256 totalAssets = want.balanceOf(address(this));
         amountFreed = totalAssets;
     }

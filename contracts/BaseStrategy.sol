@@ -595,7 +595,7 @@ abstract contract BaseStrategy {
      * liquidate all of the Strategy's positions back to the Vault.
      */
 
-    function liquidateEverything() internal virtual returns (uint256 _amountFreed);
+    function liquidateAllPositions() internal virtual returns (uint256 _amountFreed);
 
     /**
      * @notice
@@ -726,7 +726,13 @@ abstract contract BaseStrategy {
         uint256 debtPayment = 0;
         if (emergencyExit) {
             // Free up as much capital as possible
-            (profit, loss, debtPayment) = liquidateEverything(debtOutstanding);
+            uint256 amountFreed = liquidateAllPositions();
+            if (amountFreed < debtOutstanding) {
+                loss = debtOutstanding.sub(amountFreed);
+            } else if (amountFreed > debtOutstanding) {
+                profit = amountFreed.sub(debtOutstanding);
+            }
+            debtPayment = debtOutstanding.sub(loss);
         } else {
             // Free up returns for Vault to pull
             (profit, loss, debtPayment) = prepareReturn(debtOutstanding);
@@ -845,25 +851,6 @@ abstract contract BaseStrategy {
         for (uint256 i; i < _protectedTokens.length; i++) require(_token != _protectedTokens[i], "!protected");
 
         IERC20(_token).safeTransfer(governance(), IERC20(_token).balanceOf(address(this)));
-    }
-
-    function liquidateEverything(uint256 debtOutstanding)
-        internal
-        returns (
-            uint256,
-            uint256,
-            uint256
-        )
-    {
-        uint256 loss = 0;
-        uint256 profit = 0;
-        uint256 amountFreed = liquidateEverything();
-        if (amountFreed < debtOutstanding) {
-            loss = debtOutstanding.sub(amountFreed);
-        } else if (amountFreed > debtOutstanding) {
-            profit = amountFreed.sub(debtOutstanding);
-        }
-        return (profit, loss, debtOutstanding.sub(loss));
     }
 }
 
