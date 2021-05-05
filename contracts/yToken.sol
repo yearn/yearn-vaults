@@ -3,6 +3,7 @@ pragma solidity 0.8.3;
 
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {VaultAPI, BaseWrapper} from "./BaseWrapper.sol";
 
@@ -12,18 +13,15 @@ contract yToken is IERC20, BaseWrapper {
     constructor(address _token, address _registry) BaseWrapper(_token, _registry) {}
 
     function name() external view returns (string memory) {
-        VaultAPI _bestVault = bestVault();
-        return _bestVault.name();
+        return "Yearn " + IERC20Metadata(address(token)).name();
     }
 
     function symbol() external view returns (string memory) {
-        VaultAPI _bestVault = bestVault();
-        return _bestVault.symbol();
+        return "y" + IERC20Metadata(address(token)).symbol();
     }
 
     function decimals() external view returns (uint256) {
-        VaultAPI _bestVault = bestVault();
-        return _bestVault.decimals();
+        IERC20Metadata(address(token)).decimals();
     }
 
     function totalSupply() external override view returns (uint256 total) {
