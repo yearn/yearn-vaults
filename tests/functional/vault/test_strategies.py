@@ -345,6 +345,31 @@ def test_ordering(gov, vault, TestStrategy, rando):
         strategies + [ZERO_ADDRESS] * (20 - len(strategies)),
         {"from": gov},
     )
+
+    other_strat = gov.deploy(TestStrategy, vault)
+
+    # Do not add a strategy
+    with brownie.reverts():
+        vault.setWithdrawalQueue(
+            strategies + [other_strat] * (20 - len(strategies)),
+            {"from": gov},
+        )
+
+    # Do not remove strategies
+    with brownie.reverts():
+        vault.setWithdrawalQueue(
+            strategies[0:-2] + [ZERO_ADDRESS] * (20 - len(strategies[0:-2])),
+            {"from": gov},
+        )
+
+    other_strategy_list = strategies.copy()
+    other_strategy_list[0] = other_strat
+    with brownie.reverts():
+        vault.setWithdrawalQueue(
+            other_strategy_list + [ZERO_ADDRESS] * (20 - len(other_strategy_list)),
+            {"from": gov},
+        )
+
     # can't use the same strategy twice
     with brownie.reverts():
         vault.setWithdrawalQueue(
