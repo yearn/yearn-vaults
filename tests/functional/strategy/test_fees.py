@@ -4,7 +4,7 @@ import brownie
 FEE_MAX = 10_000
 
 
-def test_performance_fees(gov, vault, token, TestStrategy, rewards, strategist):
+def test_performance_fees(gov, vault, token, TestStrategy, rewards, strategist, chain):
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(450, {"from": gov})
 
@@ -15,13 +15,14 @@ def test_performance_fees(gov, vault, token, TestStrategy, rewards, strategist):
     assert vault.balanceOf(strategy) == 0
 
     token.transfer(strategy, 10 ** token.decimals(), {"from": gov})
+    chain.sleep(1)
     strategy.harvest({"from": strategist})
 
     assert vault.balanceOf(rewards) == 0.045 * 10 ** token.decimals()
     assert vault.balanceOf(strategy) == 0.005 * 10 ** token.decimals()
 
 
-def test_zero_fees(gov, vault, token, TestStrategy, rewards, strategist):
+def test_zero_fees(gov, vault, token, TestStrategy, rewards, strategist, chain):
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
 
@@ -32,6 +33,7 @@ def test_zero_fees(gov, vault, token, TestStrategy, rewards, strategist):
     assert vault.balanceOf(strategy) == 0
 
     token.transfer(strategy, 10 ** token.decimals(), {"from": gov})
+    chain.sleep(1)
     strategy.harvest({"from": strategist})
 
     assert vault.managementFee() == 0
@@ -69,6 +71,7 @@ def test_max_fees(gov, vault, token, TestStrategy, rewards, strategist):
 
 def test_delegated_fees(chain, rewards, vault, strategy, gov, token):
     # Make sure funds are in the strategy
+    chain.sleep(1)
     strategy.harvest()
     assert strategy.estimatedTotalAssets() > 0
 
@@ -96,6 +99,7 @@ def test_delegated_fees(chain, rewards, vault, strategy, gov, token):
 
 
 def test_gain_less_than_fees(chain, rewards, vault, strategy, gov, token):
+    chain.sleep(1)
     # Make sure funds are in the strategy
     strategy.harvest()
     assert strategy.estimatedTotalAssets() > 0
