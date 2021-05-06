@@ -362,6 +362,7 @@ def test_ordering(gov, vault, TestStrategy, rando):
             {"from": gov},
         )
 
+    # Do not add new strategies
     other_strategy_list = strategies.copy()
     other_strategy_list[0] = other_strat
     with brownie.reverts():
