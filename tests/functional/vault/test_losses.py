@@ -27,6 +27,7 @@ def test_losses(chain, vault, strategy, gov, token):
     vault.deposit(5000, {"from": gov})
 
     chain.sleep(DAY // 10)
+    chain.sleep(1)
     strategy.harvest({"from": gov})
     assert token.balanceOf(strategy) == 500
 
@@ -34,6 +35,7 @@ def test_losses(chain, vault, strategy, gov, token):
     chain.sleep(DAY // 10)
     strategy._takeFunds(100, {"from": gov})
     vault.deposit(100, {"from": gov})  # NOTE: total assets doesn't change
+    chain.sleep(1)
     strategy.harvest({"from": gov})
     params = vault.strategies(strategy).dict()
     assert params["totalLoss"] == 100
@@ -43,6 +45,7 @@ def test_losses(chain, vault, strategy, gov, token):
     chain.sleep(DAY // 10)
     strategy._takeFunds(300, {"from": gov})
     vault.deposit(300, {"from": gov})  # NOTE: total assets doesn't change
+    chain.sleep(1)
     strategy.harvest({"from": gov})
     params = vault.strategies(strategy).dict()
     assert params["totalLoss"] == 400
@@ -54,6 +57,7 @@ def test_losses(chain, vault, strategy, gov, token):
     strategy._takeFunds(100, {"from": gov})
     vault.deposit(100, {"from": gov})  # NOTE: total assets doesn't change
     assert token.balanceOf(strategy) == 0
+    chain.sleep(1)
     strategy.harvest({"from": gov})
     params = vault.strategies(strategy).dict()
     assert params["totalLoss"] == 500

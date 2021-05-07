@@ -233,14 +233,16 @@ def test_deposit_withdraw_faillure(token, gov, vault):
         vault.withdraw(vault.balanceOf(gov), {"from": gov})
 
 
-def test_report_loss(token, gov, vault, strategy, accounts):
+def test_report_loss(chain, token, gov, vault, strategy, accounts):
     token.approve(vault, MAX_UINT256, {"from": gov})
     vault.deposit({"from": gov})
+    chain.sleep(1)
     strategy.harvest()
     strategy._takeFunds(token.balanceOf(strategy), {"from": gov})
     assert token.balanceOf(strategy) == 0
 
     # Make sure we do not send more funds to the strategy.
+    chain.sleep(1)
     strategy.harvest()
     assert token.balanceOf(strategy) == 0
 
@@ -265,6 +267,7 @@ def test_sandwich_attack(
     vault.addStrategy(strategy, 4_000, 0, MAX_UINT256, 0, {"from": gov})
     vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
 
+    chain.sleep(1)
     strategy.harvest({"from": strategist})
     # strategy is returning 0.02%. Equivalent to 35.6% a year at 5 harvests a day
     profit_to_be_returned = token.balanceOf(strategy) / 5000
@@ -280,6 +283,7 @@ def test_sandwich_attack(
     vault.deposit(attack_amount, {"from": attacker})
 
     # harvest happens
+    chain.sleep(1)
     strategy.harvest({"from": strategist})
 
     chain.sleep(1)
