@@ -14,6 +14,7 @@ def test_emergency_shutdown(token, gov, vault, strategy, keeper, chain):
         {"from": gov},
     )
     # Do it once to seed it with debt
+    chain.sleep(1)
     strategy.harvest({"from": keeper})
     add_yield = lambda: token.transfer(
         strategy, token.balanceOf(strategy) // 50, {"from": gov}
@@ -30,6 +31,7 @@ def test_emergency_shutdown(token, gov, vault, strategy, keeper, chain):
     while not debt_limit_hit():
         chain.sleep(DAY)
         add_yield()
+        chain.sleep(1)
         strategy.harvest({"from": keeper})
 
     # Call for a shutdown
@@ -52,6 +54,7 @@ def test_emergency_shutdown(token, gov, vault, strategy, keeper, chain):
 
     # Do it once more, for good luck (and also coverage)
     token.transfer(strategy, token.balanceOf(gov), {"from": gov})
+    chain.sleep(1)
     strategy.harvest({"from": keeper})
 
     # Vault didn't lose anything during shutdown
@@ -72,6 +75,7 @@ def test_emergency_exit(token, gov, vault, strategy, keeper, chain, withSurplus)
     )
 
     # Do it once to seed it with debt
+    chain.sleep(1)
     strategy.harvest({"from": keeper})
     add_yield = lambda: token.transfer(
         strategy, token.balanceOf(strategy) // 50, {"from": gov}
@@ -88,6 +92,7 @@ def test_emergency_exit(token, gov, vault, strategy, keeper, chain, withSurplus)
     while not debt_limit_hit():
         chain.sleep(DAY)
         add_yield()
+        chain.sleep(1)
         strategy.harvest({"from": keeper})
 
     if withSurplus:
