@@ -566,11 +566,14 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
 
         existsInOldQueue: bool = False
         for j in range(MAXIMUM_STRATEGIES):
+            if queue[j] == ZERO_ADDRESS:
+                existsInOldQueue = True
+                break
             if queue[i] == old_queue[j]:
                 # NOTE: Ensure that every entry in queue prior to reordering exists now
                 existsInOldQueue = True
 
-            if j < i:
+            if j <= i:
                 # NOTE: This will only check for duplicate entries in queue after `i`
                 continue
             assert queue[i] != queue[j]  # dev: do not add duplicate strategies
