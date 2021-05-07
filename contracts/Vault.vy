@@ -1552,11 +1552,14 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
     # NOTE: In effect, this reduces overall share price by the combined fee
     # NOTE: may throw if Vault.totalAssets() > 1e64, or not called for more than a year
     precisionFactor: uint256 = self.precisionFactor
+    duration: uint256 = block.timestamp - self.strategies[strategy].lastReport
+    assert duration != 0 # can't assessFees twice within the same block
+
     management_fee: uint256 = (
         precisionFactor *
         (
             (self.strategies[strategy].totalDebt - Strategy(strategy).delegatedAssets())
-            * (block.timestamp - self.strategies[strategy].lastReport)
+            * duration 
             * self.managementFee
         )
         / MAX_BPS
