@@ -1,7 +1,7 @@
 import brownie
 
 
-def test_multiple_withdrawals(token, gov, Vault, TestStrategy):
+def test_multiple_withdrawals(token, gov, Vault, TestStrategy, chain):
     # Need a fresh vault to do this math right
     vault = Vault.deploy({"from": gov})
     vault.initialize(
@@ -31,6 +31,7 @@ def test_multiple_withdrawals(token, gov, Vault, TestStrategy):
         )
         for s in strategies
     ]
+    chain.sleep(1)
 
     [s.harvest({"from": gov}) for s in strategies]  # Seed all the strategies with debt
 
@@ -76,6 +77,7 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
     # Withdrawal should fail, no matter the distribution of tokens between
     # the vault and the strategies
     while vault.totalDebt() < vault.totalAssets():
+        chain.sleep(1)
         [s.harvest({"from": gov}) for s in strategies]
         with brownie.reverts():
             vault.withdraw(5000, {"from": rando})
@@ -202,6 +204,7 @@ def test_withdrawal_with_empty_queue(
     token.transferFrom(gov, guardian, token.balanceOf(gov), {"from": gov})
 
     chain.sleep(8640)
+    chain.sleep(1)
     strategy.harvest({"from": gov})
     assert token.balanceOf(vault) < vault.totalAssets()
 
@@ -257,6 +260,7 @@ def test_withdrawal_with_reentrancy(
 
     # move funds into strategy
     chain.sleep(1)  # Needs to be a second ahead, at least
+    chain.sleep(1)
     strategy.harvest({"from": gov})
 
     # To simulate reentrancy we need strategy to have some balance
@@ -281,6 +285,7 @@ def test_user_withdraw(chain, gov, token, vault, strategy, rando):
     deposit = vault.totalAssets()
     pricePerShareBefore = vault.pricePerShare()
     token.transfer(strategy, vault.totalAssets(), {"from": gov})  # seed some profit
+    chain.sleep(1)
     strategy.harvest({"from": gov})
 
     chain.sleep(1)
@@ -303,6 +308,7 @@ def test_profit_degration(chain, gov, token, vault, strategy, rando):
 
     deposit = vault.totalAssets()
     token.transfer(strategy, deposit, {"from": gov})  # seed some profit
+    chain.sleep(1)
     strategy.harvest({"from": gov})
 
     vault.withdraw({"from": gov})
@@ -339,6 +345,7 @@ def test_withdraw_partial_delegate_assets(chain, gov, token, vault, strategy, ra
     deposit = vault.totalAssets()
     pricePerShareBefore = vault.pricePerShare()
     token.transfer(strategy, vault.totalAssets(), {"from": gov})  # seed some profit
+    chain.sleep(1)
     strategy.harvest({"from": gov})
 
     chain.sleep(1)

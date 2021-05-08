@@ -10,15 +10,6 @@ def test_config(gov, token, vault, registry, ytoken):
     assert registry.numVaults(token) == 0
 
     with brownie.reverts():
-        assert ytoken.name()
-
-    with brownie.reverts():
-        assert ytoken.symbol()
-
-    with brownie.reverts():
-        assert ytoken.decimals()
-
-    with brownie.reverts():
         ytoken.bestVault()
 
     # This won't revert though, there's no Vaults yet
@@ -28,9 +19,9 @@ def test_config(gov, token, vault, registry, ytoken):
     registry.newRelease(vault, {"from": gov})
     registry.endorseVault(vault, {"from": gov})
     assert ytoken.bestVault() == vault
-    assert ytoken.name() == vault.name()
-    assert ytoken.symbol() == vault.symbol()
-    assert ytoken.decimals() == vault.decimals()
+    assert ytoken.name() == "Yearn " + token.name()
+    assert ytoken.symbol() == "y" + token.symbol()
+    assert ytoken.decimals() == token.decimals()
     assert ytoken.allVaults() == [vault]
 
 
