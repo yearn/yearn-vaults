@@ -550,11 +550,36 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
         order sensitive.
     """
     assert msg.sender in [self.management, self.governance]
+
     # HACK: Temporary until Vyper adds support for Dynamic arrays
+    old_queue: address[MAXIMUM_STRATEGIES] = empty(address[MAXIMUM_STRATEGIES])
     for i in range(MAXIMUM_STRATEGIES):
-        if queue[i] == ZERO_ADDRESS and self.withdrawalQueue[i] == ZERO_ADDRESS:
+        old_queue[i] = self.withdrawalQueue[i] 
+        if queue[i] == ZERO_ADDRESS:
+            # NOTE: Cannot use this method to remove entries from the queue
+            assert old_queue[i] == ZERO_ADDRESS
             break
+        # NOTE: Cannot use this method to add more entries to the queue
+        assert old_queue[i] != ZERO_ADDRESS
+
         assert self.strategies[queue[i]].activation > 0
+
+        existsInOldQueue: bool = False
+        for j in range(MAXIMUM_STRATEGIES):
+            if queue[j] == ZERO_ADDRESS:
+                existsInOldQueue = True
+                break
+            if queue[i] == old_queue[j]:
+                # NOTE: Ensure that every entry in queue prior to reordering exists now
+                existsInOldQueue = True
+
+            if j <= i:
+                # NOTE: This will only check for duplicate entries in queue after `i`
+                continue
+            assert queue[i] != queue[j]  # dev: do not add duplicate strategies
+
+        assert existsInOldQueue # dev: do not add new strategies
+
         self.withdrawalQueue[i] = queue[i]
     log UpdateWithdrawalQueue(queue)
 
