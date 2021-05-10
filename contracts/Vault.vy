@@ -1698,14 +1698,14 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     debt: uint256 = self._debtOutstanding(msg.sender)
     debtPayment: uint256 = min(_debtPayment, debt)
 
+    # Compute the line of credit the Vault is able to offer the Strategy (if any)
+    credit: uint256 = self._creditAvailable(msg.sender)
+
     if debtPayment > 0:
         self.strategies[msg.sender].totalDebt -= debtPayment
         self.totalDebt -= debtPayment
         debt -= debtPayment
         # NOTE: `debt` is being tracked for later
-
-    # Compute the line of credit the Vault is able to offer the Strategy (if any)
-    credit: uint256 = self._creditAvailable(msg.sender)
 
     # Update the actual debt based on the full credit we are extending to the Strategy
     # or the returns if we are taking funds back
