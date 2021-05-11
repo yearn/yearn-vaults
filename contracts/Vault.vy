@@ -1690,6 +1690,9 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     # Returns are always "realized gains"
     self.strategies[msg.sender].totalGain += gain
 
+    # Compute the line of credit the Vault is able to offer the Strategy (if any)
+    credit: uint256 = self._creditAvailable(msg.sender)
+
     # Outstanding debt the Strategy wants to take back from the Vault (if any)
     # NOTE: debtOutstanding <= StrategyParams.totalDebt
     debt: uint256 = self._debtOutstanding(msg.sender)
@@ -1700,9 +1703,6 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
         self.totalDebt -= debtPayment
         debt -= debtPayment
         # NOTE: `debt` is being tracked for later
-
-    # Compute the line of credit the Vault is able to offer the Strategy (if any)
-    credit: uint256 = self._creditAvailable(msg.sender)
 
     # Update the actual debt based on the full credit we are extending to the Strategy
     # or the returns if we are taking funds back
