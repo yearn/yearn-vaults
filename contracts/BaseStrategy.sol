@@ -543,7 +543,7 @@ abstract contract BaseStrategy {
      * This method returns any realized profits and/or realized losses
      * incurred, and should return the total amounts of profits/losses/debt
      * payments (in `want` tokens) for the Vault's accounting (e.g.
-     * `want.balanceOf(this) >= _debtPayment + _profit - _loss`).
+     * `want.balanceOf(this) >= _debtPayment + _profit`).
      *
      * `_debtOutstanding` will be 0 if the Strategy is not past the configured
      * debt limit, otherwise its value will be how far past the debt limit
