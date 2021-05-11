@@ -1672,7 +1672,9 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
         last report, and is free to be given back to Vault as earnings
     @param loss
         Amount Strategy has realized as a loss on it's investment since its
-        last report, and should be accounted for on the Vault's balance sheet
+        last report, and should be accounted for on the Vault's balance sheet.
+        The loss will reduce the debtRatio. The next time the strategy will harvest,
+        it will pay back the debt to adjust to the new adjust.
     @param _debtPayment
         Amount Strategy has made available to cover outstanding debt
     @return Amount of debt outstanding (if totalDebt > debtLimit or emergency shutdown).
