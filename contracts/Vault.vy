@@ -255,6 +255,9 @@ def initialize(
 
         If `symbolOverride` is not specified, the symbol will be 'yv'
         combined with the symbol of `token`.
+
+        The token used by the vault should not change balances outside transfers and 
+        it must transfer the exact amount requested. Fee on transfer and rebasing are not supported.
     @param token The token that may be deposited into this Vault.
     @param governance The address authorized for governance interactions.
     @param rewards The address to distribute rewards to.
