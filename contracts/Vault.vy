@@ -481,7 +481,7 @@ def setManagementFee(fee: uint256):
     @param fee The new management fee to use.
     """
     assert msg.sender == self.governance
-    assert fee <= MAX_BPS
+    assert fee <= MAX_BPS / 2
     self.managementFee = fee
     log UpdateManagementFee(fee)
 
@@ -1187,7 +1187,7 @@ def addStrategy(
     # Check strategy parameters
     assert self.debtRatio + debtRatio <= MAX_BPS
     assert minDebtPerHarvest <= maxDebtPerHarvest
-    assert performanceFee <= MAX_BPS - self.performanceFee
+    assert performanceFee <= MAX_BPS / 2 
 
     # Add strategy to approved strategies
     self.strategies[strategy] = StrategyParams({
