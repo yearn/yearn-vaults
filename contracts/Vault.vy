@@ -253,6 +253,9 @@ def initialize(
 
         If `symbolOverride` is not specified, the symbol will be 'y'
         combined with the symbol of `token`.
+
+        The token used by the vault should not change balances outside transfers and 
+        it must transfer the exact amount requested. Fee on transfer and rebasing are not supported.
     @param token The token that may be deposited into this Vault.
     @param governance The address authorized for governance interactions.
     @param rewards The address to distribute rewards to.
@@ -471,7 +474,7 @@ def setManagementFee(fee: uint256):
     @param fee The new management fee to use.
     """
     assert msg.sender == self.governance
-    assert fee <= MAX_BPS
+    assert fee <= MAX_BPS / 2
     self.managementFee = fee
     log UpdateManagementFee(fee)
 
@@ -1167,7 +1170,7 @@ def addStrategy(
     # Check strategy parameters
     assert self.debtRatio + debtRatio <= MAX_BPS
     assert minDebtPerHarvest <= maxDebtPerHarvest
-    assert performanceFee <= MAX_BPS - self.performanceFee
+    assert performanceFee <= MAX_BPS / 2 
 
     # Add strategy to approved strategies
     self.strategies[strategy] = StrategyParams({
@@ -1643,7 +1646,9 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
         last report, and is free to be given back to Vault as earnings
     @param loss
         Amount Strategy has realized as a loss on it's investment since its
-        last report, and should be accounted for on the Vault's balance sheet
+        last report, and should be accounted for on the Vault's balance sheet.
+        The loss will reduce the debtRatio. The next time the strategy will harvest,
+        it will pay back the debt in an attempt to adjust to the new debt limit.
     @param _debtPayment
         Amount Strategy has made available to cover outstanding debt
     @return Amount of debt outstanding (if totalDebt > debtLimit or emergency shutdown).
