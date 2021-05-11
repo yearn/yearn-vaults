@@ -73,7 +73,6 @@ event Approval:
 name: public(String[64])
 symbol: public(String[32])
 decimals: public(uint256)
-precisionFactor: public(uint256)
 
 balanceOf: public(HashMap[address, uint256])
 allowance: public(HashMap[address, HashMap[address, uint256]])
@@ -274,10 +273,6 @@ def initialize(
     decimals: uint256 = DetailedERC20(token).decimals()
     self.decimals = decimals
     assert decimals < 256 # dev: see VVE-2020-0001
-    if decimals < 18:
-      self.precisionFactor = 10 ** (18 - decimals)
-    else:
-      self.precisionFactor = 1
 
     self.governance = governance
     log UpdateGovernance(governance)
@@ -1562,12 +1557,10 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
     # Issue new shares to cover fees
     # NOTE: In effect, this reduces overall share price by the combined fee
     # NOTE: may throw if Vault.totalAssets() > 1e64, or not called for more than a year
-    precisionFactor: uint256 = self.precisionFactor
     duration: uint256 = block.timestamp - self.strategies[strategy].lastReport
     assert duration != 0 # can't assessFees twice within the same block
 
     management_fee: uint256 = (
-        precisionFactor *
         (
             (self.strategies[strategy].totalDebt - Strategy(strategy).delegatedAssets())
             * duration 
@@ -1575,7 +1568,6 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
         )
         / MAX_BPS
         / SECS_PER_YEAR
-        / precisionFactor
     )
 
     # Only applies in certain conditions
