@@ -75,6 +75,7 @@ def test_total_loss(chain, vault, strategy, gov, token):
     # send all our tokens back to the token contract
     token.transfer(token, token.balanceOf(strategy), {"from": strategy})
 
+    chain.sleep(1)
     strategy.harvest({"from": gov})
     params = vault.strategies(strategy)
     assert params["totalLoss"] == 5000

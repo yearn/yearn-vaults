@@ -958,10 +958,10 @@ def _reportLoss(strategy: address, loss: uint256):
     # Also, make sure we reduce our trust with the strategy by the amount of loss
     precisionFactor: uint256 = self.precisionFactor
     ratio_change: uint256 = min(
-        precisionFactor * MAX_BPS * loss / self._totalAssets() / precisionFactor,
+        # NOTE: This calculation isn't 100% precise, the adjustment is ~10%-20% more severe due to EVM math
+        precisionFactor * MAX_BPS * loss / (self.totalDebt * MAX_BPS / self.debtRatio) / precisionFactor,
         self.strategies[strategy].debtRatio,
-    )
- 
+   )
     # Finally, adjust our strategy's parameters by the loss
     self.strategies[strategy].totalLoss += loss
     self.strategies[strategy].totalDebt = totalDebt - loss
@@ -1428,10 +1428,15 @@ def removeStrategyFromQueue(strategy: address):
 @internal
 def _debtOutstanding(strategy: address) -> uint256:
     # See note on `debtOutstanding()`.
+    if self.debtRatio == 0:
+        return self.strategies[strategy].totalDebt
+    precisionFactor: uint256 = self.precisionFactor
     strategy_debtLimit: uint256 = (
-        self.strategies[strategy].debtRatio
-        * self._totalAssets()
-        / MAX_BPS
+        precisionFactor
+        * self.strategies[strategy].debtRatio
+        * self.totalDebt
+        / self.debtRatio
+        / precisionFactor
     )
     strategy_totalDebt: uint256 = self.strategies[strategy].totalDebt
 
