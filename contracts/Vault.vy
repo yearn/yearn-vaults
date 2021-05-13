@@ -222,7 +222,7 @@ totalDebt: public(uint256)  # Amount of tokens that all strategies have borrowed
 lastReport: public(uint256)  # block.timestamp of last report
 activation: public(uint256)  # block.timestamp of contract deployment
 lockedProfit: public(uint256) # how much profit is locked and cant be withdrawn
-lockedProfitDegration: public(uint256) # rate per block of degration. DEGRADATION_COEFFICIENT is 100% per block
+lockedProfitegradation: public(uint256) # rate per block of degradation. DEGRADATION_COEFFICIENT is 100% per block
 rewards: public(address)  # Rewards contract where Governance fees are sent to
 # Governance Fee for management of Vault (given to `rewards`)
 managementFee: public(uint256)
@@ -305,7 +305,7 @@ def initialize(
     log UpdateManagementFee(convert(200, uint256))
     self.lastReport = block.timestamp
     self.activation = block.timestamp
-    self.lockedProfitDegration = convert(DEGRADATION_COEFFICIENT * 46 /10 ** 6 , uint256) # 6 hours in blocks
+    self.lockedProfitDegradation = convert(DEGRADATION_COEFFICIENT * 46 /10 ** 6 , uint256) # 6 hours in blocks
     # EIP-712
     self.DOMAIN_SEPARATOR = keccak256(
         concat(
@@ -448,16 +448,16 @@ def setRewards(rewards: address):
 
 
 @external
-def setLockedProfitDegration(degration: uint256):
+def setLockedProfitDegradation(degradation: uint256):
     """
     @notice
-        Changes the locked profit degration.
-    @param degration The rate of degration in percent per second scaled to 1e18.
+        Changes the locked profit degradation.
+    @param degradation The rate of degradation in percent per second scaled to 1e18.
     """
     assert msg.sender == self.governance
-    # Since "degration" is of type uint256 it can never be less than zero
-    assert degration <= DEGRADATION_COEFFICIENT
-    self.lockedProfitDegration = degration
+    # Since "degradation" is of type uint256 it can never be less than zero
+    assert degradation <= DEGRADATION_COEFFICIENT
+    self.lockedProfitDegradation = degradation
 
 
 @external
@@ -894,7 +894,7 @@ def _shareValue(shares: uint256) -> uint256:
 
     # Determines the current value of `shares`.
         # NOTE: if sqrt(Vault.totalAssets()) >>> 1e39, this could potentially revert
-    lockedFundsRatio: uint256 = (block.timestamp - self.lastReport) * self.lockedProfitDegration
+    lockedFundsRatio: uint256 = (block.timestamp - self.lastReport) * self.lockedProfitDegradation
     freeFunds: uint256 = self._totalAssets()
     precisionFactor: uint256 = self.precisionFactor
     if(lockedFundsRatio < DEGRADATION_COEFFICIENT):
