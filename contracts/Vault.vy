@@ -960,7 +960,7 @@ def _reportLoss(strategy: address, loss: uint256):
     if self.debtRatio != 0: # if vault with single strategy that is set to EmergencyOne
         ratio_change = min(
             # NOTE: This calculation isn't 100% precise, the adjustment is ~10%-20% more severe due to EVM math
-            MAX_BPS * loss / (self.totalDebt * MAX_BPS / self.debtRatio),
+            loss * self.debtRatio / self.totalDebt,
             self.strategies[strategy].debtRatio,
     )
     # Finally, adjust our strategy's parameters by the loss
