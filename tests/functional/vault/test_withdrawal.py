@@ -294,7 +294,7 @@ def test_user_withdraw(chain, gov, token, vault, strategy, rando):
     vault.setPerformanceFee(0, {"from": gov})
     vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
 
-    vault.setLockedProfitDegration(
+    vault.setLockedProfitDegradation(
         1e18, {"from": gov}
     )  # Set profit degradation to 1 sec.
     deposit = vault.totalAssets()
@@ -314,7 +314,7 @@ def test_user_withdraw(chain, gov, token, vault, strategy, rando):
     assert token.balanceOf(vault) == 0  # everything is withdrawn
 
 
-def test_profit_degration(chain, gov, token, vault, strategy, rando):
+def test_profit_degradation(chain, gov, token, vault, strategy, rando):
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
     vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
@@ -352,7 +352,7 @@ def test_withdraw_partial_delegate_assets(chain, gov, token, vault, strategy, ra
     vault.setPerformanceFee(0, {"from": gov})
     vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
 
-    vault.setLockedProfitDegration(
+    vault.setLockedProfitDegradation(
         1e18, {"from": gov}
     )  # Set profit degradation to 1 sec.
     deposit = vault.totalAssets()
