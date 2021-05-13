@@ -954,13 +954,19 @@ def _reportLoss(strategy: address, loss: uint256):
     # Loss can only be up the amount of debt issued to strategy
     totalDebt: uint256 = self.strategies[strategy].totalDebt
     assert totalDebt >= loss
+
+    # Also, make sure we reduce our trust with the strategy by the amount of loss
+    ratio_change: uint256 = 0
+    if self.debtRatio != 0: # if vault with single strategy that is set to EmergencyOne
+        ratio_change = min(
+            # NOTE: This calculation isn't 100% precise, the adjustment is ~10%-20% more severe due to EVM math
+            loss * self.debtRatio / self.totalDebt,
+            self.strategies[strategy].debtRatio,
+    )
+    # Finally, adjust our strategy's parameters by the loss
     self.strategies[strategy].totalLoss += loss
     self.strategies[strategy].totalDebt = totalDebt - loss
     self.totalDebt -= loss
-
-    # Also, make sure we reduce our trust with the strategy by the same amount
-    debtRatio: uint256 = self.strategies[strategy].debtRatio
-    ratio_change: uint256 = min(loss * MAX_BPS / self._totalAssets(), debtRatio)
     self.strategies[strategy].debtRatio -= ratio_change
     self.debtRatio -= ratio_change
 
@@ -1423,10 +1429,12 @@ def removeStrategyFromQueue(strategy: address):
 @internal
 def _debtOutstanding(strategy: address) -> uint256:
     # See note on `debtOutstanding()`.
+    if self.debtRatio == 0:
+        return self.strategies[strategy].totalDebt
     strategy_debtLimit: uint256 = (
         self.strategies[strategy].debtRatio
-        * self._totalAssets()
-        / MAX_BPS
+        * self.totalDebt
+        / self.debtRatio
     )
     strategy_totalDebt: uint256 = self.strategies[strategy].totalDebt
 
