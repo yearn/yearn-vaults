@@ -73,7 +73,6 @@ event Approval:
 name: public(String[64])
 symbol: public(String[32])
 decimals: public(uint256)
-precisionFactor: public(uint256)
 
 balanceOf: public(HashMap[address, uint256])
 allowance: public(HashMap[address, HashMap[address, uint256]])
@@ -277,10 +276,6 @@ def initialize(
     decimals: uint256 = DetailedERC20(token).decimals()
     self.decimals = decimals
     assert decimals < 256 # dev: see VVE-2020-0001
-    if decimals < 18:
-      self.precisionFactor = 10 ** (18 - decimals)
-    else:
-      self.precisionFactor = 1
 
     self.governance = governance
     log UpdateGovernance(governance)
@@ -802,8 +797,7 @@ def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
     if totalSupply > 0:
         # Mint amount of shares based on what the Vault is managing overall
         # NOTE: if sqrt(token.totalSupply()) > 1e39, this could potentially revert
-        precisionFactor: uint256 = self.precisionFactor
-        shares = precisionFactor * amount * totalSupply / self._totalAssets() / precisionFactor
+        shares =  amount * totalSupply / self._totalAssets()
     else:
         # No existing shares, so mint 1:1
         shares = amount
@@ -892,25 +886,21 @@ def _shareValue(shares: uint256) -> uint256:
         # NOTE: if sqrt(Vault.totalAssets()) >>> 1e39, this could potentially revert
     lockedFundsRatio: uint256 = (block.timestamp - self.lastReport) * self.lockedProfitDegration
     freeFunds: uint256 = self._totalAssets()
-    precisionFactor: uint256 = self.precisionFactor
     if(lockedFundsRatio < DEGREDATION_COEFFICIENT):
         freeFunds -= (
             self.lockedProfit
              - (
-                 precisionFactor
-                 * lockedFundsRatio
+                 lockedFundsRatio
                  * self.lockedProfit
                  / DEGREDATION_COEFFICIENT
-                 / precisionFactor
+    
              )
          )
     # NOTE: using 1e3 for extra precision here, when decimals is low
     return (
-        precisionFactor
-       * shares
+       shares
         * freeFunds
         / self.totalSupply
-        / precisionFactor
     )
 
 
@@ -921,13 +911,10 @@ def _sharesForAmount(amount: uint256) -> uint256:
     # See dev note on `deposit`.
     if self._totalAssets() > 0:
         # NOTE: if sqrt(token.totalSupply()) > 1e37, this could potentially revert
-        precisionFactor: uint256 = self.precisionFactor
         return  (
-            precisionFactor
-            * amount
+            amount
             * self.totalSupply
             / self._totalAssets()
-            / precisionFactor
         )
     else:
         return 0
@@ -973,8 +960,7 @@ def _reportLoss(strategy: address, loss: uint256):
 
     # Also, make sure we reduce our trust with the strategy by the same amount
     debtRatio: uint256 = self.strategies[strategy].debtRatio
-    precisionFactor: uint256 = self.precisionFactor
-    ratio_change: uint256 = min(precisionFactor * loss * MAX_BPS / self._totalAssets() / precisionFactor, debtRatio)
+    ratio_change: uint256 = min(loss * MAX_BPS / self._totalAssets(), debtRatio)
     self.strategies[strategy].debtRatio -= ratio_change
     self.debtRatio -= ratio_change
 
@@ -1102,8 +1088,7 @@ def withdraw(
 
     # NOTE: This loss protection is put in place to revert if losses from
     #       withdrawing are more than what is considered acceptable.
-    precisionFactor: uint256 = self.precisionFactor
-    assert totalLoss <= precisionFactor * maxLoss * (value + totalLoss) / MAX_BPS / precisionFactor
+    assert totalLoss <= maxLoss * (value + totalLoss) / MAX_BPS 
 
     # Burn shares (full value of what is being withdrawn)
     self.totalSupply -= shares
@@ -1438,13 +1423,10 @@ def removeStrategyFromQueue(strategy: address):
 @internal
 def _debtOutstanding(strategy: address) -> uint256:
     # See note on `debtOutstanding()`.
-    precisionFactor: uint256 = self.precisionFactor
     strategy_debtLimit: uint256 = (
-        precisionFactor
-        * self.strategies[strategy].debtRatio
+        self.strategies[strategy].debtRatio
         * self._totalAssets()
         / MAX_BPS
-        / precisionFactor
     )
     strategy_totalDebt: uint256 = self.strategies[strategy].totalDebt
 
@@ -1475,11 +1457,10 @@ def _creditAvailable(strategy: address) -> uint256:
     # See note on `creditAvailable()`.
     if self.emergencyShutdown:
         return 0
-    precisionFactor: uint256 = self.precisionFactor
     vault_totalAssets: uint256 = self._totalAssets()
-    vault_debtLimit: uint256 = precisionFactor * self.debtRatio * vault_totalAssets / MAX_BPS / precisionFactor
+    vault_debtLimit: uint256 =  self.debtRatio * vault_totalAssets / MAX_BPS 
     vault_totalDebt: uint256 = self.totalDebt
-    strategy_debtLimit: uint256 = precisionFactor * self.strategies[strategy].debtRatio * vault_totalAssets / MAX_BPS / precisionFactor
+    strategy_debtLimit: uint256 = self.strategies[strategy].debtRatio * vault_totalAssets / MAX_BPS
     strategy_totalDebt: uint256 = self.strategies[strategy].totalDebt
     strategy_minDebtPerHarvest: uint256 = self.strategies[strategy].minDebtPerHarvest
     strategy_maxDebtPerHarvest: uint256 = self.strategies[strategy].maxDebtPerHarvest
@@ -1540,13 +1521,10 @@ def _expectedReturn(strategy: address) -> uint256:
     if timeSinceLastHarvest > 0 and totalHarvestTime > 0 and Strategy(strategy).isActive():
         # NOTE: Unlikely to throw unless strategy accumalates >1e68 returns
         # NOTE: Calculate average over period of time where harvests have occured in the past
-        precisionFactor: uint256 = self.precisionFactor
         return (
-            precisionFactor
-            * self.strategies[strategy].totalGain
+            self.strategies[strategy].totalGain
             * timeSinceLastHarvest
             / totalHarvestTime
-            / precisionFactor
         )
     else:
         return 0  # Covers the scenario when block.timestamp == activation
@@ -1582,12 +1560,10 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
     # Issue new shares to cover fees
     # NOTE: In effect, this reduces overall share price by the combined fee
     # NOTE: may throw if Vault.totalAssets() > 1e64, or not called for more than a year
-    precisionFactor: uint256 = self.precisionFactor
     duration: uint256 = block.timestamp - self.strategies[strategy].lastReport
     assert duration != 0 # can't assessFees twice within the same block
 
     management_fee: uint256 = (
-        precisionFactor *
         (
             (self.strategies[strategy].totalDebt - Strategy(strategy).delegatedAssets())
             * duration 
@@ -1595,7 +1571,6 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
         )
         / MAX_BPS
         / SECS_PER_YEAR
-        / precisionFactor
     )
 
     # Only applies in certain conditions
@@ -1607,14 +1582,12 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
     if gain > 0:
         # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
         strategist_fee = (
-            precisionFactor
-            * gain
+            gain
             * self.strategies[strategy].performanceFee
             / MAX_BPS
-            / precisionFactor
         )
         # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
-        performance_fee = precisionFactor * gain * self.performanceFee / MAX_BPS / precisionFactor
+        performance_fee = gain * self.performanceFee / MAX_BPS
 
     # NOTE: This must be called prior to taking new collateral,
     #       or the calculation will be wrong!
@@ -1633,11 +1606,9 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
         if strategist_fee > 0:  # NOTE: Guard against DIV/0 fault
             # NOTE: Unlikely to throw unless sqrt(reward) >>> 1e39
             strategist_reward: uint256 = (
-                precisionFactor
-                * strategist_fee
+                strategist_fee
                 * reward
                 / total_fee
-                / precisionFactor
             )
             self._transfer(self, strategy, strategist_reward)
             # NOTE: Strategy distributes rewards at the end of harvest()
