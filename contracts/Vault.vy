@@ -222,7 +222,7 @@ totalDebt: public(uint256)  # Amount of tokens that all strategies have borrowed
 lastReport: public(uint256)  # block.timestamp of last report
 activation: public(uint256)  # block.timestamp of contract deployment
 lockedProfit: public(uint256) # how much profit is locked and cant be withdrawn
-lockedProfitegradation: public(uint256) # rate per block of degradation. DEGRADATION_COEFFICIENT is 100% per block
+lockedProfitDegradation: public(uint256) # rate per block of degradation. DEGRADATION_COEFFICIENT is 100% per block
 rewards: public(address)  # Rewards contract where Governance fees are sent to
 # Governance Fee for management of Vault (given to `rewards`)
 managementFee: public(uint256)
