@@ -39,9 +39,6 @@ API_VERSION: constant(String[28]) = "0.3.5"
 
 from vyper.interfaces import ERC20
 
-implements: ERC20
-
-
 interface DetailedERC20:
     def name() -> String[42]: view
     def symbol() -> String[20]: view
