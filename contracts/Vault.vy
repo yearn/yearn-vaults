@@ -1435,6 +1435,10 @@ def removeStrategyFromQueue(strategy: address):
 @internal
 def _debtOutstanding(strategy: address) -> uint256:
     # See note on `debtOutstanding()`.
+    strategy_totalDebt: uint256 = self.strategies[strategy].totalDebt
+    if self.emergencyShutdown:
+        return strategy_totalDebt
+
     precisionFactor: uint256 = self.precisionFactor
     strategy_debtLimit: uint256 = (
         precisionFactor
@@ -1443,11 +1447,8 @@ def _debtOutstanding(strategy: address) -> uint256:
         / MAX_BPS
         / precisionFactor
     )
-    strategy_totalDebt: uint256 = self.strategies[strategy].totalDebt
 
-    if self.emergencyShutdown:
-        return strategy_totalDebt
-    elif strategy_totalDebt <= strategy_debtLimit:
+    if strategy_totalDebt <= strategy_debtLimit:
         return 0
     else:
         return strategy_totalDebt - strategy_debtLimit
