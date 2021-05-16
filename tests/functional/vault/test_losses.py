@@ -27,6 +27,7 @@ def test_losses(chain, vault, strategy, gov, token):
     vault.deposit(5000, {"from": gov})
 
     chain.sleep(DAY // 10)
+    chain.sleep(1)
     strategy.harvest({"from": gov})
     assert token.balanceOf(strategy) == 500
 
@@ -34,6 +35,7 @@ def test_losses(chain, vault, strategy, gov, token):
     chain.sleep(DAY // 10)
     strategy._takeFunds(100, {"from": gov})
     vault.deposit(100, {"from": gov})  # NOTE: total assets doesn't change
+    chain.sleep(1)
     strategy.harvest({"from": gov})
     params = vault.strategies(strategy).dict()
     assert params["totalLoss"] == 100
@@ -43,6 +45,7 @@ def test_losses(chain, vault, strategy, gov, token):
     chain.sleep(DAY // 10)
     strategy._takeFunds(300, {"from": gov})
     vault.deposit(300, {"from": gov})  # NOTE: total assets doesn't change
+    chain.sleep(1)
     strategy.harvest({"from": gov})
     params = vault.strategies(strategy).dict()
     assert params["totalLoss"] == 400
@@ -54,7 +57,27 @@ def test_losses(chain, vault, strategy, gov, token):
     strategy._takeFunds(100, {"from": gov})
     vault.deposit(100, {"from": gov})  # NOTE: total assets doesn't change
     assert token.balanceOf(strategy) == 0
+    chain.sleep(1)
     strategy.harvest({"from": gov})
     params = vault.strategies(strategy).dict()
     assert params["totalLoss"] == 500
     assert params["totalDebt"] == 0
+
+
+def test_total_loss(chain, vault, strategy, gov, token):
+    vault.addStrategy(strategy, 10_000, 0, 2 ** 256 - 1, 1_000, {"from": gov})
+    token.approve(vault, 2 ** 256 - 1, {"from": gov})
+    vault.deposit(5000, {"from": gov})
+    chain.sleep(1)
+    strategy.harvest({"from": gov})
+    assert token.balanceOf(strategy) == 5000
+
+    # send all our tokens back to the token contract
+    token.transfer(token, token.balanceOf(strategy), {"from": strategy})
+
+    chain.sleep(1)
+    strategy.harvest({"from": gov})
+    params = vault.strategies(strategy)
+    assert params["totalLoss"] == 5000
+    assert params["totalDebt"] == 0
+    assert params["debtRatio"] == 0

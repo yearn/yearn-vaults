@@ -42,6 +42,7 @@ def test_liquidation_after_hack(chain, gov, vault, token, TestStrategy):
     # Deploy strategy and seed it with debt
     strategy = gov.deploy(TestStrategy, vault)
     vault.addStrategy(strategy, 2_000, 0, 10 ** 21, 1000, {"from": gov})
+    chain.sleep(1)
     strategy.harvest({"from": gov})
 
     # The strategy suffers a loss
@@ -291,6 +292,13 @@ def test_revokeStrategy(chain, gov, vault, strategy, rando):
         vault.revokeStrategy(strategy, {"from": rando})
 
     vault.revokeStrategy(strategy, {"from": gov})
+    # do not revoke twice
+    with brownie.reverts():
+        vault.revokeStrategy(strategy, {"from": gov})
+    # do not revoke non-existing strategy
+    with brownie.reverts():
+        vault.revokeStrategy(ZERO_ADDRESS, {"from": gov})
+
     assert vault.strategies(strategy).dict() == {
         "performanceFee": 1000,
         "activation": activation_timestamp,
@@ -339,6 +347,38 @@ def test_ordering(gov, vault, TestStrategy, rando):
         strategies + [ZERO_ADDRESS] * (20 - len(strategies)),
         {"from": gov},
     )
+
+    other_strat = gov.deploy(TestStrategy, vault)
+
+    # Do not add a strategy
+    with brownie.reverts():
+        vault.setWithdrawalQueue(
+            strategies + [other_strat] * (20 - len(strategies)),
+            {"from": gov},
+        )
+
+    # Do not remove strategies
+    with brownie.reverts():
+        vault.setWithdrawalQueue(
+            strategies[0:-2] + [ZERO_ADDRESS] * (20 - len(strategies[0:-2])),
+            {"from": gov},
+        )
+
+    # Do not add new strategies
+    other_strategy_list = strategies.copy()
+    other_strategy_list[0] = other_strat
+    with brownie.reverts():
+        vault.setWithdrawalQueue(
+            other_strategy_list + [ZERO_ADDRESS] * (20 - len(other_strategy_list)),
+            {"from": gov},
+        )
+
+    # can't use the same strategy twice
+    with brownie.reverts():
+        vault.setWithdrawalQueue(
+            [strategies[0], strategies[0]] + [ZERO_ADDRESS] * 18,
+            {"from": rando},
+        )
 
     for idx, strategy in enumerate(strategies):
         assert vault.withdrawalQueue(idx) == strategy
@@ -452,12 +492,13 @@ def test_reporting(vault, token, strategy, gov, rando):
         vault.report(0, loss, 0, {"from": strategy})
 
 
-def test_reporting_gains_without_fee(vault, token, strategy, gov, rando):
+def test_reporting_gains_without_fee(chain, vault, token, strategy, gov, rando):
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
     vault.addStrategy(strategy, 100, 10, 20, 1000, {"from": gov})
     gain = 1000000
     assert token.balanceOf(strategy) == 0
+    chain.sleep(1)
 
     # Can't lie about total available to withdraw
     with brownie.reverts():
