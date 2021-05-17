@@ -188,7 +188,7 @@ abstract contract BaseStrategy {
      * @return A string which holds the current API version of this contract.
      */
     function apiVersion() public pure returns (string memory) {
-        return "0.3.5";
+        return "0.4.0";
     }
 
     /**
