@@ -1,0 +1,14 @@
+{
+    "types": [
+        {"type": "feat", "section": "Features"},
+        {"type": "fix", "section": "Bug Fixes"},
+        {"type": "chore", "hidden": true},
+        {"type": "docs", "hidden": true},
+        {"type": "style", "hidden": true},
+        {"type": "refactor", "hidden": true},
+        {"type": "perf", "hidden": true},
+        {"type": "test", "hidden": true}
+    ],
+    "commitUrlFormat": "https://github.com/yearn/yearn-vaults/commits/{{hash}}",
+    "compareUrlFormat": "https://github.com/yearn/yearn-vaults/compare/{{previousTag}}...{{currentTag}}"
+}

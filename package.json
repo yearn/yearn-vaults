@@ -1,5 +1,6 @@
 {
     "name": "yearn-protocol",
+    "version": "0.4.0",
     "devDependencies": {
         "@commitlint/cli": "^11.0.0",
         "@commitlint/config-conventional": "^11.0.0",
@@ -7,12 +8,17 @@
         "husky": "^4.3.0",
         "prettier": "^2.1.2",
         "prettier-plugin-solidity": "^1.0.0-alpha.57",
-        "pretty-quick": "^3.0.2"
+        "pretty-quick": "^3.0.2",
+        "standard-version": "^9.3.0"
     },
     "scripts": {
         "lint": "pretty-quick --pattern '**/*.*(sol|json)' --verbose",
         "lint:check": "prettier --check **/*.sol **/*.json",
-        "lint:fix": "pretty-quick --pattern '**/*.*(sol|json)' --staged --verbose"
+        "lint:fix": "pretty-quick --pattern '**/*.*(sol|json)' --staged --verbose",
+        "release": "standard-version",
+        "release:minor": "standard-version --release-as minor",
+        "release:patch": "standard-version --release-as patch",
+        "release:major": "standard-version --release-as major"
     },
     "husky": {
         "hooks": {
