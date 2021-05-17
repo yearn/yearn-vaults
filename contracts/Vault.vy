@@ -1599,6 +1599,7 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
     #       or the calculation will be wrong!
     # NOTE: This must be done at the same time, to ensure the relative
     #       ratio of governance_fee : strategist_fee is kept intact
+    assert performance_fee + strategist_fee <= gain
     total_fee: uint256 = performance_fee + strategist_fee + management_fee
     # ensure total_fee is not more than gain
     if total_fee > gain:
