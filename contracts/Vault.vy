@@ -1177,7 +1177,7 @@ def addStrategy(
     # Check strategy parameters
     assert self.debtRatio + debtRatio <= MAX_BPS
     assert minDebtPerHarvest <= maxDebtPerHarvest
-    assert performanceFee <= MAX_BPS / 2 
+    assert performanceFee <= MAX_BPS - self.performanceFee
 
     # Add strategy to approved strategies
     self.strategies[strategy] = StrategyParams({
