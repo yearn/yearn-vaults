@@ -461,7 +461,7 @@ def setPerformanceFee(fee: uint256):
     @param fee The new performance fee to use.
     """
     assert msg.sender == self.governance
-    assert fee <= MAX_BPS
+    assert fee <= MAX_BPS / 2
     self.performanceFee = fee
     log UpdatePerformanceFee(fee)
 
