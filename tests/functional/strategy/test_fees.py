@@ -45,15 +45,15 @@ def test_zero_fees(gov, vault, token, TestStrategy, rewards, strategist, chain):
 
 def test_max_fees(gov, vault, token, TestStrategy, rewards, strategist):
     # performance fee should not be higher than MAX
-    vault.setPerformanceFee(FEE_MAX, {"from": gov})
+    vault.setPerformanceFee(FEE_MAX / 2, {"from": gov})
     with brownie.reverts():
-        vault.setPerformanceFee(FEE_MAX + 1, {"from": gov})
+        vault.setPerformanceFee(FEE_MAX / 2 + 1, {"from": gov})
 
     # management fee should not be higher than MAX
-    vault.setManagementFee(FEE_MAX / 2, {"from": gov})
+    vault.setManagementFee(FEE_MAX, {"from": gov})
 
     with brownie.reverts():
-        vault.setManagementFee(FEE_MAX / 2 + 1, {"from": gov})
+        vault.setManagementFee(FEE_MAX + 1, {"from": gov})
 
     # addStrategy should check for MAX FEE
     strategy = strategist.deploy(TestStrategy, vault)
@@ -104,7 +104,7 @@ def test_gain_less_than_fees(chain, rewards, vault, strategy, gov, token):
 
     # Performance fees higher than 100%
     vault.updateStrategyPerformanceFee(strategy, 9000, {"from": gov})
-    vault.setPerformanceFee(9000, {"from": gov})
+    vault.setPerformanceFee(5000, {"from": gov})
 
     token.transfer(strategy, 10 ** token.decimals())
 
