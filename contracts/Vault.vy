@@ -1721,7 +1721,12 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
 
     # Profit is locked and gradually released per block
     # NOTE: compute current locked profit and replace with sum of current and new
-    self.lockedProfit = self._calculateLockedProfit() + gain - totalFees
+    lockedProfitBeforeLoss :uint256 = self._calculateLockedProfit() + gain - totalFees 
+    if lockedProfitBeforeLoss > loss: 
+        self.lockedProfit = lockedProfitBeforeLoss - loss
+    else:
+       self.lockedProfit = 0 
+
 
     # Update reporting time
     self.strategies[msg.sender].lastReport = block.timestamp

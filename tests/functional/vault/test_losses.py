@@ -81,3 +81,24 @@ def test_total_loss(chain, vault, strategy, gov, token):
     assert params["totalLoss"] == 5000
     assert params["totalDebt"] == 0
     assert params["debtRatio"] == 0
+
+
+def test_loss_should_be_removed_from_locked_profit(chain, vault, strategy, gov, token):
+    vault.setLockedProfitDegradation(1e10, {"from": gov})
+
+    vault.addStrategy(strategy, 1000, 0, 1000, 0, {"from": gov})
+    token.approve(vault, 2 ** 256 - 1, {"from": gov})
+    vault.deposit(5000, {"from": gov})
+    chain.sleep(1)
+    strategy.harvest({"from": gov})
+    assert token.balanceOf(strategy) == 500
+    token.transfer(strategy, 100, {"from": gov})
+    chain.sleep(1)
+    strategy.harvest({"from": gov})
+
+    assert vault.lockedProfit() == 90  # 100 - performance fees
+
+    token.transfer(token, 40, {"from": strategy})
+    chain.sleep(1)
+    strategy.harvest({"from": gov})
+    assert vault.lockedProfit() == 50
