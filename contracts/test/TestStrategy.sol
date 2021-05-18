@@ -13,6 +13,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 contract TestStrategy is BaseStrategyInitializable {
     bool public doReentrancy;
     bool public delegateEverything;
+    using SafeERC20 for IERC20;
 
     // Some token that needs to be protected for some reason
     // Initialize this to some fake address, because we're just using it
@@ -40,7 +41,7 @@ contract TestStrategy is BaseStrategyInitializable {
 
     // NOTE: This is a test-only function to simulate losses
     function _takeFunds(uint256 amount) public {
-        SafeERC20.safeTransfer(want, msg.sender, amount);
+        want.safeTransfer(msg.sender, amount);
     }
 
     // NOTE: This is a test-only function to enable reentrancy on withdraw

@@ -152,9 +152,9 @@ abstract contract BaseWrapper {
 
         if (pullFunds) {
             if (amount != DEPOSIT_EVERYTHING) {
-                SafeERC20.safeTransferFrom(token, depositor, address(this), amount);
+                token.safeTransferFrom(depositor, address(this), amount);
             } else {
-                SafeERC20.safeTransferFrom(token, depositor, address(this), token.balanceOf(depositor));
+                token.safeTransferFrom(depositor, address(this), token.balanceOf(depositor));
             }
         }
 
