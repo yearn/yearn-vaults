@@ -790,14 +790,14 @@ def totalAssets() -> uint256:
 @view
 @internal
 def _calculateLockedProfit() -> uint256:
-    lockedFundsRatio: uint256 = (block.timestamp - self.lastReport) * self.lockedProfitDegration
+    lockedFundsRatio: uint256 = (block.timestamp - self.lastReport) * self.lockedProfitDegradation
 
-    if(lockedFundsRatio < DEGREDATION_COEFFICIENT):
+    if(lockedFundsRatio < DEGRADATION_COEFFICIENT):
         lockedProfit: uint256 = self.lockedProfit
         return lockedProfit - (
                 lockedFundsRatio
                 * lockedProfit
-                / DEGREDATION_COEFFICIENT
+                / DEGRADATION_COEFFICIENT
             )
     else:        
         return 0
@@ -814,7 +814,6 @@ def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
     if totalSupply > 0:
         # Mint amount of shares based on what the Vault is managing overall
         # NOTE: if sqrt(token.totalSupply()) > 1e39, this could potentially revert
-        lockedFundsRatio: uint256 = (block.timestamp - self.lastReport) * self.lockedProfitDegradation
         freeFunds: uint256 = self._totalAssets() - self._calculateLockedProfit()
         shares =  amount * totalSupply / freeFunds
     else:
