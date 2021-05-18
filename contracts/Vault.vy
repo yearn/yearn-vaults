@@ -1575,6 +1575,8 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
     if gain == 0:
         return 0
 
+    assert self.strategies[strategy].performanceFee + self.performanceFee <= MAX_BPS
+
     management_fee: uint256 = (
         (
             (self.strategies[strategy].totalDebt - Strategy(strategy).delegatedAssets())
