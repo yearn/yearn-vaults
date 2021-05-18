@@ -1584,7 +1584,7 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
         / SECS_PER_YEAR
     )
 
-    self. managementDebt +=  management_fee
+    self.managementDebt +=  management_fee
 
     if gain == 0:
         return 0
@@ -1607,11 +1607,11 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
     #       or the calculation will be wrong!
     # NOTE: This must be done at the same time, to ensure the relative
     #       ratio of governance_fee : strategist_fee is kept intact
-    total_fee: uint256 = performance_fee + strategist_fee + self. managementDebt
-    self. managementDebt = 0
+    total_fee: uint256 = performance_fee + strategist_fee + self.managementDebt
+    self.managementDebt = 0
     # ensure total_fee is not more than gain
     if total_fee > gain:
-        self. managementDebt = total_fee - gain
+        self.managementDebt = total_fee - gain
         total_fee = gain
     if total_fee > 0:  # NOTE: If mgmt fee is 0% and no gains were realized, skip
         reward: uint256 = self._issueSharesForAmount(self, total_fee)
