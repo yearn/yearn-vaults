@@ -476,7 +476,7 @@ def setManagementFee(fee: uint256):
     @param fee The new management fee to use.
     """
     assert msg.sender == self.governance
-    assert fee <= MAX_BPS / 2
+    assert fee <= MAX_BPS
     self.managementFee = fee
     log UpdateManagementFee(fee)
 
