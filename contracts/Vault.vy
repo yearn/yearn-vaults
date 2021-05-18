@@ -1083,15 +1083,15 @@ def withdraw(
             self.strategies[strategy].totalDebt -= withdrawn
             self.totalDebt -= withdrawn
 
-    # NOTE: We have withdrawn everything possible out of the withdrawal queue
-    #       but we still don't have enough to fully pay them back, so adjust
-    #       to the total amount we've freed up through forced withdrawals
-    vault_balance: uint256 = self.token.balanceOf(self)
-    if value > vault_balance:
-        value = vault_balance
-        # NOTE: Burn # of shares that corresponds to what Vault has on-hand,
-        #       including the losses that were incurred above during withdrawals
-        shares = self._sharesForAmount(value + totalLoss)
+        # NOTE: We have withdrawn everything possible out of the withdrawal queue
+        #       but we still don't have enough to fully pay them back, so adjust
+        #       to the total amount we've freed up through forced withdrawals
+        vault_balance: uint256 = self.token.balanceOf(self)
+        if value > vault_balance:
+            value = vault_balance
+            # NOTE: Burn # of shares that corresponds to what Vault has on-hand,
+            #       including the losses that were incurred above during withdrawals
+            shares = self._sharesForAmount(value + totalLoss)
 
     # NOTE: This loss protection is put in place to revert if losses from
     #       withdrawing are more than what is considered acceptable.
