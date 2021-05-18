@@ -389,3 +389,34 @@ def test_withdraw_partial_delegate_assets(chain, gov, token, vault, strategy, ra
         strategy_delegated_assets_after
         == vault.strategies(strategy).dict()["totalDebt"]
     )
+
+
+def test_token_amount_does_not_change_on_deposit_withdrawal(
+    web3, chain, gov, token, vault, strategy, rando
+):
+    # set fees to 0
+    vault.setManagementFee(0, {"from": gov})
+    vault.setPerformanceFee(0, {"from": gov})
+    vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
+    vault.setLockedProfitDegradation(1e10, {"from": gov})
+    # test is only valid if some profit are locked.
+    chain.sleep(1)
+    strategy.harvest()
+    token.transfer(strategy, 100, {"from": gov})
+    chain.sleep(1)
+    strategy.harvest()
+    assert vault.lockedProfit() == 100
+
+    token.transfer(rando, 1000, {"from": gov})
+    token.approve(vault, 1000, {"from": rando})
+    balanceBefore = token.balanceOf(rando)
+    web3.provider.make_request("miner_stop", [])
+
+    deposit = vault.deposit(1000, {"from": rando, "required_confs": 0})
+    withdraw = vault.withdraw({"from": rando, "required_confs": 0})
+
+    web3.provider.make_request("evm_mine", [chain.time() + 5])
+    web3.provider.make_request("miner_start", [])
+
+    assert deposit.block_number == withdraw.block_number
+    assert token.balanceOf(rando) == balanceBefore
