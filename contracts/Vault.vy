@@ -215,6 +215,7 @@ lockedProfitDegradation: public(uint256) # rate per block of degradation. DEGRAD
 rewards: public(address)  # Rewards contract where Governance fees are sent to
 # Governance Fee for management of Vault (given to `rewards`)
 managementFee: public(uint256)
+managementDebt: public(uint256)
 # Governance Fee for performance of Vault (given to `rewards`)
 performanceFee: public(uint256)
 MAX_BPS: constant(uint256) = 10_000  # 100%, or 10k basis points
@@ -290,6 +291,7 @@ def initialize(
     self.performanceFee = 1000  # 10% of yield (per Strategy)
     log UpdatePerformanceFee(convert(1000, uint256))
     self.managementFee = 200  # 2% per year
+    self.managementDebt = 0
     log UpdateManagementFee(convert(200, uint256))
     self.lastReport = block.timestamp
     self.activation = block.timestamp
@@ -1572,11 +1574,6 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
     duration: uint256 = block.timestamp - self.strategies[strategy].lastReport
     assert duration != 0 # can't assessFees twice within the same block
 
-    if gain == 0:
-        return 0
-
-    assert self.strategies[strategy].performanceFee + self.performanceFee <= MAX_BPS
-
     management_fee: uint256 = (
         (
             (self.strategies[strategy].totalDebt - Strategy(strategy).delegatedAssets())
@@ -1586,6 +1583,14 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
         / MAX_BPS
         / SECS_PER_YEAR
     )
+
+    self. managementDebt +=  management_fee
+
+    if gain == 0:
+        return 0
+
+    # if total performance fee is greater than 100% then this will cause an underflow
+    assert self.strategies[strategy].performanceFee + self.performanceFee <= MAX_BPS
 
     # NOTE: Applies if Strategy is not shutting down, or it is but all debt paid off
     # NOTE: No fee is taken when a Strategy is unwinding it's position, until all debt is paid
@@ -1602,12 +1607,12 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
     #       or the calculation will be wrong!
     # NOTE: This must be done at the same time, to ensure the relative
     #       ratio of governance_fee : strategist_fee is kept intact
-    total_fee: uint256 = performance_fee + strategist_fee + management_fee
+    total_fee: uint256 = performance_fee + strategist_fee + self. managementDebt
+    self. managementDebt = 0
     # ensure total_fee is not more than gain
     if total_fee > gain:
+        self. managementDebt = total_fee - gain
         total_fee = gain
-        # if total performance fee is greater than 100% then this will cause an underflow
-        management_fee = gain - performance_fee - strategist_fee
     if total_fee > 0:  # NOTE: If mgmt fee is 0% and no gains were realized, skip
         reward: uint256 = self._issueSharesForAmount(self, total_fee)
 
