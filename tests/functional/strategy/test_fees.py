@@ -50,10 +50,10 @@ def test_max_fees(gov, vault, token, TestStrategy, rewards, strategist):
         vault.setPerformanceFee(FEE_MAX / 2 + 1, {"from": gov})
 
     # management fee should not be higher than MAX
-    vault.setManagementFee(FEE_MAX / 2, {"from": gov})
+    vault.setManagementFee(FEE_MAX, {"from": gov})
 
     with brownie.reverts():
-        vault.setManagementFee(FEE_MAX / 2 + 1, {"from": gov})
+        vault.setManagementFee(FEE_MAX + 1, {"from": gov})
 
     # addStrategy should check for MAX FEE
     strategy = strategist.deploy(TestStrategy, vault)
