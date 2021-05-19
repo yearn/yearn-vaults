@@ -1282,7 +1282,7 @@ def updateStrategyPerformanceFee(
     @param performanceFee The new fee the strategist will receive.
     """
     assert msg.sender == self.governance
-    assert performanceFee <= MAX_BPS - self.performanceFee
+    assert performanceFee <= MAX_BPS / 2
     assert self.strategies[strategy].activation > 0
     self.strategies[strategy].performanceFee = performanceFee
     log StrategyUpdatePerformanceFee(strategy, performanceFee)
