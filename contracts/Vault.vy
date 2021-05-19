@@ -1613,8 +1613,6 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
     # ensure total_fee is not more than gain
     if total_fee > gain:
         total_fee = gain
-        # if total performance fee is greater than 100% then this will cause an underflow
-        management_fee = gain - performance_fee - strategist_fee
     if total_fee > 0:  # NOTE: If mgmt fee is 0% and no gains were realized, skip
         reward: uint256 = self._issueSharesForAmount(self, total_fee)
 
