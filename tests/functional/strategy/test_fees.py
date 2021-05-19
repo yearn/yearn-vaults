@@ -108,6 +108,8 @@ def test_gain_less_than_fees(chain, rewards, vault, strategy, gov, token):
     strategy.harvest()
     assert strategy.estimatedTotalAssets() > 0
 
+    token.transfer(strategy, 10 ** token.decimals())
+
     # Governance and strategist have not earned any fees yet
     assert vault.balanceOf(rewards) == 0
     assert vault.balanceOf(strategy) == 0
