@@ -99,11 +99,11 @@ Any command `in code blocks` is meant to be executed from a Mac/Linux terminal o
     - If you're in Windows using WSL, type `code .` to launch VSCode
       - At this point install [Solidity Compiler](https://marketplace.visualstudio.com/items?itemName=JuanBlanco.solidity) - be sure to _Install in WSL_
       - Install [Vyper](https://marketplace.visualstudio.com/items?itemName=tintinweb.vscode-vyper) as well on WSL
-    - Open one of the .sol files, right click the code and click _Solidity: Change Workspace compiler version (Remote)_, Change to 0.8.3
+    - Open one of the .sol files, right click the code and click _Solidity: Change Workspace compiler version (Remote)_, Change to 0.8.4
       - Alternatively, go to File -> Preferences -> Settings
       - If you’re using WSL, go to the Remote [WSL] tab
       - Otherwise choose the Workspace tab
-        - Search for _Solidity_ and copy and paste _v0.8.3_ into the _Solidity: Compile Using Remote Version_ textbox
+        - Search for _Solidity_ and copy and paste _v0.8.4_ into the _Solidity: Compile Using Remote Version_ textbox
     - Set Black as the linter.
       - You'll see a toast notification the bottom right asking about linting, choose _black_
       - If you don't see this, just go to _File_ -> _Preferences_ -> _Settings_
