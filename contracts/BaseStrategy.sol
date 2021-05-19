@@ -766,7 +766,7 @@ abstract contract BaseStrategy {
         uint256 amountFreed;
         (amountFreed, _loss) = liquidatePosition(_amountNeeded);
         // Send it directly back (NOTE: Using `msg.sender` saves some gas here)
-        want.safeTransfer(msg.sender, amountFreed);
+        SafeERC20.safeTransfer(want, msg.sender, amountFreed);
         // NOTE: Reinvest anything leftover on next `tend`/`harvest`
     }
 
@@ -793,7 +793,7 @@ abstract contract BaseStrategy {
         require(msg.sender == address(vault));
         require(BaseStrategy(_newStrategy).vault() == vault);
         prepareMigration(_newStrategy);
-        want.safeTransfer(_newStrategy, want.balanceOf(address(this)));
+        SafeERC20.safeTransfer(want, _newStrategy, want.balanceOf(address(this)));
     }
 
     /**
@@ -857,7 +857,7 @@ abstract contract BaseStrategy {
         address[] memory _protectedTokens = protectedTokens();
         for (uint256 i; i < _protectedTokens.length; i++) require(_token != _protectedTokens[i], "!protected");
 
-        IERC20(_token).safeTransfer(governance(), IERC20(_token).balanceOf(address(this)));
+        SafeERC20.safeTransfer(IERC20(_token), governance(), IERC20(_token).balanceOf(address(this)));
     }
 }
 

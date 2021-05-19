@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.3;
+pragma solidity 0.8.5;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
@@ -141,7 +141,7 @@ contract AffiliateToken is ERC20, BaseWrapper {
         _approve(owner, spender, amount);
     }
 
-    function decimals() public virtual override view returns (uint8) {
+    function decimals() public view virtual override returns (uint8) {
         return _decimals;
     }
 }

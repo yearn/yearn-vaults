@@ -151,9 +151,9 @@ abstract contract BaseWrapper {
 
         if (pullFunds) {
             if (amount != DEPOSIT_EVERYTHING) {
-                token.safeTransferFrom(depositor, address(this), amount);
+                SafeERC20.safeTransferFrom(token, depositor, address(this), amount);
             } else {
-                token.safeTransferFrom(depositor, address(this), token.balanceOf(depositor));
+                SafeERC20.safeTransferFrom(token, depositor, address(this), token.balanceOf(depositor));
             }
         }
 
@@ -246,7 +246,7 @@ abstract contract BaseWrapper {
 
         // If we have extra, deposit back into `_bestVault` for `sender`
         // NOTE: Invariant is `withdrawn <= amount`
-        if (withdrawn > amount && withdrawn - amount > _bestVault.pricePerShare().div(10**_bestVault.decimals())) {
+        if (withdrawn > amount && withdrawn - amount > _bestVault.pricePerShare() / (10**_bestVault.decimals())) {
             // Don't forget to approve the deposit
             if (token.allowance(address(this), address(_bestVault)) < withdrawn - amount) {
                 SafeERC20.safeApprove(token, address(_bestVault), UNLIMITED_APPROVAL); // Vaults are trusted
