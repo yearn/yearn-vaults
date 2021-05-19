@@ -815,7 +815,7 @@ def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
         # Mint amount of shares based on what the Vault is managing overall
         # NOTE: if sqrt(token.totalSupply()) > 1e39, this could potentially revert
         freeFunds: uint256 = self._totalAssets() - self._calculateLockedProfit()
-        shares =  amount * totalSupply / freeFunds
+        shares =  amount * totalSupply / freeFunds  # dev: no free funds
     else:
         # No existing shares, so mint 1:1
         shares = amount
