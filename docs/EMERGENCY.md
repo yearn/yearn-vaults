@@ -135,6 +135,8 @@ This checklist should be complemented with the [steps](#emergency-steps)
 - [ ] Assign Key Roles to War Room members
 - [ ] Add Strategist or other Expert (or their backup) to the War Room
 - [ ] Clear related Multi-sig queues
+- [ ] Disable deposits and/or withdrawals as needed in the web UI
+- [ ] If share price has been artificially lowered, then call `vault.setDepositLimit(0)` from governance
 - [ ] Confirm and identify Issue
 - [ ] Take immediate corrective/preventive actions in order to prevent (further) loss of funds
 - [ ] Communicate the current situation internally and externally (as appropriate)
