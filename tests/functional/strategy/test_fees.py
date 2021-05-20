@@ -86,7 +86,8 @@ def test_delegated_fees(chain, rewards, vault, strategy, gov, token):
     # Management fee is active...
     bal_before = vault.balanceOf(rewards)
     chain.mine(timedelta=60 * 60 * 24 * 365)  # Mine a year at 2% mgmt fee
-    token.transfer(strategy, 10 ** token.decimals())
+    amount = vault.strategies(strategy).dict()["totalDebt"] * 3 / 100
+    token.transfer(strategy, amount)
     strategy.harvest()
     assert vault.balanceOf(rewards) > bal_before  # increase in mgmt fees
 
