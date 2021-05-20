@@ -904,7 +904,6 @@ def _shareValue(shares: uint256) -> uint256:
         # NOTE: if sqrt(Vault.totalAssets()) >>> 1e39, this could potentially revert
     freeFunds: uint256 = self._totalAssets() - self._calculateLockedProfit()
 
-    # NOTE: using 1e3 for extra precision here, when decimals is low
     return (
        shares
         * freeFunds
