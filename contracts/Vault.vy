@@ -215,6 +215,7 @@ lockedProfitDegradation: public(uint256) # rate per block of degradation. DEGRAD
 rewards: public(address)  # Rewards contract where Governance fees are sent to
 # Governance Fee for management of Vault (given to `rewards`)
 managementFee: public(uint256)
+managementDebt: public(uint256)
 # Governance Fee for performance of Vault (given to `rewards`)
 performanceFee: public(uint256)
 MAX_BPS: constant(uint256) = 10_000  # 100%, or 10k basis points
@@ -291,6 +292,7 @@ def initialize(
     log UpdatePerformanceFee(convert(1000, uint256))
     self.managementFee = 200  # 2% per year
     log UpdateManagementFee(convert(200, uint256))
+    self.managementDebt = 0
     self.lastReport = block.timestamp
     self.activation = block.timestamp
     self.lockedProfitDegradation = convert(DEGRADATION_COEFFICIENT * 46 /10 ** 6 , uint256) # 6 hours in blocks
@@ -1589,29 +1591,30 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
         / SECS_PER_YEAR
     )
 
-    # Only applies in certain conditions
-    strategist_fee: uint256 = 0
-    performance_fee: uint256 = 0
+    self.managementDebt +=  management_fee
+    if gain == 0:
+        return 0
 
     # NOTE: Applies if Strategy is not shutting down, or it is but all debt paid off
     # NOTE: No fee is taken when a Strategy is unwinding it's position, until all debt is paid
-    if gain > 0:
-        # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
-        strategist_fee = (
-            gain
-            * self.strategies[strategy].performanceFee
-            / MAX_BPS
-        )
-        # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
-        performance_fee = gain * self.performanceFee / MAX_BPS
+    # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
+    strategist_fee: uint256 = (
+        gain
+        * self.strategies[strategy].performanceFee
+        / MAX_BPS
+    )
+    # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
+    performance_fee: uint256 = gain * self.performanceFee / MAX_BPS
 
     # NOTE: This must be called prior to taking new collateral,
     #       or the calculation will be wrong!
     # NOTE: This must be done at the same time, to ensure the relative
     #       ratio of governance_fee : strategist_fee is kept intact
-    total_fee: uint256 = performance_fee + strategist_fee + management_fee
+    total_fee: uint256 = performance_fee + strategist_fee + self.managementDebt
+    self.managementDebt = 0
     # ensure total_fee is not more than gain
     if total_fee > gain:
+        self.managementDebt = total_fee - gain
         total_fee = gain
     if total_fee > 0:  # NOTE: If mgmt fee is 0% and no gains were realized, skip
         reward: uint256 = self._issueSharesForAmount(self, total_fee)
