@@ -102,6 +102,7 @@ def test_delegated_fees(chain, rewards, vault, strategy, gov, token):
     strategy.harvest()
     assert vault.balanceOf(rewards) == bal_before  # No increase in mgmt fees
 
+
 def test_management_debt(chain, rewards, vault, strategy, gov, token):
     # Make sure funds are in the strategy
     chain.sleep(1)
@@ -130,6 +131,7 @@ def test_management_debt(chain, rewards, vault, strategy, gov, token):
     token.transfer(strategy, 10 ** token.decimals())
     strategy.harvest()
     assert vault.managementDebt() > debt_before  # increase in management debt
+
 
 def test_gain_less_than_fees(chain, rewards, vault, strategy, gov, token):
     chain.sleep(1)
