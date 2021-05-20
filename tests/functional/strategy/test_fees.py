@@ -102,7 +102,7 @@ def test_delegated_fees(chain, rewards, vault, strategy, gov, token):
     strategy.harvest()
     assert vault.balanceOf(rewards) == bal_before  # No increase in mgmt fees
 
-def test_management_fees(chain, rewards, vault, strategy, gov, token):
+def test_management_debt(chain, rewards, vault, strategy, gov, token):
     # Make sure funds are in the strategy
     chain.sleep(1)
     strategy.harvest()
@@ -120,7 +120,7 @@ def test_management_fees(chain, rewards, vault, strategy, gov, token):
     strategy.harvest()
     assert vault.managementDebt() == debt_before
 
-     # Make sure that performance fees are charged
+    # Make sure that performance fees are charged
     vault.setPerformanceFee(FEE_MAX / 2, {"from": gov})
     vault.updateStrategyPerformanceFee(strategy, FEE_MAX / 2, {"from": gov})
 
