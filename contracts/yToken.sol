@@ -9,6 +9,23 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 
 import {VaultAPI, BaseWrapper} from "./BaseWrapper.sol";
 
+interface IERC20Metadata {
+    /**
+     * @dev Returns the name of the token.
+     */
+    function name() external view returns (string memory);
+
+    /**
+     * @dev Returns the symbol of the token.
+     */
+    function symbol() external view returns (string memory);
+
+    /**
+     * @dev Returns the decimals places of the token.
+     */
+    function decimals() external view returns (uint8);
+}
+
 contract yToken is IERC20, BaseWrapper {
     using SafeMath for uint256;
 
@@ -17,18 +34,15 @@ contract yToken is IERC20, BaseWrapper {
     constructor(address _token, address _registry) public BaseWrapper(_token, _registry) {}
 
     function name() external view returns (string memory) {
-        VaultAPI _bestVault = bestVault();
-        return _bestVault.name();
+        return string(abi.encodePacked("Yearn ", IERC20Metadata(address(token)).name()));
     }
 
     function symbol() external view returns (string memory) {
-        VaultAPI _bestVault = bestVault();
-        return _bestVault.symbol();
+        return string(abi.encodePacked("y", IERC20Metadata(address(token)).symbol()));
     }
 
     function decimals() external view returns (uint256) {
-        VaultAPI _bestVault = bestVault();
-        return _bestVault.decimals();
+        return IERC20Metadata(address(token)).decimals();
     }
 
     function totalSupply() external override view returns (uint256 total) {
