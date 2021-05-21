@@ -293,7 +293,7 @@ def initialize(
     log UpdateManagementFee(convert(200, uint256))
     self.lastReport = block.timestamp
     self.activation = block.timestamp
-    self.lockedProfitDegradation = convert(DEGRADATION_COEFFICIENT * 46 /10 ** 6 , uint256) # 6 hours in blocks
+    self.lockedProfitDegradation = convert(DEGRADATION_COEFFICIENT * 46 / 10 ** 6 , uint256) # 6 hours in blocks
     # EIP-712
     self.DOMAIN_SEPARATOR = keccak256(
         concat(
@@ -901,11 +901,11 @@ def _shareValue(shares: uint256) -> uint256:
         return shares
 
     # Determines the current value of `shares`.
-        # NOTE: if sqrt(Vault.totalAssets()) >>> 1e39, this could potentially revert
+    # NOTE: if sqrt(Vault.totalAssets()) >>> 1e39, this could potentially revert
     freeFunds: uint256 = self._totalAssets() - self._calculateLockedProfit()
 
     return (
-       shares
+        shares
         * freeFunds
         / self.totalSupply
     )
@@ -969,7 +969,7 @@ def _reportLoss(strategy: address, loss: uint256):
             # NOTE: This calculation isn't 100% precise, the adjustment is ~10%-20% more severe due to EVM math
             loss * self.debtRatio / self.totalDebt,
             self.strategies[strategy].debtRatio,
-    )
+        )
     # Finally, adjust our strategy's parameters by the loss
     self.strategies[strategy].totalLoss += loss
     self.strategies[strategy].totalDebt = totalDebt - loss
@@ -1716,12 +1716,11 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
 
     # Profit is locked and gradually released per block
     # NOTE: compute current locked profit and replace with sum of current and new
-    lockedProfitBeforeLoss :uint256 = self._calculateLockedProfit() + gain - totalFees 
+    lockedProfitBeforeLoss: uint256 = self._calculateLockedProfit() + gain - totalFees
     if lockedProfitBeforeLoss > loss: 
         self.lockedProfit = lockedProfitBeforeLoss - loss
     else:
-       self.lockedProfit = 0 
-
+        self.lockedProfit = 0
 
     # Update reporting time
     self.strategies[msg.sender].lastReport = block.timestamp
