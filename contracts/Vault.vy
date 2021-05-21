@@ -1578,6 +1578,10 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
     duration: uint256 = block.timestamp - self.strategies[strategy].lastReport
     assert duration != 0 # can't assessFees twice within the same block
 
+    if gain == 0:
+        # NOTE: The fees are not charged if there hasn't been any gains reported
+        return 0
+
     management_fee: uint256 = (
         (
             (self.strategies[strategy].totalDebt - Strategy(strategy).delegatedAssets())
@@ -1588,21 +1592,15 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
         / SECS_PER_YEAR
     )
 
-    # Only applies in certain conditions
-    strategist_fee: uint256 = 0
-    performance_fee: uint256 = 0
-
     # NOTE: Applies if Strategy is not shutting down, or it is but all debt paid off
     # NOTE: No fee is taken when a Strategy is unwinding it's position, until all debt is paid
-    if gain > 0:
-        # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
-        strategist_fee = (
-            gain
-            * self.strategies[strategy].performanceFee
-            / MAX_BPS
-        )
-        # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
-        performance_fee = gain * self.performanceFee / MAX_BPS
+    strategist_fee: uint256 = (
+        gain
+        * self.strategies[strategy].performanceFee
+        / MAX_BPS
+    )
+    # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
+    performance_fee: uint256 = gain * self.performanceFee / MAX_BPS
 
     # NOTE: This must be called prior to taking new collateral,
     #       or the calculation will be wrong!
