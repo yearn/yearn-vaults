@@ -1579,6 +1579,7 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
     assert duration != 0 # can't assessFees twice within the same block
 
     if gain == 0:
+        # NOTE: The fees are not charged if there hasn't been any gains reported
         return 0
 
     management_fee: uint256 = (
