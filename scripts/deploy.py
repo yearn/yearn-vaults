@@ -77,6 +77,7 @@ def main():
         if click.confirm("Deploy a Proxy Vault", default="Y"):
             use_proxy = True
     elif Version(PACKAGE_VERSION) > latest_release:
+        target_release_index = num_releases + 1
         if not click.confirm(f"Deploy {PACKAGE_VERSION} as new release"):
             return
 
@@ -95,8 +96,12 @@ def main():
     management = get_address("Vault Management", default="ychad.eth")
     name = click.prompt(f"Set description", default=DEFAULT_VAULT_NAME(token))
     symbol = click.prompt(f"Set symbol", default=DEFAULT_VAULT_SYMBOL(token))
-    target_release = Vault.at(registry.releases(target_release_index)).apiVersion()
     release_delta = num_releases - target_release_index
+    target_release = (
+        Vault.at(registry.releases(target_release_index)).apiVersion()
+        if release_delta >= 0
+        else PACKAGE_VERSION
+    )
 
     click.echo(
         f"""
