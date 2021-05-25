@@ -89,7 +89,7 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
     # One of our strategies suffers a loss
     total_assets = vault.totalAssets()
     loss = token.balanceOf(strategies[0]) // 2  # 10% of total
-    vault.setStrategyHealtyChanges(strategies[0], 1000, {"from": gov})
+    vault.setStrategylossRatioLimit(strategies[0], 1000, {"from": gov})
     strategies[0]._takeFunds(loss, {"from": gov})
     # Harvest the loss
     assert vault.strategies(strategies[0]).dict()["totalLoss"] == 0

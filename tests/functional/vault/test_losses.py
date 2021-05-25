@@ -37,7 +37,7 @@ def test_losses_updates_less_and_debt(chain, vault, strategy, gov, token):
     strategy._takeFunds(100, {"from": gov})
     vault.deposit(100, {"from": gov})  # NOTE: total assets doesn't change
     chain.sleep(1)
-    vault.setStrategyDoHealthCheck(strategy, False, {"from": gov})
+    vault.setStrategycheckLoss(strategy, False, {"from": gov})
     strategy.harvest({"from": gov})
     params = vault.strategies(strategy).dict()
     assert params["totalLoss"] == 100
@@ -46,7 +46,7 @@ def test_losses_updates_less_and_debt(chain, vault, strategy, gov, token):
     # Harder second loss
     chain.sleep(DAY // 10)
     strategy._takeFunds(300, {"from": gov})
-    vault.setStrategyDoHealthCheck(strategy, False, {"from": gov})
+    vault.setStrategycheckLoss(strategy, False, {"from": gov})
     vault.deposit(300, {"from": gov})  # NOTE: total assets doesn't change
     chain.sleep(1)
     strategy.harvest({"from": gov})
@@ -61,7 +61,7 @@ def test_losses_updates_less_and_debt(chain, vault, strategy, gov, token):
     vault.deposit(100, {"from": gov})  # NOTE: total assets doesn't change
     assert token.balanceOf(strategy) == 0
     chain.sleep(1)
-    vault.setStrategyDoHealthCheck(strategy, False, {"from": gov})
+    vault.setStrategycheckLoss(strategy, False, {"from": gov})
     strategy.harvest({"from": gov})
     params = vault.strategies(strategy).dict()
     assert params["totalLoss"] == 500
@@ -80,7 +80,7 @@ def test_total_loss(chain, vault, strategy, gov, token):
     token.transfer(token, token.balanceOf(strategy), {"from": strategy})
 
     chain.sleep(1)
-    vault.setStrategyDoHealthCheck(strategy, False, {"from": gov})
+    vault.setStrategycheckLoss(strategy, False, {"from": gov})
     strategy.harvest({"from": gov})
     params = vault.strategies(strategy)
     assert params["totalLoss"] == 5000
@@ -95,7 +95,7 @@ def test_loss_should_be_removed_from_locked_profit(chain, vault, strategy, gov, 
     token.approve(vault, 2 ** 256 - 1, {"from": gov})
     vault.deposit(5000, {"from": gov})
     chain.sleep(1)
-    vault.setStrategyDoHealthCheck(strategy, False, {"from": gov})
+    vault.setStrategycheckLoss(strategy, False, {"from": gov})
     strategy.harvest({"from": gov})
     assert token.balanceOf(strategy) == 500
     token.transfer(strategy, 100, {"from": gov})
@@ -123,7 +123,7 @@ def test_report_loss(chain, token, gov, vault, strategy, accounts):
     chain.sleep(1)
     with brownie.revert:
         strategy.harvest()
-    vault.setStrategyDoHealthCheck(strategy, False, {"from": gov})
+    vault.setStrategycheckLoss(strategy, False, {"from": gov})
     strategy.harvest()
     assert token.balanceOf(strategy) == 0
 

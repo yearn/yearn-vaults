@@ -104,7 +104,7 @@ def test_emergency_exit(token, gov, vault, strategy, keeper, chain, withSurplus)
         # Oh my! There was a hack!
         stolen_funds = token.balanceOf(strategy) // 10
         strategy._takeFunds(stolen_funds, {"from": gov})
-        vault.setStrategyDoHealthCheck(strategy, False, {"from": gov})
+        vault.setStrategycheckLoss(strategy, False, {"from": gov})
 
     # Call for an exit
     strategy.setEmergencyExit({"from": gov})
