@@ -1186,6 +1186,7 @@ def addStrategy(
     assert self.debtRatio + debtRatio <= MAX_BPS
     assert minDebtPerHarvest <= maxDebtPerHarvest
     assert performanceFee <= MAX_BPS / 2 
+    assert lossRatioLimit <= MAX_BPS
 
     # Add strategy to approved strategies
     self.strategies[strategy] = StrategyParams({
@@ -1306,7 +1307,8 @@ def setStrategycheckLoss(strategy: address, enabled: bool):
 
 @external
 def setStrategylossRatioLimit(strategy: address, percent: uint256):
-    assert msg.sender == self.governance 
+    assert msg.sender == self.governance
+    assert percent <= MAX_BPS
     assert self.strategies[strategy].activation > 0
     self.strategies[strategy].lossRatioLimit = percent
 
@@ -1696,7 +1698,7 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
         if self.strategies[msg.sender].checkLoss:
             assert(pricePerShare * (MAX_BPS - self.strategies[msg.sender].lossRatioLimit) / MAX_BPS <= self._shareValue(10 ** self.decimals)) # dev: price decrease out of ranges
         else:
-            self.strategies[msg.sender].checkLoss = True
+            self.strategies[msg.sender].checkLoss = True # Will check again on next report.
 
     # Assess both management fee and performance fee, and issue both as shares of the vault
     totalFees: uint256 = self._assessFees(msg.sender, gain)

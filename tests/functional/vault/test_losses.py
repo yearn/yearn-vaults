@@ -112,16 +112,16 @@ def test_loss_should_be_removed_from_locked_profit(chain, vault, strategy, gov, 
 
 def test_report_loss(chain, token, gov, vault, strategy, accounts):
     token.approve(vault, MAX_UINT256, {"from": gov})
-    vault.deposit({"from": gov})
+    vault.deposit(1000, {"from": gov})
     vault.addStrategy(strategy, 1000, 0, 1000, 0, {"from": gov})
     chain.sleep(1)
     strategy.harvest()
+
     strategy._takeFunds(token.balanceOf(strategy), {"from": gov})
     assert token.balanceOf(strategy) == 0
 
-    # Make sure we do not send more funds to the strategy.
     chain.sleep(1)
-    with brownie.revert:
+    with brownie.reverts():
         strategy.harvest()
     vault.setStrategycheckLoss(strategy, False, {"from": gov})
     strategy.harvest()

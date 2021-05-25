@@ -3,6 +3,7 @@ import brownie
 from brownie import ZERO_ADDRESS
 
 MAX_UINT256 = 2 ** 256 - 1
+MAX_BPS = 10000
 
 
 @pytest.fixture
@@ -614,38 +615,17 @@ def test_health_report_check(gov, token, vault, strategy, chain):
 def test_update_healt_check_report(gov, rando, vault, strategy, chain):
     vault.addStrategy(strategy, 10_000, 0, 1000, 0, {"from": gov})
 
+    activation_timestamp = chain[-1]["timestamp"]
     # Not just anyone can update heath check report
     with brownie.reverts():
         vault.setStrategycheckLoss(strategy, False, {"from": rando})
     with brownie.reverts():
         vault.setStrategylossRatioLimit(strategy, 50, {"from": rando})
-
-    vault.setStrategycheckLoss(strategy, True, {"from": gov})
-    assert vault.strategies(strategy).dict() == {
-        "activation": 1621951388,
-        "debtRatio": 10000,
-        "checkLoss": True,
-        "lossRatioLimit": 300,
-        "lastReport": 1621951388,
-        "maxDebtPerHarvest": 1000,
-        "minDebtPerHarvest": 0,
-        "performanceFee": 0,
-        "totalDebt": 0,
-        "totalGain": 0,
-        "totalLoss": 0,
-    }
+    vault.setStrategycheckLoss(strategy, False, {"from": gov})
+    assert vault.strategies(strategy).dict()["checkLoss"] == False
 
     vault.setStrategylossRatioLimit(strategy, 50, {"from": gov})
-    assert vault.strategies(strategy).dict() == {
-        "activation": 1621951388,
-        "debtRatio": 10000,
-        "checkLoss": True,
-        "lossRatioLimit": 50,
-        "lastReport": 1621951388,
-        "maxDebtPerHarvest": 1000,
-        "minDebtPerHarvest": 0,
-        "performanceFee": 0,
-        "totalDebt": 0,
-        "totalGain": 0,
-        "totalLoss": 0,
-    }
+    assert vault.strategies(strategy).dict()["lossRatioLimit"] == 50
+
+    with brownie.reverts():
+        vault.setStrategylossRatioLimit(strategy, MAX_BPS + 1, {"from": gov})
