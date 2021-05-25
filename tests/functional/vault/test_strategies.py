@@ -125,6 +125,8 @@ def test_addStrategy(
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
+        "doHealthCheck": False,
+        "healtyChanges": 0,
     }
 
     vault.addStrategy(strategy, 100, 10, 20, 1000, {"from": gov})
@@ -139,6 +141,8 @@ def test_addStrategy(
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
+        "doHealthCheck": True,
+        "healtyChanges": 300,
     }
     assert vault.withdrawalQueue(0) == strategy
 
@@ -206,6 +210,8 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
+        "doHealthCheck": True,
+        "healtyChanges": 300,
     }
 
     vault.updateStrategyMinDebtPerHarvest(strategy, 15, {"from": gov})
@@ -219,6 +225,8 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
+        "doHealthCheck": True,
+        "healtyChanges": 300,
     }
 
     vault.updateStrategyMaxDebtPerHarvest(strategy, 15, {"from": gov})
@@ -232,6 +240,8 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
+        "doHealthCheck": True,
+        "healtyChanges": 300,
     }
 
     vault.updateStrategyPerformanceFee(strategy, 75, {"from": gov})
@@ -245,6 +255,8 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
+        "doHealthCheck": True,
+        "healtyChanges": 300,
     }
 
 
@@ -309,6 +321,8 @@ def test_revokeStrategy(chain, gov, vault, strategy, rando):
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
+        "doHealthCheck": True,
+        "healtyChanges": 300,
     }
 
     assert vault.withdrawalQueue(0) == strategy
@@ -563,3 +577,75 @@ def test_update_debtRatio_to_add_second_strategy(gov, vault, strategy, other_str
 
     # But 50% should work
     vault.addStrategy(other_strategy, 5_000, 0, 0, 0, {"from": gov})
+
+
+def test_health_report_check(gov, token, vault, strategy, chain):
+    token.approve(vault, MAX_UINT256, {"from": gov})
+    vault.addStrategy(strategy, 10_000, 0, 1000, 0, {"from": gov})
+    vault.deposit(1000, {"from": gov})
+    chain.sleep(1)
+    strategy.harvest()
+
+    # Small price change won't trigger the emergency
+    price = vault.pricePerShare()
+    strategy._takeFunds(30, {"from": gov})
+    chain.sleep(1)
+    strategy.harvest()
+    assert vault.pricePerShare() == 0.97 * 10 ** vault.decimals()
+
+    # Big price change isn't allowed
+    strategy._takeFunds(100, {"from": gov})
+    chain.sleep(1)
+    with brownie.reverts():
+        strategy.harvest()
+    vault.setStrategyDoHealthCheck(strategy, False)
+    strategy.harvest()
+    assert vault.pricePerShare() == 0.87 * 10 ** vault.decimals()
+
+    strategy._takeFunds(token.balanceOf(strategy) / 10, {"from": gov})
+    chain.sleep(1)
+    with brownie.reverts():
+        strategy.harvest()
+    vault.setStrategyHealtyChanges(strategy, 1000)  # 10%
+    strategy.harvest()
+    assert vault.pricePerShare() == 0.783 * 10 ** vault.decimals()
+
+
+def test_update_healt_check_report(gov, rando, vault, strategy, chain):
+    vault.addStrategy(strategy, 10_000, 0, 1000, 0, {"from": gov})
+
+    # Not just anyone can update heath check report
+    with brownie.reverts():
+        vault.setStrategyDoHealthCheck(strategy, False, {"from": rando})
+    with brownie.reverts():
+        vault.setStrategyHealtyChanges(strategy, 50, {"from": rando})
+
+    vault.setStrategyDoHealthCheck(strategy, True, {"from": gov})
+    assert vault.strategies(strategy).dict() == {
+        "activation": 1621951388,
+        "debtRatio": 10000,
+        "doHealthCheck": True,
+        "healtyChanges": 300,
+        "lastReport": 1621951388,
+        "maxDebtPerHarvest": 1000,
+        "minDebtPerHarvest": 0,
+        "performanceFee": 0,
+        "totalDebt": 0,
+        "totalGain": 0,
+        "totalLoss": 0,
+    }
+
+    vault.setStrategyHealtyChanges(strategy, 50, {"from": gov})
+    assert vault.strategies(strategy).dict() == {
+        "activation": 1621951388,
+        "debtRatio": 10000,
+        "doHealthCheck": True,
+        "healtyChanges": 50,
+        "lastReport": 1621951388,
+        "maxDebtPerHarvest": 1000,
+        "minDebtPerHarvest": 0,
+        "performanceFee": 0,
+        "totalDebt": 0,
+        "totalGain": 0,
+        "totalLoss": 0,
+    }

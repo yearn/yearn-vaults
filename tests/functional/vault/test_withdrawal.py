@@ -89,6 +89,7 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
     # One of our strategies suffers a loss
     total_assets = vault.totalAssets()
     loss = token.balanceOf(strategies[0]) // 2  # 10% of total
+    vault.setStrategyHealtyChanges(strategies[0], 1000, {"from": gov})
     strategies[0]._takeFunds(loss, {"from": gov})
     # Harvest the loss
     assert vault.strategies(strategies[0]).dict()["totalLoss"] == 0
@@ -118,6 +119,7 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
     chain.revert()  # Back before the withdrawal
 
     # Scenario 2: we wait, and only suffer a minor loss
+
     strategies[0].harvest({"from": gov})
     assert vault.strategies(strategies[0]).dict()["totalLoss"] == loss
     assert token.balanceOf(rando) == 0

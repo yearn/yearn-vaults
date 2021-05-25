@@ -94,7 +94,8 @@ struct StrategyParams:
     totalDebt: uint256  # Total outstanding debt that Strategy has
     totalGain: uint256  # Total returns that Strategy has realized for Vault
     totalLoss: uint256  # Total losses that Strategy has realized for Vault
-
+    healtyChanges: uint256 # Allowed Percentage of price per share negative changes
+    doHealthCheck: bool # Allow bypassing the healtyChanges checks 
 
 event StrategyAdded:
     strategy: indexed(address)
@@ -1148,6 +1149,7 @@ def addStrategy(
     minDebtPerHarvest: uint256,
     maxDebtPerHarvest: uint256,
     performanceFee: uint256,
+    healtyChanges: uint256 = 300 # 3%
 ):
     """
     @notice
@@ -1196,6 +1198,8 @@ def addStrategy(
         totalDebt: 0,
         totalGain: 0,
         totalLoss: 0,
+        healtyChanges: healtyChanges,
+        doHealthCheck: True
     })
     log StrategyAdded(strategy, debtRatio, minDebtPerHarvest, maxDebtPerHarvest, performanceFee)
 
@@ -1294,6 +1298,18 @@ def updateStrategyPerformanceFee(
     log StrategyUpdatePerformanceFee(strategy, performanceFee)
 
 
+@external
+def setStrategyDoHealthCheck(strategy: address, enabled: bool):
+    assert msg.sender == self.governance 
+    assert self.strategies[strategy].activation > 0
+    self.strategies[strategy].doHealthCheck = enabled 
+
+@external
+def setStrategyHealtyChanges(strategy: address, percent: uint256):
+    assert msg.sender == self.governance 
+    assert self.strategies[strategy].activation > 0
+    self.strategies[strategy].healtyChanges = percent
+
 @internal
 def _revokeStrategy(strategy: address):
     self.debtRatio -= self.strategies[strategy].debtRatio
@@ -1342,6 +1358,8 @@ def migrateStrategy(oldVersion: address, newVersion: address):
         totalDebt: strategy.totalDebt,
         totalGain: 0,
         totalLoss: 0,
+        healtyChanges: strategy.healtyChanges,
+        doHealthCheck: True
     })
 
     Strategy(oldVersion).migrate(newVersion)
@@ -1664,15 +1682,22 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
         Amount Strategy has made available to cover outstanding debt
     @return Amount of debt outstanding (if totalDebt > debtLimit or emergency shutdown).
     """
+    strategy: StrategyParams = self.strategies[msg.sender] # should only be used for reading
 
     # Only approved strategies can call this function
-    assert self.strategies[msg.sender].activation > 0
+    assert strategy.activation > 0
     # No lying about total available to withdraw!
     assert self.token.balanceOf(msg.sender) >= gain + _debtPayment
 
     # We have a loss to report, do it before the rest of the calculations
     if loss > 0:
+        pricePerShare: uint256 = self._shareValue(10 ** self.decimals)
         self._reportLoss(msg.sender, loss)
+
+        if strategy.doHealthCheck:
+            assert(pricePerShare * (MAX_BPS - strategy.healtyChanges) / MAX_BPS <= self._shareValue(10 ** self.decimals)) # dev: price decrease out of ranges
+        else:
+            self.strategies[msg.sender].doHealthCheck = True
 
     # Assess both management fee and performance fee, and issue both as shares of the vault
     totalFees: uint256 = self._assessFees(msg.sender, gain)
@@ -1745,7 +1770,6 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     else:
         # Otherwise, just return what we have as debt outstanding
         return debt
-
 
 @external
 def sweep(token: address, amount: uint256 = MAX_UINT256):
