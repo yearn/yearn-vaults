@@ -94,7 +94,9 @@ struct StrategyParams:
     totalDebt: uint256  # Total outstanding debt that Strategy has
     totalGain: uint256  # Total returns that Strategy has realized for Vault
     totalLoss: uint256  # Total losses that Strategy has realized for Vault
-
+    enforceChangeLimit: bool # Allow bypassing the lossRatioLimit checks 
+    profitLimitRatio: uint256 # Allowed Percentage of price per share positive changes
+    lossLimitRatio: uint256 # Allowed Percentage of price per share negative changes
 
 event StrategyAdded:
     strategy: indexed(address)
@@ -1151,6 +1153,8 @@ def addStrategy(
     minDebtPerHarvest: uint256,
     maxDebtPerHarvest: uint256,
     performanceFee: uint256,
+    profitLimitRatio: uint256 = 300, # 3%
+    lossLimitRatio: uint256 = 300 # 3%
 ):
     """
     @notice
@@ -1199,6 +1203,9 @@ def addStrategy(
         totalDebt: 0,
         totalGain: 0,
         totalLoss: 0,
+        profitLimitRatio: profitLimitRatio,
+        lossLimitRatio: lossLimitRatio,
+        enforceChangeLimit: True
     })
     log StrategyAdded(strategy, debtRatio, minDebtPerHarvest, maxDebtPerHarvest, performanceFee)
 
@@ -1297,6 +1304,19 @@ def updateStrategyPerformanceFee(
     log StrategyUpdatePerformanceFee(strategy, performanceFee)
 
 
+@external
+def setStrategyEnforeChangeLimit(strategy: address, enabled: bool):
+    assert msg.sender in [self.management, self.governance]
+    assert self.strategies[strategy].activation > 0
+    self.strategies[strategy].enforceChangeLimit = enabled 
+
+@external
+def setStrategySetLimitRatio(strategy: address, _lossRatioLimit: uint256, _profitLimitRatio: uint256):
+    assert msg.sender in [self.management, self.governance]
+    assert self.strategies[strategy].activation > 0
+    self.strategies[strategy].lossLimitRatio = _lossRatioLimit
+    self.strategies[strategy].profitLimitRatio = _profitLimitRatio
+
 @internal
 def _revokeStrategy(strategy: address):
     self.debtRatio -= self.strategies[strategy].debtRatio
@@ -1345,6 +1365,9 @@ def migrateStrategy(oldVersion: address, newVersion: address):
         totalDebt: strategy.totalDebt,
         totalGain: 0,
         totalLoss: 0,
+        profitLimitRatio: strategy.profitLimitRatio,
+        lossLimitRatio: strategy.lossLimitRatio,
+        enforceChangeLimit: True
     })
 
     Strategy(oldVersion).migrate(newVersion)
@@ -1673,10 +1696,21 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     assert self.strategies[msg.sender].activation > 0
     # No lying about total available to withdraw!
     assert self.token.balanceOf(msg.sender) >= gain + _debtPayment
+    
+    # Check report is within healty ranges
+
+    if self.strategies[msg.sender].enforceChangeLimit:
+        totalDebt: uint256 = self.strategies[msg.sender].totalDebt
+
+        assert(gain <= ((totalDebt * self.strategies[msg.sender].profitLimitRatio) / MAX_BPS)) # dev: gain too high
+        assert(loss <= ((totalDebt * self.strategies[msg.sender].lossLimitRatio) / MAX_BPS)) # dev: loss too high
+    else:
+        self.strategies[msg.sender].enforceChangeLimit = True
 
     # We have a loss to report, do it before the rest of the calculations
     if loss > 0:
         self._reportLoss(msg.sender, loss)
+
 
     # Assess both management fee and performance fee, and issue both as shares of the vault
     totalFees: uint256 = self._assessFees(msg.sender, gain)
@@ -1749,7 +1783,6 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     else:
         # Otherwise, just return what we have as debt outstanding
         return debt
-
 
 @external
 def sweep(token: address, amount: uint256 = MAX_UINT256):
