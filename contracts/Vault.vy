@@ -1328,6 +1328,7 @@ def migrateStrategy(oldVersion: address, newVersion: address):
     self._revokeStrategy(oldVersion)
     # _revokeStrategy will lower the debtRatio
     self.debtRatio += strategy.debtRatio
+    assert self.debtRatio <= MAX_BPS
     # Debt is migrated to new strategy
     self.strategies[oldVersion].totalDebt = 0
 
