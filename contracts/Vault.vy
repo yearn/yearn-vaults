@@ -94,8 +94,8 @@ struct StrategyParams:
     totalDebt: uint256  # Total outstanding debt that Strategy has
     totalGain: uint256  # Total returns that Strategy has realized for Vault
     totalLoss: uint256  # Total losses that Strategy has realized for Vault
-    lossRatioLimit: uint256 # Allowed Percentage of price per share negative changes
-    checkLoss: bool # Allow bypassing the lossRatioLimit checks 
+    ratioChangeLimit: uint256 # Allowed Percentage of price per share negative changes
+    enforeChangeLimit: bool # Allow bypassing the ratioChangeLimit checks 
 
 event StrategyAdded:
     strategy: indexed(address)
@@ -1149,7 +1149,7 @@ def addStrategy(
     minDebtPerHarvest: uint256,
     maxDebtPerHarvest: uint256,
     performanceFee: uint256,
-    lossRatioLimit: uint256 = 300 # 3%
+    ratioChangeLimit: uint256 = 300 # 3%
 ):
     """
     @notice
@@ -1186,7 +1186,7 @@ def addStrategy(
     assert self.debtRatio + debtRatio <= MAX_BPS
     assert minDebtPerHarvest <= maxDebtPerHarvest
     assert performanceFee <= MAX_BPS / 2 
-    assert lossRatioLimit <= MAX_BPS
+    assert ratioChangeLimit <= MAX_BPS
 
     # Add strategy to approved strategies
     self.strategies[strategy] = StrategyParams({
@@ -1199,8 +1199,8 @@ def addStrategy(
         totalDebt: 0,
         totalGain: 0,
         totalLoss: 0,
-        lossRatioLimit: lossRatioLimit,
-        checkLoss: True
+        ratioChangeLimit: ratioChangeLimit,
+        enforeChangeLimit: True
     })
     log StrategyAdded(strategy, debtRatio, minDebtPerHarvest, maxDebtPerHarvest, performanceFee)
 
@@ -1300,17 +1300,17 @@ def updateStrategyPerformanceFee(
 
 
 @external
-def setStrategycheckLoss(strategy: address, enabled: bool):
-    assert msg.sender == self.governance 
+def setStrategyEnforeChangeLimit(strategy: address, enabled: bool):
+    assert msg.sender in [self.governance , self.management]
     assert self.strategies[strategy].activation > 0
-    self.strategies[strategy].checkLoss = enabled 
+    self.strategies[strategy].enforeChangeLimit = enabled 
 
 @external
-def setStrategylossRatioLimit(strategy: address, percent: uint256):
-    assert msg.sender == self.governance
+def setStrategyRatioChangeLimit(strategy: address, percent: uint256):
+    assert msg.sender in [self.governance , self.management]
     assert percent <= MAX_BPS
     assert self.strategies[strategy].activation > 0
-    self.strategies[strategy].lossRatioLimit = percent
+    self.strategies[strategy].ratioChangeLimit = percent
 
 @internal
 def _revokeStrategy(strategy: address):
@@ -1360,8 +1360,8 @@ def migrateStrategy(oldVersion: address, newVersion: address):
         totalDebt: strategy.totalDebt,
         totalGain: 0,
         totalLoss: 0,
-        lossRatioLimit: strategy.lossRatioLimit,
-        checkLoss: True
+        ratioChangeLimit: strategy.ratioChangeLimit,
+        enforeChangeLimit: True
     })
 
     Strategy(oldVersion).migrate(newVersion)
@@ -1689,20 +1689,11 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     assert self.strategies[msg.sender].activation > 0
     # No lying about total available to withdraw!
     assert self.token.balanceOf(msg.sender) >= gain + _debtPayment
+    pricePerShare: uint256 = self._shareValue(10 ** self.decimals)
 
     # We have a loss to report, do it before the rest of the calculations
     if loss > 0:
-        if self.strategies[msg.sender].checkLoss:
-            assert loss <= self.strategies[msg.sender].lossRatioLimit * strategy_totalDebt / MAX_BPS
-        else:
-            self.strategies[msg.sender].checkLoss = True
         self._reportLoss(msg.sender, loss)
-
-        if self.strategies[msg.sender].checkLoss:
-            assert(pricePerShare * (MAX_BPS - self.strategies[msg.sender].lossRatioLimit) / MAX_BPS <= self._shareValue(10 ** self.decimals)) # dev: price decrease out of ranges
-        else:
-            self.strategies[msg.sender].checkLoss = True # Will check again on next report.
-
     # Assess both management fee and performance fee, and issue both as shares of the vault
     totalFees: uint256 = self._assessFees(msg.sender, gain)
 
@@ -1750,6 +1741,13 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
         self.lockedProfit = lockedProfitBeforeLoss - loss
     else:
         self.lockedProfit = 0
+
+    if self.strategies[msg.sender].enforeChangeLimit:
+        newPricePerShare: uint256 = self._shareValue(10 ** self.decimals)
+        assert((pricePerShare * (MAX_BPS - self.strategies[msg.sender].ratioChangeLimit) / MAX_BPS) <= newPricePerShare) # dev: price decrease out of ranges
+        assert((pricePerShare * (MAX_BPS + self.strategies[msg.sender].ratioChangeLimit) / MAX_BPS) >= newPricePerShare) # dev: price increase out of ranges
+    else:
+        self.strategies[msg.sender].enforeChangeLimit = True # Will check again on next report.
 
     # Update reporting time
     self.strategies[msg.sender].lastReport = block.timestamp
