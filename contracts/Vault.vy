@@ -1692,7 +1692,10 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
 
     # We have a loss to report, do it before the rest of the calculations
     if loss > 0:
-        pricePerShare: uint256 = self._shareValue(10 ** self.decimals)
+        if self.strategies[msg.sender].checkLoss:
+            assert loss <= self.strategies[msg.sender].lossRatioLimit * strategy_totalDebt / MAX_BPS
+        else:
+            self.strategies[msg.sender].checkLoss = True
         self._reportLoss(msg.sender, loss)
 
         if self.strategies[msg.sender].checkLoss:
