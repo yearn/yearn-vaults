@@ -16,7 +16,7 @@ struct StrategyParams {
     uint256 totalDebt;
     uint256 totalGain;
     uint256 totalLoss;
-    uint256 ratioChangeLimit;
+    uint256 changeLimitRatio;
     bool enforeChangeLimit;
 }
 

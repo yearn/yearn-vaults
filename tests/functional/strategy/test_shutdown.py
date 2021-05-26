@@ -92,6 +92,7 @@ def test_emergency_exit(token, gov, vault, strategy, keeper, chain, withSurplus)
     while not debt_limit_hit():
         chain.sleep(DAY)
         add_yield()
+        vault.setStrategyEnforeChangeLimit(strategy, False, {"from": gov})
         chain.sleep(1)
         strategy.harvest({"from": keeper})
 
@@ -100,6 +101,8 @@ def test_emergency_exit(token, gov, vault, strategy, keeper, chain, withSurplus)
         stolen_funds = 0
         added_funds = token.balanceOf(strategy) // 10
         token.transfer(strategy, added_funds, {"from": gov})
+        vault.setStrategyEnforeChangeLimit(strategy, False, {"from": gov})
+
     else:
         # Oh my! There was a hack!
         stolen_funds = token.balanceOf(strategy) // 10

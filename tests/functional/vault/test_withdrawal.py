@@ -89,7 +89,7 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
     # One of our strategies suffers a loss
     total_assets = vault.totalAssets()
     loss = token.balanceOf(strategies[0]) // 2  # 10% of total
-    vault.setStrategyRatioChangeLimit(strategies[0], 1000, {"from": gov})
+    vault.setStrategychangeLimitRatio(strategies[0], 1000, {"from": gov})
     strategies[0]._takeFunds(loss, {"from": gov})
     # Harvest the loss
     assert vault.strategies(strategies[0]).dict()["totalLoss"] == 0
@@ -306,6 +306,7 @@ def test_user_withdraw(chain, gov, token, vault, strategy, rando):
     deposit = vault.totalAssets()
     pricePerShareBefore = vault.pricePerShare()
     token.transfer(strategy, vault.totalAssets(), {"from": gov})  # seed some profit
+    vault.setStrategyEnforeChangeLimit(strategy, False, {"from": gov})
     chain.sleep(1)
     strategy.harvest({"from": gov})
 
@@ -329,6 +330,7 @@ def test_profit_degradation(chain, gov, token, vault, strategy, rando):
 
     deposit = vault.totalAssets()
     token.transfer(strategy, deposit, {"from": gov})  # seed some profit
+    vault.setStrategyEnforeChangeLimit(strategy, False, {"from": gov})
     chain.sleep(1)
     strategy.harvest({"from": gov})
 
@@ -366,6 +368,7 @@ def test_withdraw_partial_delegate_assets(chain, gov, token, vault, strategy, ra
     deposit = vault.totalAssets()
     pricePerShareBefore = vault.pricePerShare()
     token.transfer(strategy, vault.totalAssets(), {"from": gov})  # seed some profit
+    vault.setStrategyEnforeChangeLimit(strategy, False, {"from": gov})
     chain.sleep(1)
     strategy.harvest({"from": gov})
 

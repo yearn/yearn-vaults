@@ -94,8 +94,8 @@ struct StrategyParams:
     totalDebt: uint256  # Total outstanding debt that Strategy has
     totalGain: uint256  # Total returns that Strategy has realized for Vault
     totalLoss: uint256  # Total losses that Strategy has realized for Vault
-    ratioChangeLimit: uint256 # Allowed Percentage of price per share negative changes
-    enforeChangeLimit: bool # Allow bypassing the ratioChangeLimit checks 
+    changeLimitRatio: uint256 # Allowed Percentage of price per share negative changes
+    enforeChangeLimit: bool # Allow bypassing the changeLimitRatio checks 
 
 event StrategyAdded:
     strategy: indexed(address)
@@ -1149,7 +1149,7 @@ def addStrategy(
     minDebtPerHarvest: uint256,
     maxDebtPerHarvest: uint256,
     performanceFee: uint256,
-    ratioChangeLimit: uint256 = 300 # 3%
+    changeLimitRatio: uint256 = 300 # 3%
 ):
     """
     @notice
@@ -1186,7 +1186,7 @@ def addStrategy(
     assert self.debtRatio + debtRatio <= MAX_BPS
     assert minDebtPerHarvest <= maxDebtPerHarvest
     assert performanceFee <= MAX_BPS / 2 
-    assert ratioChangeLimit <= MAX_BPS
+    assert changeLimitRatio <= MAX_BPS
 
     # Add strategy to approved strategies
     self.strategies[strategy] = StrategyParams({
@@ -1199,7 +1199,7 @@ def addStrategy(
         totalDebt: 0,
         totalGain: 0,
         totalLoss: 0,
-        ratioChangeLimit: ratioChangeLimit,
+        changeLimitRatio: changeLimitRatio,
         enforeChangeLimit: True
     })
     log StrategyAdded(strategy, debtRatio, minDebtPerHarvest, maxDebtPerHarvest, performanceFee)
@@ -1306,11 +1306,11 @@ def setStrategyEnforeChangeLimit(strategy: address, enabled: bool):
     self.strategies[strategy].enforeChangeLimit = enabled 
 
 @external
-def setStrategyRatioChangeLimit(strategy: address, percent: uint256):
+def setStrategychangeLimitRatio(strategy: address, percent: uint256):
     assert msg.sender in [self.governance , self.management]
     assert percent <= MAX_BPS
     assert self.strategies[strategy].activation > 0
-    self.strategies[strategy].ratioChangeLimit = percent
+    self.strategies[strategy].changeLimitRatio = percent
 
 @internal
 def _revokeStrategy(strategy: address):
@@ -1360,7 +1360,7 @@ def migrateStrategy(oldVersion: address, newVersion: address):
         totalDebt: strategy.totalDebt,
         totalGain: 0,
         totalLoss: 0,
-        ratioChangeLimit: strategy.ratioChangeLimit,
+        changeLimitRatio: strategy.changeLimitRatio,
         enforeChangeLimit: True
     })
 
@@ -1744,8 +1744,8 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
 
     if self.strategies[msg.sender].enforeChangeLimit:
         newPricePerShare: uint256 = self._shareValue(10 ** self.decimals)
-        assert((pricePerShare * (MAX_BPS - self.strategies[msg.sender].ratioChangeLimit) / MAX_BPS) <= newPricePerShare) # dev: price decrease out of ranges
-        assert((pricePerShare * (MAX_BPS + self.strategies[msg.sender].ratioChangeLimit) / MAX_BPS) >= newPricePerShare) # dev: price increase out of ranges
+        assert((pricePerShare * (MAX_BPS - self.strategies[msg.sender].changeLimitRatio) / MAX_BPS) <= newPricePerShare) # dev: price decrease out of ranges
+        assert((pricePerShare * (MAX_BPS + self.strategies[msg.sender].changeLimitRatio) / MAX_BPS) >= newPricePerShare) # dev: price increase out of ranges
     else:
         self.strategies[msg.sender].enforeChangeLimit = True # Will check again on next report.
 
