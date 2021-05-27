@@ -1181,7 +1181,6 @@ def addStrategy(
     assert self.token.address == Strategy(strategy).want()
 
     # Check strategy parameters
-    assert self.debtRatio + debtRatio <= MAX_BPS
     assert minDebtPerHarvest <= maxDebtPerHarvest
     assert performanceFee <= MAX_BPS / 2 
 
@@ -1225,7 +1224,6 @@ def updateStrategyDebtRatio(
     self.debtRatio -= self.strategies[strategy].debtRatio
     self.strategies[strategy].debtRatio = debtRatio
     self.debtRatio += debtRatio
-    assert self.debtRatio <= MAX_BPS
     log StrategyUpdateDebtRatio(strategy, debtRatio)
 
 
@@ -1472,10 +1470,12 @@ def _creditAvailable(strategy: address) -> uint256:
     # See note on `creditAvailable()`.
     if self.emergencyShutdown:
         return 0
+    if self.debtRatio == 0:
+        return 0
     vault_totalAssets: uint256 = self._totalAssets()
-    vault_debtLimit: uint256 =  self.debtRatio * vault_totalAssets / MAX_BPS 
+    vault_debtLimit: uint256 =  vault_totalAssets
     vault_totalDebt: uint256 = self.totalDebt
-    strategy_debtLimit: uint256 = self.strategies[strategy].debtRatio * vault_totalAssets / MAX_BPS
+    strategy_debtLimit: uint256 = self.strategies[strategy].debtRatio * vault_totalAssets / self.debtRatio
     strategy_totalDebt: uint256 = self.strategies[strategy].totalDebt
     strategy_minDebtPerHarvest: uint256 = self.strategies[strategy].minDebtPerHarvest
     strategy_maxDebtPerHarvest: uint256 = self.strategies[strategy].maxDebtPerHarvest
