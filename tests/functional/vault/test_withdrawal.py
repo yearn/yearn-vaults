@@ -334,7 +334,7 @@ def test_profit_degradation(chain, gov, token, vault, strategy, rando):
 
     assert vault.totalSupply() == 0
     assert (
-        token.balanceOf(vault) > 0
+        vault.totalAssets() > 0
     )  # all money withdrawn but some profit left locked for 6 hours
 
     vault.deposit(deposit, {"from": gov})
