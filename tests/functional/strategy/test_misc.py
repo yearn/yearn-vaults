@@ -186,3 +186,13 @@ def test_set_metadataURI(gov, strategy, strategist, rando):
     assert strategy.metadataURI() == "ipfs://test3"
     with brownie.reverts("!authorized"):
         strategy.setMetadataURI("ipfs://fake", {"from": rando})
+
+
+def test_reduce_debt_ratio(strategy, vault, gov, chain):
+    chain.sleep(1)
+    strategy.harvest({"from": gov})
+    assert vault.strategies(strategy).dict()["totalDebt"] > 0
+    old_debt_ratio = vault.strategies(strategy).dict()["debtRatio"]
+    vault.updateStrategyDebtRatio(strategy, old_debt_ratio // 2, {"from": gov})
+
+    assert vault.debtOutstanding(strategy) > 0
