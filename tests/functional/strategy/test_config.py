@@ -37,7 +37,7 @@ def test_strategy_no_reinit(strategist, vault, TestStrategy):
     strategy = strategist.deploy(TestStrategy, vault)
 
     with brownie.reverts("Strategy already initialized"):
-        strategy.initialize(vault, strategist, strategist, strategist)
+        strategy.initialize(vault, strategist, strategist, strategist, 300)
 
 
 def test_strategy_setEmergencyExit(strategy, gov, strategist, rando, chain):
