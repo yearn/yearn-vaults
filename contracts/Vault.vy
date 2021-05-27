@@ -964,6 +964,8 @@ def _reportLoss(strategy: address, loss: uint256):
 
     # Also, make sure we reduce our trust with the strategy by the amount of loss
     if self.debtRatio != 0: # if vault with single strategy that is set to EmergencyOne
+        # NOTE: The context to this calculation is different than the calculation in `_reportLoss`,
+        # this calculation intentionally approximates via `totalDebt` to avoid manipulatable results
         ratio_change: uint256 = min(
             # NOTE: This calculation isn't 100% precise, the adjustment is ~10%-20% more severe due to EVM math
             loss * self.debtRatio / self.totalDebt,
