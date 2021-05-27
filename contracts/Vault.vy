@@ -1437,10 +1437,11 @@ def _debtOutstanding(strategy: address) -> uint256:
     # See note on `debtOutstanding()`.
     if self.debtRatio == 0:
         return self.strategies[strategy].totalDebt
+
     strategy_debtLimit: uint256 = (
         self.strategies[strategy].debtRatio
-        * self.totalDebt
-        / self.debtRatio
+        * self._totalAssets()
+        / MAX_BPS
     )
     strategy_totalDebt: uint256 = self.strategies[strategy].totalDebt
 
