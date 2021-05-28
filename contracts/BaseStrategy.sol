@@ -818,7 +818,7 @@ abstract contract BaseStrategy {
      * NOTE: Do *not* include `want`, already included in `sweep` below.
      *
      * Example:
-     *
+     * ```
      *    function protectedTokens() internal override view returns (address[] memory) {
      *      address[] memory protected = new address[](3);
      *      protected[0] = tokenA;
@@ -826,6 +826,7 @@ abstract contract BaseStrategy {
      *      protected[2] = tokenC;
      *      return protected;
      *    }
+     * ```
      */
     function protectedTokens() internal virtual view returns (address[] memory);
 
