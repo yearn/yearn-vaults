@@ -235,10 +235,10 @@ def initialize(
     token: address,
     governance: address,
     rewards: address,
-    management: address,
     nameOverride: String[64],
     symbolOverride: String[32],
     guardian: address = msg.sender,
+    management: address =  msg.sender,
 ):
     """
     @notice

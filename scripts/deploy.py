@@ -92,7 +92,9 @@ def main():
     gov = get_address("Yearn Governance", default=gov_default)
 
     rewards = get_address("Rewards contract", default="treasury.ychad.eth")
-    guardian = get_address("Vault Guardian", default="dev.ychad.eth")
+    guardian = gov
+    if use_proxy == False:
+        guardian = get_address("Vault Guardian", default="dev.ychad.eth")
     management = get_address("Vault Management", default="ychad.eth")
     name = click.prompt(f"Set description", default=DEFAULT_VAULT_NAME(token))
     symbol = click.prompt(f"Set symbol", default=DEFAULT_VAULT_SYMBOL(token))
@@ -126,7 +128,6 @@ def main():
             token,
             gov,
             rewards,
-            management,
             # NOTE: Empty string `""` means no override (don't use click default tho)
             name if name != DEFAULT_VAULT_NAME(token) else "",
             symbol if symbol != DEFAULT_VAULT_SYMBOL(token) else "",
@@ -140,6 +141,7 @@ def main():
             click.echo(f"Experimental Vault deployed [{vault.address}]")
             click.echo("    NOTE: Vault is not registered in Registry!")
         else:
+            args.append(management)
             if guardian != dev.address:
                 # NOTE: Only need to include if guardian is not self
                 args.append(guardian)
