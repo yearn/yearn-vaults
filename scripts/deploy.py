@@ -67,6 +67,8 @@ def main():
         0.3.3 => 4
         0.3.4 => 5 (DO NOT USE) 
         0.3.5 => 6
+        0.4.0 => 7 (DO NOT USE)
+        0.4.1 => 8
         """
         )
         target_release_index = click.prompt(
