@@ -1047,8 +1047,8 @@ def withdraw(
     # See @dev note, above.
     value: uint256 = self._shareValue(shares)
 
-    totalLoss: uint256 = 0
     if value > self.token.balanceOf(self):
+        totalLoss: uint256 = 0
         # We need to go get some from our strategies in the withdrawal queue
         # NOTE: This performs forced withdrawals from each Strategy. During
         #       forced withdrawal, a Strategy may realize a loss. That loss
@@ -1100,9 +1100,9 @@ def withdraw(
             #       including the losses that were incurred above during withdrawals
             shares = self._sharesForAmount(value + totalLoss)
 
-    # NOTE: This loss protection is put in place to revert if losses from
-    #       withdrawing are more than what is considered acceptable.
-    assert totalLoss <= maxLoss * (value + totalLoss) / MAX_BPS 
+        # NOTE: This loss protection is put in place to revert if losses from
+        #       withdrawing are more than what is considered acceptable.
+        assert totalLoss * MAX_BPS <= maxLoss * (value + totalLoss)
 
     # Burn shares (full value of what is being withdrawn)
     self.totalSupply -= shares
