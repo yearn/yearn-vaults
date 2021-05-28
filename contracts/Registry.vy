@@ -9,7 +9,6 @@ interface Vault:
         token: address,
         governance: address,
         rewards: address,
-        management: address,
         name: String[64],
         symbol: String[32],
         guardian: address,
@@ -155,7 +154,6 @@ def _newProxyVault(
     token: address,
     governance: address,
     rewards: address,
-    management: address,
     guardian: address,
     name: String[64],
     symbol: String[32],
@@ -166,7 +164,7 @@ def _newProxyVault(
     vault: address = create_forwarder_to(release)
 
     # NOTE: Must initialize the Vault atomically with deploying it
-    Vault(vault).initialize(token, governance, rewards, management, name, symbol, guardian)
+    Vault(vault).initialize(token, governance, rewards, name, symbol, guardian)
 
     return vault
 
@@ -202,7 +200,6 @@ def newVault(
     token: address,
     guardian: address,
     rewards: address,
-    management: address,
     name: String[64],
     symbol: String[32],
     releaseDelta: uint256 = 0,  # NOTE: Uses latest by default
@@ -230,7 +227,7 @@ def newVault(
 
     # NOTE: Underflow if no releases created yet, or targeting prior to release history
     releaseTarget: uint256 = self.numReleases - 1 - releaseDelta  # dev: no releases
-    vault: address = self._newProxyVault(token, msg.sender, rewards, management, guardian, name, symbol, releaseTarget)
+    vault: address = self._newProxyVault(token, msg.sender, rewards, guardian, name, symbol, releaseTarget)
 
     self._registerVault(token, vault)
 
@@ -243,7 +240,6 @@ def newExperimentalVault(
     governance: address,
     guardian: address,
     rewards: address,
-    management: address,
     name: String[64],
     symbol: String[32],
     releaseDelta: uint256 = 0,  # NOTE: Uses latest by default
@@ -268,7 +264,7 @@ def newExperimentalVault(
     # NOTE: Underflow if no releases created yet, or targeting prior to release history
     releaseTarget: uint256 = self.numReleases - 1 - releaseDelta  # dev: no releases
     # NOTE: Anyone can call this method, as a convenience to Strategist' experiments
-    vault: address = self._newProxyVault(token, governance, rewards, management, guardian, name, symbol, releaseTarget)
+    vault: address = self._newProxyVault(token, governance, rewards, guardian, name, symbol, releaseTarget)
 
     # NOTE: Not registered, so emit an "experiment" event here instead
     log NewExperimentalVault(token, msg.sender, vault, Vault(vault).apiVersion())

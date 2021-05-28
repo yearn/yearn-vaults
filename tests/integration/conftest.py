@@ -49,7 +49,6 @@ def create_vault(gov, rewards, guardian, create_token, patch_vault_version):
             token,
             gov,
             rewards,
-            gov,
             token.symbol() + " yVault",
             "yv" + token.symbol(),
             guardian,

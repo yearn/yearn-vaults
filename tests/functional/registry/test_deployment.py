@@ -42,9 +42,7 @@ def test_deployment_management(
 
     # Can't deploy the same vault api version twice, proxy or not
     with brownie.reverts():
-        registry.newVault(
-            v1_token, guardian, rewards, management, "", "", {"from": gov}
-        )
+        registry.newVault(v1_token, guardian, rewards, "", "", {"from": gov})
 
     # New release overrides previous release
     v2_vault = create_vault(version="2.0.0")  # Uses different token
@@ -56,7 +54,7 @@ def test_deployment_management(
     assert registry.numTokens() == 1
     proxy_vault = Vault.at(
         registry.newVault(
-            v1_token, guardian, rewards, management, "", "", {"from": gov}
+            v1_token, guardian, rewards, "", "", {"from": gov}
         ).return_value
     )
     assert proxy_vault.apiVersion() == v2_vault.apiVersion() == "2.0.0"
@@ -71,7 +69,7 @@ def test_deployment_management(
     v2_token = create_token()
     proxy_vault = Vault.at(
         registry.newVault(
-            v2_token, guardian, rewards, management, "", "", 1, {"from": gov}
+            v2_token, guardian, rewards, "", "", 1, {"from": gov}
         ).return_value
     )
     assert proxy_vault.apiVersion() == v1_vault.apiVersion() == "1.0.0"
@@ -88,9 +86,7 @@ def test_deployment_management(
 
     # Not just anyone can create a new endorsed Vault, only governance can!
     with brownie.reverts():
-        registry.newVault(
-            create_token(), guardian, rewards, management, "", "", {"from": rando}
-        )
+        registry.newVault(create_token(), guardian, rewards, "", "", {"from": rando})
 
 
 def test_experimental_deployments(
@@ -101,14 +97,12 @@ def test_experimental_deployments(
 
     # Anyone can make an experiment
     token = create_token()
-    registry.newExperimentalVault(
-        token, rando, rando, rando, rando, "", "", {"from": rando}
-    )
+    registry.newExperimentalVault(token, rando, rando, rando, "", "", {"from": rando})
 
     # You can make as many experiments as you want with same api version
     experimental_vault = Vault.at(
         registry.newExperimentalVault(
-            token, rando, rando, rando, rando, "", "", {"from": rando}
+            token, rando, rando, rando, "", "", {"from": rando}
         ).return_value
     )
 
@@ -140,7 +134,7 @@ def test_experimental_deployments(
     # You can't endorse a vault if it would overwrite a current deployment
     experimental_vault = Vault.at(
         registry.newExperimentalVault(
-            token, gov, gov, gov, gov, "", "", {"from": rando}
+            token, gov, gov, gov, "", "", {"from": rando}
         ).return_value
     )
     with brownie.reverts():
@@ -152,7 +146,7 @@ def test_experimental_deployments(
 
     experimental_vault = Vault.at(
         registry.newExperimentalVault(
-            token, gov, gov, gov, gov, "", "", {"from": rando}
+            token, gov, gov, gov, "", "", {"from": rando}
         ).return_value
     )
     registry.endorseVault(experimental_vault, {"from": gov})
@@ -162,7 +156,7 @@ def test_experimental_deployments(
     token = create_token()
     experimental_vault = Vault.at(
         registry.newExperimentalVault(
-            token, gov, gov, gov, gov, "", "", 1, {"from": rando}
+            token, gov, gov, gov, "", "", 1, {"from": rando}
         ).return_value
     )
     registry.endorseVault(experimental_vault, 1, {"from": gov})
