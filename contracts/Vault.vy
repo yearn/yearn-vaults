@@ -1102,7 +1102,7 @@ def withdraw(
 
         # NOTE: This loss protection is put in place to revert if losses from
         #       withdrawing are more than what is considered acceptable.
-        assert totalLoss * MAX_BPS <= maxLoss * (value + totalLoss)
+        assert totalLoss <= maxLoss * (value + totalLoss) / MAX_BPS
 
     # Burn shares (full value of what is being withdrawn)
     self.totalSupply -= shares
