@@ -35,7 +35,7 @@
     https://github.com/iearn-finance/yearn-vaults/blob/master/SPECIFICATION.md
 """
 
-API_VERSION: constant(String[28]) = "0.4.1"
+API_VERSION: constant(String[28]) = "0.4.2"
 
 from vyper.interfaces import ERC20
 
@@ -235,10 +235,10 @@ def initialize(
     token: address,
     governance: address,
     rewards: address,
-    management: address,
     nameOverride: String[64],
     symbolOverride: String[32],
     guardian: address = msg.sender,
+    management: address =  msg.sender,
 ):
     """
     @notice

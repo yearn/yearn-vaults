@@ -25,14 +25,13 @@ def test_vault_deployment(guardian, gov, rewards, token, Vault):
         token,
         gov,
         rewards,
-        gov,
         token.symbol() + " yVault",
         "yv" + token.symbol(),
         guardian,
     )
     # Addresses
     assert vault.governance() == gov
-    assert vault.management() == gov
+    assert vault.management() == guardian
     assert vault.guardian() == guardian
     assert vault.rewards() == rewards
     assert vault.token() == token
@@ -54,7 +53,7 @@ def test_vault_deployment(guardian, gov, rewards, token, Vault):
 def test_vault_name_symbol_override(guardian, gov, rewards, token, Vault):
     # Deploy the Vault with name/symbol overrides
     vault = guardian.deploy(Vault)
-    vault.initialize(token, gov, rewards, gov, "crvY yVault", "yvcrvY", guardian)
+    vault.initialize(token, gov, rewards, "crvY yVault", "yvcrvY", guardian)
     # Assert that the overrides worked
     assert vault.name() == "crvY yVault"
     assert vault.symbol() == "yvcrvY"
@@ -62,10 +61,10 @@ def test_vault_name_symbol_override(guardian, gov, rewards, token, Vault):
 
 def test_vault_reinitialization(guardian, gov, rewards, token, Vault):
     vault = guardian.deploy(Vault)
-    vault.initialize(token, gov, rewards, gov, "crvY yVault", "yvcrvY", guardian)
+    vault.initialize(token, gov, rewards, "crvY yVault", "yvcrvY", guardian)
     # Can't reinitialize a vault
     with brownie.reverts():
-        vault.initialize(token, gov, rewards, gov, "crvY yVault", "yvcrvY", guardian)
+        vault.initialize(token, gov, rewards, "crvY yVault", "yvcrvY", guardian)
 
 
 @pytest.mark.parametrize(

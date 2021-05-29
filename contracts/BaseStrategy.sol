@@ -188,7 +188,7 @@ abstract contract BaseStrategy {
      * @return A string which holds the current API version of this contract.
      */
     function apiVersion() public pure returns (string memory) {
-        return "0.4.1";
+        return "0.4.2";
     }
 
     /**
@@ -818,7 +818,7 @@ abstract contract BaseStrategy {
      * NOTE: Do *not* include `want`, already included in `sweep` below.
      *
      * Example:
-     *
+     * ```
      *    function protectedTokens() internal override view returns (address[] memory) {
      *      address[] memory protected = new address[](3);
      *      protected[0] = tokenA;
@@ -826,6 +826,7 @@ abstract contract BaseStrategy {
      *      protected[2] = tokenC;
      *      return protected;
      *    }
+     * ```
      */
     function protectedTokens() internal virtual view returns (address[] memory);
 

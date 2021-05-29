@@ -10,7 +10,7 @@ def vault(gov, management, token, Vault):
     # NOTE: Because the fixture has tokens in it already
     vault = gov.deploy(Vault)
     vault.initialize(
-        token, gov, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
+        token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
     )
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     vault.setManagement(management, {"from": gov})
@@ -70,7 +70,6 @@ def strategy_with_wrong_vault(gov, token, vault, Vault, TestStrategy):
     otherVault = gov.deploy(Vault)
     otherVault.initialize(
         token,
-        gov,
         gov,
         gov,
         token.symbol() + " yVault",
