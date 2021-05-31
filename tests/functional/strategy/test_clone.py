@@ -79,4 +79,4 @@ def test_double_initialize(TestStrategy, vault, other_vault, gov):
 
     # Sholdn't be able to initialize twice
     with brownie.reverts():
-        strategy.initialize(other_vault, gov, gov, gov, 300)
+        strategy.initialize(other_vault, gov, gov, gov)

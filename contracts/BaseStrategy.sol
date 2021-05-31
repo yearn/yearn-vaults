@@ -180,7 +180,7 @@ abstract contract BaseStrategy {
     using SafeERC20 for IERC20;
     string public metadataURI;
     uint256 constant MAX_BPS = 10_000;
-    uint256 public changeLimitRatio = 300;
+    uint256 public changeLimitRatio;
     bool public enforeChangeLimit;
 
     function apiVersion() public pure returns (string memory) {
@@ -235,6 +235,11 @@ abstract contract BaseStrategy {
         _;
     }
 
+    modifier onlyVaultManagers() {
+        require(msg.sender == management() || msg.sender == governance(), "!authorized");
+        _;
+    }
+
     modifier onlyEmergencyAuthorized() {
         require(
             msg.sender == strategist || msg.sender == governance() || msg.sender == vault.guardian() || msg.sender == vault.management(),
@@ -266,15 +271,14 @@ abstract contract BaseStrategy {
     }
 
     constructor(address _vault) public {
-        _initialize(_vault, msg.sender, msg.sender, msg.sender, 300);
+        _initialize(_vault, msg.sender, msg.sender, msg.sender);
     }
 
     function _initialize(
         address _vault,
         address _strategist,
         address _rewards,
-        address _keeper,
-        uint256 _changeLimitRatio
+        address _keeper
     ) internal {
         require(address(want) == address(0), "Strategy already initialized");
 
@@ -284,12 +288,12 @@ abstract contract BaseStrategy {
         strategist = _strategist;
         rewards = _rewards;
         keeper = _keeper;
-        changeLimitRatio = changeLimitRatio;
 
         minReportDelay = 0;
         maxReportDelay = 86400;
         profitFactor = 100;
         debtThreshold = 0;
+        changeLimitRatio = 300;
 
         vault.approve(rewards, uint256(-1));
     }
@@ -306,11 +310,11 @@ abstract contract BaseStrategy {
         emit UpdatedKeeper(_keeper);
     }
 
-    function setStrategyEnforeChangeLimit(bool _enforeChangeLimit) external onlyAuthorized {
+    function setStrategyEnforeChangeLimit(bool _enforeChangeLimit) external onlyVaultManagers {
         enforeChangeLimit = _enforeChangeLimit;
     }
 
-    function setStrategychangeLimitRatio(uint256 _changeLimitRatio) external onlyAuthorized {
+    function setStrategychangeLimitRatio(uint256 _changeLimitRatio) external onlyVaultManagers {
         require(_changeLimitRatio < MAX_BPS);
         changeLimitRatio = _changeLimitRatio;
     }
@@ -350,6 +354,10 @@ abstract contract BaseStrategy {
 
     function governance() internal view returns (address) {
         return vault.governance();
+    }
+
+    function management() internal view returns (address) {
+        return vault.management();
     }
 
     function ethToWant(uint256 _amtInWei) public virtual view returns (uint256);
@@ -423,19 +431,15 @@ abstract contract BaseStrategy {
         } else {
             (profit, loss, debtPayment) = prepareReturn(debtOutstanding);
         }
-
-        uint256 pricePerShare = vault.pricePerShare();
-
-        debtOutstanding = vault.report(profit, loss, debtPayment);
-
         if (enforeChangeLimit) {
-            uint256 newPricePerShare = vault.pricePerShare();
-            require(((pricePerShare * (MAX_BPS - changeLimitRatio)) / MAX_BPS) <= newPricePerShare, "price decrease out of ranges");
-            require(((pricePerShare * (MAX_BPS + changeLimitRatio)) / MAX_BPS) >= newPricePerShare, "price increase out of ranges");
+            uint256 totalDebt = vault.strategies(address(this)).totalDebt;
+            require(profit <= (totalDebt * changeLimitRatio) / MAX_BPS);
+            require(loss <= (totalDebt * changeLimitRatio) / MAX_BPS);
         } else {
             enforeChangeLimit = true;
         }
 
+        debtOutstanding = vault.report(profit, loss, debtPayment);
         adjustPosition(debtOutstanding);
 
         emit Harvested(profit, loss, debtPayment, debtOutstanding);
@@ -487,10 +491,9 @@ abstract contract BaseStrategyInitializable is BaseStrategy {
         address _vault,
         address _strategist,
         address _rewards,
-        address _keeper,
-        uint256 _changeLimitRatio
+        address _keeper
     ) external virtual {
-        _initialize(_vault, _strategist, _rewards, _keeper, _changeLimitRatio);
+        _initialize(_vault, _strategist, _rewards, _keeper);
     }
 
     function clone(address _vault) external returns (address) {
@@ -514,7 +517,7 @@ abstract contract BaseStrategyInitializable is BaseStrategy {
             newStrategy := create(0, clone_code, 0x37)
         }
 
-        BaseStrategyInitializable(newStrategy).initialize(_vault, _strategist, _rewards, _keeper, changeLimitRatio);
+        BaseStrategyInitializable(newStrategy).initialize(_vault, _strategist, _rewards, _keeper);
 
         emit Cloned(newStrategy);
     }

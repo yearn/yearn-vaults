@@ -54,6 +54,7 @@ def test_emergency_shutdown(token, gov, vault, strategy, keeper, chain):
 
     # Do it once more, for good luck (and also coverage)
     token.transfer(strategy, token.balanceOf(gov), {"from": gov})
+    strategy.setStrategyEnforeChangeLimit(False, {"from": gov})
     chain.sleep(1)
     strategy.harvest({"from": keeper})
 

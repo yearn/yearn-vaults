@@ -119,7 +119,7 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
     chain.revert()  # Back before the withdrawal
 
     # Scenario 2: we wait, and only suffer a minor loss
-
+    strategies[0].setStrategyEnforeChangeLimit(False, {"from": gov})
     strategies[0].harvest({"from": gov})
     assert vault.strategies(strategies[0]).dict()["totalLoss"] == loss
     assert token.balanceOf(rando) == 0
