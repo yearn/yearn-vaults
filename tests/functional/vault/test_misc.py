@@ -233,22 +233,6 @@ def test_deposit_withdraw_faillure(token, gov, vault):
         vault.withdraw(vault.balanceOf(gov), {"from": gov})
 
 
-def test_report_loss(chain, token, gov, vault, strategy, accounts):
-    token.approve(vault, MAX_UINT256, {"from": gov})
-    vault.deposit({"from": gov})
-    chain.sleep(1)
-    strategy.harvest()
-    strategy._takeFunds(token.balanceOf(strategy), {"from": gov})
-    assert token.balanceOf(strategy) == 0
-
-    # Make sure we do not send more funds to the strategy.
-    chain.sleep(1)
-    strategy.harvest()
-    assert token.balanceOf(strategy) == 0
-
-    assert vault.debtRatio() == 0
-
-
 def test_sandwich_attack(
     chain, TestStrategy, web3, token, gov, vault, strategist, rando
 ):

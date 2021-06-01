@@ -73,10 +73,15 @@ def test_harvest_tend_trigger(chain, gov, vault, token, TestStrategy):
     assert strategy.harvestTrigger(MAX_UINT256)
 
     chain.undo()
+    strategy._toggleHealth()
+    assert strategy.harvestTrigger(0) == False
 
+    chain.undo()
     # Check that trigger works in emergency exit mode
     strategy.setEmergencyExit({"from": gov})
     assert strategy.harvestTrigger(MAX_UINT256)
+
+    # trigger returns false when unhealthy
 
     # Stops after it runs out of balance
     while strategy.harvestTrigger(0):

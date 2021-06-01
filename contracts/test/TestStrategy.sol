@@ -13,13 +13,16 @@ import {BaseStrategyInitializable, StrategyParams, VaultAPI} from "../BaseStrate
 contract TestStrategy is BaseStrategyInitializable {
     bool public doReentrancy;
     bool public delegateEverything;
+    bool public healthy;
 
     // Some token that needs to be protected for some reason
     // Initialize this to some fake address, because we're just using it
     // to test `BaseStrategy.protectedTokens()`
     address public constant protectedToken = address(0xbad);
 
-    constructor(address _vault) public BaseStrategyInitializable(_vault) {}
+    constructor(address _vault) public BaseStrategyInitializable(_vault) {
+        healthy = true;
+    }
 
     function name() external view override returns (string memory) {
         return string(abi.encodePacked("TestStrategy ", apiVersion()));
@@ -48,6 +51,11 @@ contract TestStrategy is BaseStrategyInitializable {
         doReentrancy = !doReentrancy;
     }
 
+    // NOTE: This is a test-only function to enable harvest trigger health check
+    function _toggleHealth() public {
+        healthy = !healthy;
+    }
+
     // NOTE: This is a test-only function to simulate a wrong want token
     function _setWant(IERC20 _want) public {
         want = _want;
@@ -60,6 +68,10 @@ contract TestStrategy is BaseStrategyInitializable {
     function estimatedTotalAssets() public view override returns (uint256) {
         // For mock, this is just everything we have
         return want.balanceOf(address(this));
+    }
+
+    function healtyHarvest() public view override returns (bool) {
+        return healthy;
     }
 
     function prepareReturn(uint256 _debtOutstanding)

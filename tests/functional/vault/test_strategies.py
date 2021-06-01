@@ -3,6 +3,7 @@ import brownie
 from brownie import ZERO_ADDRESS
 
 MAX_UINT256 = 2 ** 256 - 1
+MAX_BPS = 10000
 
 
 @pytest.fixture
@@ -562,3 +563,54 @@ def test_update_debtRatio_to_add_second_strategy(gov, vault, strategy, other_str
 
     # But 50% should work
     vault.addStrategy(other_strategy, 5_000, 0, 0, 0, {"from": gov})
+
+
+def test_health_report_check(gov, token, vault, strategy, chain):
+    token.approve(vault, MAX_UINT256, {"from": gov})
+    vault.addStrategy(strategy, 10_000, 0, 1000, 0, {"from": gov})
+    vault.deposit(1000, {"from": gov})
+    chain.sleep(1)
+    strategy.harvest()
+
+    # Small price change won't trigger the emergency
+    price = vault.pricePerShare()
+    strategy._takeFunds(30, {"from": gov})
+    chain.sleep(1)
+    strategy.harvest()
+    assert vault.pricePerShare() == 0.97 * 10 ** vault.decimals()
+
+    # Big price change isn't allowed
+    strategy._takeFunds(100, {"from": gov})
+    chain.sleep(1)
+    with brownie.reverts():
+        strategy.harvest()
+    strategy.setStrategyEnforeChangeLimit(False, {"from": gov})
+    strategy.harvest()
+    assert vault.pricePerShare() == 0.87 * 10 ** vault.decimals()
+
+    strategy._takeFunds(token.balanceOf(strategy) / 10, {"from": gov})
+    chain.sleep(1)
+    with brownie.reverts():
+        strategy.harvest()
+    strategy.setStrategychangeLimitRatio(1000)  # 10%
+    strategy.harvest()
+    assert vault.pricePerShare() == 0.786 * 10 ** vault.decimals()
+
+
+def test_update_healt_check_report(gov, rando, vault, strategy, chain):
+    vault.addStrategy(strategy, 10_000, 0, 1000, 0, {"from": gov})
+
+    activation_timestamp = chain[-1]["timestamp"]
+    # Not just anyone can update heath check report
+    with brownie.reverts():
+        strategy.setStrategyEnforeChangeLimit(False, {"from": rando})
+    with brownie.reverts():
+        strategy.setStrategychangeLimitRatio(50, {"from": rando})
+    strategy.setStrategyEnforeChangeLimit(False, {"from": gov})
+    assert strategy.enforeChangeLimit() == False
+
+    strategy.setStrategychangeLimitRatio(50, {"from": gov})
+    assert strategy.changeLimitRatio() == 50
+
+    with brownie.reverts():
+        strategy.setStrategychangeLimitRatio(MAX_BPS + 1, {"from": gov})

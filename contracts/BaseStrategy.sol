@@ -180,6 +180,9 @@ abstract contract BaseStrategy {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
     string public metadataURI;
+    uint256 constant MAX_BPS = 10_000;
+    uint256 public changeLimitRatio;
+    bool public enforeChangeLimit;
 
     /**
      * @notice
@@ -274,6 +277,11 @@ abstract contract BaseStrategy {
         _;
     }
 
+    modifier onlyVaultManagers() {
+        require(msg.sender == management() || msg.sender == governance(), "!authorized");
+        _;
+    }
+
     modifier onlyEmergencyAuthorized() {
         require(
             msg.sender == strategist || msg.sender == governance() || msg.sender == vault.guardian() || msg.sender == vault.management(),
@@ -334,12 +342,12 @@ abstract contract BaseStrategy {
         strategist = _strategist;
         rewards = _rewards;
         keeper = _keeper;
-
         // initialize variables
         minReportDelay = 0;
         maxReportDelay = 86400;
         profitFactor = 100;
         debtThreshold = 0;
+        changeLimitRatio = 300;
 
         vault.approve(rewards, uint256(-1)); // Allow rewards to be pulled
     }
@@ -374,6 +382,15 @@ abstract contract BaseStrategy {
         require(_keeper != address(0));
         keeper = _keeper;
         emit UpdatedKeeper(_keeper);
+    }
+
+    function setStrategyEnforeChangeLimit(bool _enforeChangeLimit) external onlyVaultManagers {
+        enforeChangeLimit = _enforeChangeLimit;
+    }
+
+    function setStrategychangeLimitRatio(uint256 _changeLimitRatio) external onlyVaultManagers {
+        require(_changeLimitRatio < MAX_BPS);
+        changeLimitRatio = _changeLimitRatio;
     }
 
     /**
@@ -522,6 +539,10 @@ abstract contract BaseStrategy {
      */
     function estimatedTotalAssets() public view virtual returns (uint256);
 
+    function management() internal view returns (address) {
+        return vault.management();
+    }
+
     /*
      * @notice
      *  Provide an indication of whether this strategy is currently "active"
@@ -532,6 +553,10 @@ abstract contract BaseStrategy {
      */
     function isActive() public view returns (bool) {
         return vault.strategies(address(this)).debtRatio > 0 || estimatedTotalAssets() > 0;
+    }
+
+    function healtyHarvest() public view virtual returns (bool) {
+        return true;
     }
 
     /**
@@ -669,6 +694,8 @@ abstract contract BaseStrategy {
      * @return `true` if `harvest()` should be called, `false` otherwise.
      */
     function harvestTrigger(uint256 callCostInWei) public view virtual returns (bool) {
+        if (healtyHarvest() == false) return false;
+
         uint256 callCost = ethToWant(callCostInWei);
         StrategyParams memory params = vault.strategies(address(this));
 
@@ -739,6 +766,13 @@ abstract contract BaseStrategy {
             (profit, loss, debtPayment) = prepareReturn(debtOutstanding);
         }
 
+        if (enforeChangeLimit) {
+            uint256 totalDebt = vault.strategies(address(this)).totalDebt;
+            require(profit <= (totalDebt * changeLimitRatio) / MAX_BPS);
+            require(loss <= (totalDebt * changeLimitRatio) / MAX_BPS);
+        } else {
+            enforeChangeLimit = true;
+        }
         // Allow Vault to take up to the "harvested" balance of this contract,
         // which is the amount it has earned since the last time it reported to
         // the Vault.
