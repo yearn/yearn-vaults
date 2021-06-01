@@ -41,9 +41,12 @@ jobs:
       - name: Install node.js dependencies
         run: yarn --frozen-lockfile
 
-      - name: Run linter on *.sol and *.json
-        run: yarn lint:check
+      - name: Run formater check on *.sol and *.json
+        run: yarn format:check
 
+      - name: run linter check on *.sol file
+        run: yarn hint
+  
     commits:
       runs-on: ubuntu-latest
 

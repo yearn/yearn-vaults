@@ -45,11 +45,11 @@ contract yToken is IERC20, BaseWrapper {
         return IERC20Metadata(address(token)).decimals();
     }
 
-    function totalSupply() external override view returns (uint256 total) {
+    function totalSupply() external view override returns (uint256 total) {
         return totalAssets();
     }
 
-    function balanceOf(address account) external override view returns (uint256 balance) {
+    function balanceOf(address account) external view override returns (uint256 balance) {
         return totalVaultBalance(account);
     }
 

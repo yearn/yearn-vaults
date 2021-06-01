@@ -5,3 +5,4 @@ build/
 reports/
 node_modules/
 .test_durations
+yarn-error.log 
