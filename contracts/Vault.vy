@@ -225,6 +225,8 @@ MAX_BPS: constant(uint256) = 10_000  # 100%, or 10k basis points
 SECS_PER_YEAR: constant(uint256) = 31_556_952  # 365.2425 days
 # `nonces` track `permit` approvals with signature.
 nonces: public(HashMap[address, uint256])
+lockedDeposit: public(uint256)  # how much block locked and cant be withdrawn
+depositAt: public(HashMap[address, uint256])
 DOMAIN_SEPARATOR: public(bytes32)
 DOMAIN_TYPE_HASH: constant(bytes32) = keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)')
 PERMIT_TYPE_HASH: constant(bytes32) = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
@@ -866,6 +868,8 @@ def deposit(_amount: uint256 = MAX_UINT256, recipient: address = msg.sender) -> 
     assert not self.emergencyShutdown  # Deposits are locked out
     assert recipient not in [self, ZERO_ADDRESS]
 
+    self.depositAt[msg.sender] = block.number + self.lockedDeposit
+
     amount: uint256 = _amount
 
     # If _amount not specified, transfer the full token balance,
@@ -1033,6 +1037,8 @@ def withdraw(
 
     # Max Loss is <=100%, revert otherwise
     assert maxLoss <= MAX_BPS
+
+    assert self.depositAt[msg.sender] <= block.number
 
     # If _shares not specified, transfer full share balance
     if shares == MAX_UINT256:
