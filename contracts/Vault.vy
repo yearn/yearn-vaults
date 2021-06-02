@@ -225,6 +225,7 @@ MAX_BPS: constant(uint256) = 10_000  # 100%, or 10k basis points
 SECS_PER_YEAR: constant(uint256) = 31_556_952  # 365.2425 days
 # `nonces` track `permit` approvals with signature.
 nonces: public(HashMap[address, uint256])
+minLockedAmount: public(uint256)
 lockedDeposit: public(uint256)  # how much block locked and cant be withdrawn
 depositAt: public(HashMap[address, uint256])
 DOMAIN_SEPARATOR: public(bytes32)
@@ -449,6 +450,18 @@ def setDepositLimit(limit: uint256):
     assert msg.sender == self.governance
     self.depositLimit = limit
     log UpdateDepositLimit(limit)
+
+
+@external
+def setMinLockedAmount(minLockedAmount: uint256):
+    assert msg.sender == self.governance
+    self.minLockedAmount = minLockedAmount
+
+
+@external
+def setLockedDeposit(lockedDeposit: uint256):
+    assert msg.sender == self.governance
+    self.lockedDeposit = lockedDeposit
 
 
 @external
@@ -868,8 +881,6 @@ def deposit(_amount: uint256 = MAX_UINT256, recipient: address = msg.sender) -> 
     assert not self.emergencyShutdown  # Deposits are locked out
     assert recipient not in [self, ZERO_ADDRESS]
 
-    self.depositAt[msg.sender] = block.number + self.lockedDeposit
-
     amount: uint256 = _amount
 
     # If _amount not specified, transfer the full token balance,
@@ -885,6 +896,9 @@ def deposit(_amount: uint256 = MAX_UINT256, recipient: address = msg.sender) -> 
 
     # Ensure we are depositing something
     assert amount > 0
+
+    if amount >= self.minLockedAmount:
+        self.depositAt[recipient] = block.number + self.lockedDeposit
 
     # Issue new shares (needs to be done before taking deposit to be accurate)
     # Shares are issued to recipient (may be different from msg.sender)
