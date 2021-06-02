@@ -222,6 +222,8 @@ MAX_BPS: constant(uint256) = 10_000  # 100%, or 10k basis points
 #       So the average year has 365 + 97/400 = 365.2425 days
 #       ERROR(Julian): -0.0078
 #       ERROR(Gregorian): -0.0003
+#       A day = 24 * 60 * 60 sec = 86400 sec
+#       365.2425 * 86400 = 31556952.0
 SECS_PER_YEAR: constant(uint256) = 31_556_952  # 365.2425 days
 # `nonces` track `permit` approvals with signature.
 nonces: public(HashMap[address, uint256])
