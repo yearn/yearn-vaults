@@ -21,7 +21,7 @@ contract TestStrategy is BaseStrategyInitializable {
 
     constructor(address _vault) public BaseStrategyInitializable(_vault) {}
 
-    function name() external override view returns (string memory) {
+    function name() external view override returns (string memory) {
         return string(abi.encodePacked("TestStrategy ", apiVersion()));
     }
 
@@ -30,7 +30,7 @@ contract TestStrategy is BaseStrategyInitializable {
         delegateEverything = !delegateEverything;
     }
 
-    function delegatedAssets() external override view returns (uint256) {
+    function delegatedAssets() external view override returns (uint256) {
         if (delegateEverything) {
             return vault.strategies(address(this)).totalDebt;
         } else {
@@ -53,11 +53,11 @@ contract TestStrategy is BaseStrategyInitializable {
         want = _want;
     }
 
-    function ethToWant(uint256 amtInWei) public override view returns (uint256) {
+    function ethToWant(uint256 amtInWei) public view override returns (uint256) {
         return amtInWei; // 1:1 conversion for testing
     }
 
-    function estimatedTotalAssets() public override view returns (uint256) {
+    function estimatedTotalAssets() public view override returns (uint256) {
         // For mock, this is just everything we have
         return want.balanceOf(address(this));
     }
@@ -120,7 +120,7 @@ contract TestStrategy is BaseStrategyInitializable {
         // Nothing needed here because no additional tokens/tokenized positions for mock
     }
 
-    function protectedTokens() internal override view returns (address[] memory) {
+    function protectedTokens() internal view override returns (address[] memory) {
         address[] memory protected = new address[](1);
         protected[0] = protectedToken;
         return protected;
