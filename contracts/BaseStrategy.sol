@@ -125,6 +125,16 @@ interface StrategyAPI {
     event Harvested(uint256 profit, uint256 loss, uint256 debtPayment, uint256 debtOutstanding);
 }
 
+interface HealthCheck {
+    function check(
+        uint256 profit,
+        uint256 loss,
+        uint256 debtPayment,
+        uint256 debtOutstanding,
+        uint256 totalDebt
+    ) external view returns (bool);
+}
+
 /**
  * @title Yearn Base Strategy
  * @author yearn.finance
@@ -145,6 +155,10 @@ abstract contract BaseStrategy {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
     string public metadataURI;
+
+    // health checks
+    bool public doHealthCheck;
+    address public healthCheck;
 
     /**
      * @notice
@@ -259,6 +273,15 @@ abstract contract BaseStrategy {
         _;
     }
 
+    modifier onlyVaultManagers() {
+        require(
+            msg.sender == vault.management() || msg.sender == governance(),
+            "!authorized"
+        );
+        _;
+    }
+
+
     constructor(address _vault) public {
         _initialize(_vault, msg.sender, msg.sender, msg.sender);
     }
@@ -285,6 +308,14 @@ abstract contract BaseStrategy {
         rewards = _rewards;
         keeper = _keeper;
         vault.approve(rewards, uint256(-1)); // Allow rewards to be pulled
+    }
+
+    function setHealthCheck(address _healthCheck) external onlyVaultManagers {
+        healthCheck = _healthCheck;
+    }
+
+    function setDoHealthCheck(bool _doHealthCheck) external onlyVaultManagers {
+        doHealthCheck = _doHealthCheck;
     }
 
     /**
@@ -662,10 +693,27 @@ abstract contract BaseStrategy {
         // Allow Vault to take up to the "harvested" balance of this contract,
         // which is the amount it has earned since the last time it reported to
         // the Vault.
+        uint256 totalDebt = vault.strategies(address(this)).totalDebt;
         debtOutstanding = vault.report(profit, loss, debtPayment);
 
         // Check if free returns are left, and re-invest them
         adjustPosition(debtOutstanding);
+
+        // call healthCheck contract
+        if (doHealthCheck && healthCheck != address(0)) {
+            require(
+                HealthCheck(healthCheck).check(
+                    profit,
+                    loss,
+                    debtPayment,
+                    debtOutstanding,
+                    totalDebt
+                ),
+                "!healthcheck"
+            );
+        } else {
+            doHealthCheck = true;
+        }
 
         emit Harvested(profit, loss, debtPayment, debtOutstanding);
     }
