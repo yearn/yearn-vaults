@@ -2,29 +2,6 @@
 pragma solidity >=0.6.0 <0.7.0;
 pragma experimental ABIEncoderV2;
 
-struct StrategyParams {
-    uint256 performanceFee;
-    uint256 activation;
-    uint256 debtRatio;
-    uint256 minDebtPerHarvest;
-    uint256 maxDebtPerHarvest;
-    uint256 lastReport;
-    uint256 totalDebt;
-    uint256 totalGain;
-    uint256 totalLoss;
-}
-
-interface VaultAPI {
-    function strategies(address _strategy)
-        external
-        view
-        returns (StrategyParams memory);
-}
-
-interface StrategyAPI {
-    function vault() external view returns (address);
-}
-
 interface CustomHealthCheck {
     function check(
         uint256 profit,
@@ -49,14 +26,8 @@ struct LegacyStrategyParams {
 
 struct Limits {
     uint256 profitLimitRatio;
-    uint256 lossLimitRatio; 
-}
-
-interface LegacyVaultAPI {
-    function strategies(address _strategy)
-        external
-        view
-        returns (LegacyStrategyParams memory);
+    uint256 lossLimitRatio;
+    bool exists;
 }
 
 contract CommonHealthCheck {
@@ -115,7 +86,7 @@ contract CommonHealthCheck {
     function setStrategyLimits(address _strategy, uint256 _profitLimitRatio, uint256 _lossLimitRatio) external onlyAuthorized {
        require(_lossLimitRatio < MAX_BPS);
        require(_profitLimitRatio < MAX_BPS);
-        strategiesLimits[_strategy] = Limits(_profitLimitRatio, _lossLimitRatio);
+        strategiesLimits[_strategy] = Limits(_profitLimitRatio, _lossLimitRatio, true);
     }
 
     function setCheck(address _strategy, address _check)
@@ -167,14 +138,15 @@ contract CommonHealthCheck {
         Limits memory limits = strategiesLimits[msg.sender];
         uint256 _profitLimitRatio;
         uint256 _lossLimitRatio;
-        if(limits.profitLimitRatio == 0) { // profitLimitRatio for a strategy should never be zero 
+        if(limits.exists) {
+            _profitLimitRatio = limits.profitLimitRatio;
+            _lossLimitRatio = limits.lossLimitRatio;
+
+        } else {
             _profitLimitRatio = profitLimitRatio;
             _lossLimitRatio = lossLimitRatio;
-        } else {
-           _profitLimitRatio = limits.profitLimitRatio;
-           _lossLimitRatio = limits.lossLimitRatio;
         }
-
+        
         if (_profit > ((_totalDebt * _profitLimitRatio) / MAX_BPS)) {
             return false;
         }

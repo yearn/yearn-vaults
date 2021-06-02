@@ -60,4 +60,19 @@ def test_strategy_harvest(vault, gov, strategy, token, common_health_check, chai
     strategy.setDoHealthCheck(False, {"from": gov})
     strategy.harvest()
 
+
+def test_strategy_harvest_custom_limits(vault, gov, strategy, token, common_health_check, chain):
+    strategy.harvest()
+    strategy.setHealthCheck(common_health_check, {"from": gov})
+    common_health_check.setStrategyLimits(strategy, 5000, 0, {"from": gov}) # big gain no loss
+
+    chain.snapshot()
+
+    balance = strategy.estimatedTotalAssets()
+    token.transfer(strategy, balance * 0.5)
+    strategy.harvest()
+
     chain.revert()
+    strategy._takeFunds(1)
+    with brownie.reverts():
+        strategy.harvest()
