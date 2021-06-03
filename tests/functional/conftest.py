@@ -50,17 +50,27 @@ def keeper(accounts):
     yield accounts[5]
 
 
-@pytest.fixture
-def strategy(gov, strategist, keeper, token, vault, TestStrategy):
+@pytest.fixture(params=["RegularStrategy", "ClonedStrategy"])
+def strategy(gov, strategist, keeper, rewards, vault, TestStrategy, request):
     strategy = strategist.deploy(TestStrategy, vault)
+
+    if request.param == "ClonedStrategy":
+        # deploy the proxy using as logic the original strategy
+        tx = strategy.clone(vault, strategist, rewards, keeper, {"from": strategist})
+        # strategy proxy address is returned in the event `Cloned`
+        strategyAddress = tx.events["Cloned"]["clone"]
+        # redefine strategy as the new proxy deployed
+        strategy = TestStrategy.at(strategyAddress, owner=strategist)
+
     strategy.setKeeper(keeper, {"from": strategist})
     vault.addStrategy(
         strategy,
         4_000,  # 40% of Vault
-        vault.totalAssets() // 8640000,  # Rate limit of 1% of vault's assets per day
+        vault.totalAssets() // 8640000, # Rate limit of 1% of vault's assets per day
         1000,  # 10% performance fee for Strategist
         {"from": gov},
     )
+    
     yield strategy
 
 

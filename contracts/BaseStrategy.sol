@@ -109,6 +109,16 @@ interface StrategyAPI {
     event Harvested(uint256 profit, uint256 loss, uint256 debtPayment, uint256 debtOutstanding);
 }
 
+interface HealthCheck {
+    function check(
+        uint256 profit,
+        uint256 loss,
+        uint256 debtPayment,
+        uint256 debtOutstanding,
+        uint256 totalDebt
+    ) external view returns (bool);
+}
+
 /**
  * @title Yearn Base Strategy
  * @author yearn.finance
@@ -128,6 +138,10 @@ interface StrategyAPI {
 abstract contract BaseStrategy {
     using SafeMath for uint256;
     string public metadataURI;
+
+    // health checks
+    bool public doHealthCheck;
+    address public healthCheck;
 
     /**
      * @notice
@@ -229,6 +243,10 @@ abstract contract BaseStrategy {
         _;
     }
 
+    constructor(address _vault) public {
+        _initialize(_vault, msg.sender, msg.sender, msg.sender);
+    }
+
     /**
      * @notice
      *  Initializes the Strategy, this is called only once, when the
@@ -236,14 +254,29 @@ abstract contract BaseStrategy {
      * @dev `_vault` should implement `VaultAPI`.
      * @param _vault The address of the Vault responsible for this Strategy.
      */
-    constructor(address _vault) public {
+    function _initialize(
+        address _vault,
+        address _strategist,
+        address _rewards,
+        address _keeper
+    ) internal {
+        require(address(want) == address(0), "Strategy already initialized");
+
         vault = VaultAPI(_vault);
         want = IERC20(vault.token());
         want.approve(_vault, uint256(-1)); // Give Vault unlimited access (might save gas)
-        strategist = msg.sender;
-        rewards = msg.sender;
-        keeper = msg.sender;
+        strategist = _strategist;
+        rewards = _rewards;
+        keeper = _keeper;
         vault.approve(rewards, uint256(-1)); // Allow rewards to be pulled
+    }
+
+    function setHealthCheck(address _healthCheck) external onlyGovernance {
+        healthCheck = _healthCheck;
+    }
+
+    function setDoHealthCheck(bool _doHealthCheck) external onlyGovernance {
+        doHealthCheck = _doHealthCheck;
     }
 
     /**
@@ -601,10 +634,27 @@ abstract contract BaseStrategy {
         // Allow Vault to take up to the "harvested" balance of this contract,
         // which is the amount it has earned since the last time it reported to
         // the Vault.
+        uint256 totalDebt = vault.strategies(address(this)).totalDebt;
         debtOutstanding = vault.report(profit, loss, debtPayment);
 
         // Check if free returns are left, and re-invest them
         adjustPosition(debtOutstanding);
+
+        // call healthCheck contract
+        if (doHealthCheck && healthCheck != address(0)) {
+            require(
+                HealthCheck(healthCheck).check(
+                    profit,
+                    loss,
+                    debtPayment,
+                    debtOutstanding,
+                    totalDebt
+                ),
+                "!healthcheck"
+            );
+        } else {
+            doHealthCheck = true;
+        }
 
         emit Harvested(profit, loss, debtPayment, debtOutstanding);
     }
@@ -711,5 +761,49 @@ abstract contract BaseStrategy {
         for (uint256 i; i < _protectedTokens.length; i++) require(_token != _protectedTokens[i], "!protected");
 
         IERC20(_token).transfer(governance(), IERC20(_token).balanceOf(address(this)));
+    }
+}
+
+abstract contract BaseStrategyInitializable is BaseStrategy {
+    bool public isOriginal = true;
+    event Cloned(address indexed clone);
+
+    constructor(address _vault) public BaseStrategy(_vault) {}
+
+    function initialize(
+        address _vault,
+        address _strategist,
+        address _rewards,
+        address _keeper
+    ) external virtual {
+        _initialize(_vault, _strategist, _rewards, _keeper);
+    }
+
+    function clone(address _vault) external returns (address) {
+        require(isOriginal, "!clone");
+        return this.clone(_vault, msg.sender, msg.sender, msg.sender);
+    }
+
+    function clone(
+        address _vault,
+        address _strategist,
+        address _rewards,
+        address _keeper
+    ) external returns (address newStrategy) {
+        // Copied from https://github.com/optionality/clone-factory/blob/master/contracts/CloneFactory.sol
+        bytes20 addressBytes = bytes20(address(this));
+
+        assembly {
+            // EIP-1167 bytecode
+            let clone_code := mload(0x40)
+            mstore(clone_code, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000)
+            mstore(add(clone_code, 0x14), addressBytes)
+            mstore(add(clone_code, 0x28), 0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000)
+            newStrategy := create(0, clone_code, 0x37)
+        }
+
+        BaseStrategyInitializable(newStrategy).initialize(_vault, _strategist, _rewards, _keeper);
+
+        emit Cloned(newStrategy);
     }
 }

@@ -2,17 +2,17 @@
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
-import {BaseStrategy, StrategyParams, VaultAPI} from "../BaseStrategy.sol";
+import {BaseStrategyInitializable, StrategyParams, VaultAPI} from "../BaseStrategy.sol";
 
 /*
  * This Strategy serves as both a mock Strategy for testing, and an example
  * for integrators on how to use BaseStrategy
  */
 
-contract TestStrategy is BaseStrategy {
+contract TestStrategy is BaseStrategyInitializable {
     bool public doReentrancy;
 
-    constructor(address _vault) public BaseStrategy(_vault) {}
+    constructor(address _vault) public BaseStrategyInitializable(_vault) {}
 
     function name() external override view returns (string memory) {
         return string(abi.encodePacked("TestStrategy ", apiVersion()));
