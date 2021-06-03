@@ -82,7 +82,7 @@ token: public(ERC20)
 governance: public(address)
 management: public(address)
 guardian: public(address)
-pendingGovernance: address
+pendingGovernance: public(address)
 
 struct StrategyParams:
     performanceFee: uint256  # Strategist's fee (basis points)
@@ -383,6 +383,7 @@ def acceptGovernance():
     """
     assert msg.sender == self.pendingGovernance
     self.governance = msg.sender
+    self.pendingGovernance = ZERO_ADDRESS
     log UpdateGovernance(msg.sender)
 
 
