@@ -1585,16 +1585,32 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
     if gain == 0:
         # NOTE: The fees are not charged if there hasn't been any gains reported
         return 0
+    
+    undelegatedAssets: uint256 = self.strategies[strategy].totalDebt - Strategy(strategy).delegatedAssets()
 
-    management_fee: uint256 = (
-        (
-            (self.strategies[strategy].totalDebt - Strategy(strategy).delegatedAssets())
-            * duration 
-            * self.managementFee
+    performance_fee: uint256 = 0
+    management_fee: uint256 = 0
+
+    if undelegatedAssets > 0:
+        management_fee = (
+            (
+                undelegatedAssets
+                * duration 
+                * self.managementFee
+            )
+            / MAX_BPS
+            / SECS_PER_YEAR
         )
-        / MAX_BPS
-        / SECS_PER_YEAR
-    )
+
+         # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
+        performance_fee = (
+            # NOTE: Fee is applied to gain in same ratio as we have for undelegated assets to total assets
+            gain
+            * self.performanceFee
+            * undelegatedAssets
+            / self.strategies[strategy].totalDebt
+            / MAX_BPS
+        )
 
     # NOTE: Applies if Strategy is not shutting down, or it is but all debt paid off
     # NOTE: No fee is taken when a Strategy is unwinding it's position, until all debt is paid
@@ -1603,8 +1619,6 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
         * self.strategies[strategy].performanceFee
         / MAX_BPS
     )
-    # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
-    performance_fee: uint256 = gain * self.performanceFee / MAX_BPS
 
     # NOTE: This must be called prior to taking new collateral,
     #       or the calculation will be wrong!
