@@ -192,6 +192,7 @@ event StrategyAddedToQueue:
 strategies: public(HashMap[address, StrategyParams])
 MAXIMUM_STRATEGIES: constant(uint256) = 20
 DEGRADATION_COEFFICIENT: constant(uint256) = 10 ** 18
+SET_SIZE: constant(uint256) = 2 * MAXIMUM_STRATEGIES
 
 # Ordering that `withdraw` uses to determine which strategies to pull funds from
 # NOTE: Does *NOT* have to match the ordering of all the current strategies that
@@ -526,6 +527,33 @@ def setEmergencyShutdown(active: bool):
     log EmergencyShutdown(active)
 
 
+@internal
+@pure
+def getHash(val: address) -> uint256:
+    return convert(val, uint256)
+
+
+# @internal
+# def checkAndInsertInSet(set: address[SET_SIZE], val: address) -> bool:
+#     hash: uint256 = self.getHash(val)
+#     mask: uint256 = SET_SIZE - 1
+#     key: uint256 = bitwise_and(hash, mask)
+#     assert key < SET_SIZE
+#     for i in range(SET_SIZE):
+#         if set[i] == val: 
+#             return True
+#         if set[i] == ZERO_ADDRESS:
+#             set[i] = val
+#             return False
+#     for i in range(0, key):
+#         if set[i] == val:
+#             return True
+#         if set[i] == ZERO_ADDRESS:
+#             set[i] = val
+#             return False
+#     assert False
+
+
 @external
 def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
     """
@@ -554,35 +582,38 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
     assert msg.sender in [self.management, self.governance]
 
     # HACK: Temporary until Vyper adds support for Dynamic arrays
-    old_queue: address[MAXIMUM_STRATEGIES] = empty(address[MAXIMUM_STRATEGIES])
+    set: address[SET_SIZE] = empty(address[SET_SIZE])
     for i in range(MAXIMUM_STRATEGIES):
-        old_queue[i] = self.withdrawalQueue[i] 
         if queue[i] == ZERO_ADDRESS:
             # NOTE: Cannot use this method to remove entries from the queue
-            assert old_queue[i] == ZERO_ADDRESS
+            assert self.withdrawalQueue[i] == ZERO_ADDRESS
             break
         # NOTE: Cannot use this method to add more entries to the queue
-        assert old_queue[i] != ZERO_ADDRESS
+        assert self.withdrawalQueue[i] != ZERO_ADDRESS
 
         assert self.strategies[queue[i]].activation > 0
 
-        existsInOldQueue: bool = False
-        for j in range(MAXIMUM_STRATEGIES):
-            if queue[j] == ZERO_ADDRESS:
-                existsInOldQueue = True
+        hash: uint256 = self.getHash(queue[i])
+        mask: uint256 = SET_SIZE - 1
+        key: uint256 = bitwise_and(hash, mask)
+        assert key < SET_SIZE
+        for k in range(key, key + SET_SIZE):
+            if k >= SET_SIZE:
                 break
-            if queue[i] == old_queue[j]:
-                # NOTE: Ensure that every entry in queue prior to reordering exists now
-                existsInOldQueue = True
-
-            if j <= i:
-                # NOTE: This will only check for duplicate entries in queue after `i`
-                continue
-            assert queue[i] != queue[j]  # dev: do not add duplicate strategies
-
-        assert existsInOldQueue # dev: do not add new strategies
+            if set[k] == queue[i]: 
+                assert False
+            if set[k] == ZERO_ADDRESS:
+                set[k] = queue[i]
+        for k in range(SET_SIZE):
+            if k >= key:
+                break
+            if set[k] == queue[i]:
+                assert False
+            if set[k] == ZERO_ADDRESS:
+                set[k] = queue[i]
 
         self.withdrawalQueue[i] = queue[i]
+
     log UpdateWithdrawalQueue(queue)
 
 
