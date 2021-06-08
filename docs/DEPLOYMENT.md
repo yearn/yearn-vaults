@@ -161,6 +161,12 @@ registry.endorseVault(vault)
    registry.endorseVault(vault, releaseDelta) # from ychad.eth.
    ```
 
+## Publishing Your Strategy Description
+These steps are required for all strategies. These descriptions will be pulled into the new v3 website and used to generate strategy diagrams. 
+1. Create a pull request [at this link](https://github.com/yearn/yearn-meta/tree/master/data/strategies) to add a new `.json` file with your strategy description and details.
+2. Using other strategy files as a reference, create a 1-2 sentence description for your strategy.
+3. The author field is optional.
+
 ## Setting up Keep3r
 
 1. Adjust trigger variables until they are correct:
