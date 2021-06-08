@@ -127,6 +127,7 @@ def test_addStrategy(
         "enforceChangeLimit": False,
         "lossLimitRatio": 0,
         "profitLimitRatio": 0,
+        "customCheck": "0x0000000000000000000000000000000000000000",
     }
 
     vault.addStrategy(strategy, 100, 10, 20, 1000, {"from": gov})
@@ -144,6 +145,7 @@ def test_addStrategy(
         "enforceChangeLimit": True,
         "lossLimitRatio": 300,
         "profitLimitRatio": 300,
+        "customCheck": "0x0000000000000000000000000000000000000000",
     }
     assert vault.withdrawalQueue(0) == strategy
 
@@ -214,6 +216,7 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
         "enforceChangeLimit": True,
         "lossLimitRatio": 300,
         "profitLimitRatio": 300,
+        "customCheck": "0x0000000000000000000000000000000000000000",
     }
 
     vault.updateStrategyMinDebtPerHarvest(strategy, 15, {"from": gov})
@@ -230,6 +233,7 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
         "enforceChangeLimit": True,
         "lossLimitRatio": 300,
         "profitLimitRatio": 300,
+        "customCheck": "0x0000000000000000000000000000000000000000",
     }
 
     vault.updateStrategyMaxDebtPerHarvest(strategy, 15, {"from": gov})
@@ -246,6 +250,7 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
         "enforceChangeLimit": True,
         "lossLimitRatio": 300,
         "profitLimitRatio": 300,
+        "customCheck": "0x0000000000000000000000000000000000000000",
     }
 
     vault.updateStrategyPerformanceFee(strategy, 75, {"from": gov})
@@ -262,6 +267,7 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
         "enforceChangeLimit": True,
         "lossLimitRatio": 300,
         "profitLimitRatio": 300,
+        "customCheck": "0x0000000000000000000000000000000000000000",
     }
 
 
@@ -329,6 +335,7 @@ def test_revokeStrategy(chain, gov, vault, strategy, rando):
         "totalDebt": 0,
         "lossLimitRatio": 300,
         "profitLimitRatio": 300,
+        "customCheck": "0x0000000000000000000000000000000000000000",
     }
 
     assert vault.withdrawalQueue(0) == strategy
@@ -619,6 +626,19 @@ def test_health_report_check(gov, token, vault, strategy, chain):
     assert vault.pricePerShare() == 0.786 * 10 ** vault.decimals()
 
 
+def test_custom_health_check(gov, token, vault, strategy, chain, TestHealthCheck):
+    token.approve(vault, MAX_UINT256, {"from": gov})
+    vault.addStrategy(strategy, 10_000, 0, 1000, 0, {"from": gov})
+    vault.deposit(1000, {"from": gov})
+    chain.sleep(1)
+    strategy.harvest()
+    check = TestHealthCheck.deploy({"from": gov})
+    vault.setStrategyCustomCheck(strategy, check, {"from": gov})
+    strategy._takeFunds(100, {"from": gov})
+    with brownie.reverts():
+        strategy.harvest()
+
+
 def test_update_healt_check_report(gov, rando, vault, strategy, chain):
     vault.addStrategy(strategy, 10_000, 0, 1000, 0, {"from": gov})
 
@@ -643,6 +663,7 @@ def test_update_healt_check_report(gov, rando, vault, strategy, chain):
         "totalDebt": 0,
         "totalGain": 0,
         "totalLoss": 0,
+        "customCheck": "0x0000000000000000000000000000000000000000",
     }
 
     vault.setStrategySetLimitRatio(strategy, 50, 50, {"from": gov})
@@ -659,4 +680,5 @@ def test_update_healt_check_report(gov, rando, vault, strategy, chain):
         "totalDebt": 0,
         "totalGain": 0,
         "totalLoss": 0,
+        "customCheck": "0x0000000000000000000000000000000000000000",
     }

@@ -58,6 +58,10 @@ interface Strategy:
     def migrate(_newStrategy: address): nonpayable
 
 
+interface CustomHealthCheck:
+    def check(profit: uint256, loss: uint256, callerStrategy: address) -> bool: view
+
+
 event Transfer:
     sender: indexed(address)
     receiver: indexed(address)
@@ -97,6 +101,7 @@ struct StrategyParams:
     enforceChangeLimit: bool # Allow bypassing the lossRatioLimit checks 
     profitLimitRatio: uint256 # Allowed Percentage of price per share positive changes
     lossLimitRatio: uint256 # Allowed Percentage of price per share negative changes
+    customCheck: address
 
 event StrategyAdded:
     strategy: indexed(address)
@@ -1205,7 +1210,8 @@ def addStrategy(
         totalLoss: 0,
         profitLimitRatio: profitLimitRatio,
         lossLimitRatio: lossLimitRatio,
-        enforceChangeLimit: True
+        enforceChangeLimit: True,
+        customCheck: ZERO_ADDRESS
     })
     log StrategyAdded(strategy, debtRatio, minDebtPerHarvest, maxDebtPerHarvest, performanceFee)
 
@@ -1317,6 +1323,19 @@ def setStrategySetLimitRatio(strategy: address, _lossRatioLimit: uint256, _profi
     self.strategies[strategy].lossLimitRatio = _lossRatioLimit
     self.strategies[strategy].profitLimitRatio = _profitLimitRatio
 
+@external
+def setStrategyCustomCheck(strategy: address, _customCheck: address):
+    """
+    @notice
+        Change the custom strategy, default value is 0x0, when set to a non
+        null address, the vault will check the strategy health using this address.
+        If set to 0x0 it will use default checks.
+    @param strategy The Strategy to update.
+    @param _customCheck The contract that should perform the check, can be set to 0x0. 
+    """
+    assert msg.sender in [self.management, self.governance]
+    self.strategies[strategy].customCheck = _customCheck
+
 @internal
 def _revokeStrategy(strategy: address):
     self.debtRatio -= self.strategies[strategy].debtRatio
@@ -1367,7 +1386,8 @@ def migrateStrategy(oldVersion: address, newVersion: address):
         totalLoss: 0,
         profitLimitRatio: strategy.profitLimitRatio,
         lossLimitRatio: strategy.lossLimitRatio,
-        enforceChangeLimit: True
+        enforceChangeLimit: True,
+        customCheck: strategy.customCheck
     })
 
     Strategy(oldVersion).migrate(newVersion)
@@ -1700,10 +1720,13 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     # Check report is within healty ranges
 
     if self.strategies[msg.sender].enforceChangeLimit:
-        totalDebt: uint256 = self.strategies[msg.sender].totalDebt
+        if self.strategies[msg.sender].customCheck != ZERO_ADDRESS:
+            assert(CustomHealthCheck(self.strategies[msg.sender].customCheck).check(gain, loss, msg.sender)) #dev: custom check
+        else:
+            totalDebt: uint256 = self.strategies[msg.sender].totalDebt
 
-        assert(gain <= ((totalDebt * self.strategies[msg.sender].profitLimitRatio) / MAX_BPS)) # dev: gain too high
-        assert(loss <= ((totalDebt * self.strategies[msg.sender].lossLimitRatio) / MAX_BPS)) # dev: loss too high
+            assert(gain <= ((totalDebt * self.strategies[msg.sender].profitLimitRatio) / MAX_BPS)) # dev: gain too high
+            assert(loss <= ((totalDebt * self.strategies[msg.sender].lossLimitRatio) / MAX_BPS)) # dev: loss too high
     else:
         self.strategies[msg.sender].enforceChangeLimit = True
 
