@@ -192,7 +192,9 @@ event StrategyAddedToQueue:
 strategies: public(HashMap[address, StrategyParams])
 MAXIMUM_STRATEGIES: constant(uint256) = 20
 DEGRADATION_COEFFICIENT: constant(uint256) = 10 ** 18
-SET_SIZE: constant(uint256) = 32 # 2 * MAXIMUM_STRATEGIES
+# SET_SIZE can be any number but having it in power of 2 will be more gas friendly 
+# and collision free.
+SET_SIZE: constant(uint256) = 32 
 
 # Ordering that `withdraw` uses to determine which strategies to pull funds from
 # NOTE: Does *NOT* have to match the ordering of all the current strategies that
@@ -527,12 +529,6 @@ def setEmergencyShutdown(active: bool):
     log EmergencyShutdown(active)
 
 
-@internal
-@pure
-def getHash(val: address) -> uint256:
-    return convert(val, uint256)
-
-
 @external
 def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
     """
@@ -560,7 +556,6 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
     """
     assert msg.sender in [self.management, self.governance]
 
-    # HACK: Temporary until Vyper adds support for Dynamic arrays
     set: address[SET_SIZE] = empty(address[SET_SIZE])
     for i in range(MAXIMUM_STRATEGIES):
         if queue[i] == ZERO_ADDRESS:
@@ -572,10 +567,14 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
 
         assert self.strategies[queue[i]].activation > 0
 
-        hash: uint256 = self.getHash(queue[i])
+        # hash will have hash of the address in uint256.
+        # mask will be used to get key for the set for indexing
+        hash: uint256 = convert(queue[i], uint256)
         mask: uint256 = SET_SIZE - 1
         key: uint256 = bitwise_and(hash, mask)
         assert key < SET_SIZE
+        # Most of the times following for loop only run once which is making it highly gas efficient 
+        # but in the worst case of key collision it will run linearly and find first empty slot.
         for m in range(key, key + SET_SIZE):
             if m >= SET_SIZE:
                 for n in range(SET_SIZE):
