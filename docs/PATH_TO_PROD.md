@@ -1,10 +1,12 @@
 # Protocol Due Diligence: [ PROTOCOL NAME ]
 
 ## Overview + Links
-- **[Site](https://google.com)**
-- **Team**
-- **[Docs](https://google.com)**
+- **Brief description of strategy (1-2 sentences which can be published to yearn.finance)**:
+- **[Site](https://example.com)**
+- **[Team](https://example.com)**
+- **[Docs](https://example.com)**
 - **Audits and due diligence disclosures**
+
 
 ## Rug-ability
 **Multi-sig:**
@@ -28,29 +30,29 @@
 # Path to Prod
 
 ## Strategy Details
-- **Description:**
-- **Strategy current APR:**
-- **Does Strategy delegate assets?:**
-- **Target Prod Vault:**
-- **BaseStrategy Version #:**
-- **Target Prod Vault Version #:**
+- **Description**:
+- **Strategy current APR**:
+- **Does Strategy delegate assets?**:
+- **Target Prod Vault**:
+- **BaseStrategy Version #:**:
+- **Target Prod Vault Version #**:
 
 ## Testing Plan
 ### Ape.tax
-- **Will Ape.tax be used?:**
-- **Will Ape.tax vault be same version # as prod vault?:**
-- **What conditions are needed to graduate? (e.g. number of harvest cycles, min funds, etc):**
+- **Will Ape.tax be used?**:
+- **Will Ape.tax vault be same version # as prod vault?**:
+- **What conditions are needed to graduate? (e.g. number of harvest cycles, min funds, etc)**:
 
 ## Prod Deployment Plan
-- **Suggested position in withdrawQueue?:**
-- **Does strategy have any deposit/withdraw fees?:**
-- **Suggested debtRatio?:**
-- **Suggested max debtRatio to scale to?:**
+- **Suggested position in withdrawQueue?**:
+- **Does strategy have any deposit/withdraw fees?**:
+- **Suggested debtRatio?**:
+- **Suggested max debtRatio to scale to?**:
 
 ## Emergency Plan
-- **Shutdown Plan:**
-- **Things to know:**
-- **Scripts / steps needed:**
+- **Shutdown Plan**:
+- **Things to know**:
+- **Scripts / steps needed**:
 - **Is it safe to...**
     - call EmergencyShutdown
     - remove from withdrawQueue
