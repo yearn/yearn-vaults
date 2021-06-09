@@ -532,7 +532,7 @@ def test_reporting_gains_without_fee(chain, vault, token, strategy, gov, rando):
         vault.report(gain, 0, 0, {"from": strategy})
 
     token.transfer(strategy, gain, {"from": gov})
-    vault.setStrategyEnforeChangeLimit(strategy, False, {"from": gov})
+    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
 
     vault.report(gain, 0, 0, {"from": strategy})
 
@@ -613,7 +613,7 @@ def test_health_report_check(gov, token, vault, strategy, chain):
     chain.sleep(1)
     with brownie.reverts():
         strategy.harvest()
-    vault.setStrategyEnforeChangeLimit(strategy, False, {"from": gov})
+    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
     strategy.harvest()
     assert vault.pricePerShare() == 0.87 * 10 ** vault.decimals()
 
@@ -635,6 +635,10 @@ def test_custom_health_check(gov, token, vault, strategy, chain, TestHealthCheck
     check = TestHealthCheck.deploy({"from": gov})
     vault.setStrategyCustomCheck(strategy, check, {"from": gov})
     strategy._takeFunds(100, {"from": gov})
+    chain.sleep(1)
+    strategy.harvest()
+    check.togglePass()
+    chain.sleep(1)
     with brownie.reverts():
         strategy.harvest()
 
@@ -645,11 +649,11 @@ def test_update_healt_check_report(gov, rando, vault, strategy, chain):
     activation_timestamp = chain[-1]["timestamp"]
     # Not just anyone can update heath check report
     with brownie.reverts():
-        vault.setStrategyEnforeChangeLimit(strategy, False, {"from": rando})
+        vault.setStrategyEnforceChangeLimit(strategy, False, {"from": rando})
     with brownie.reverts():
         vault.setStrategySetLimitRatio(strategy, 50, 50, {"from": rando})
 
-    vault.setStrategyEnforeChangeLimit(strategy, True, {"from": gov})
+    vault.setStrategyEnforceChangeLimit(strategy, True, {"from": gov})
     assert vault.strategies(strategy).dict() == {
         "activation": activation_timestamp,
         "debtRatio": 10000,

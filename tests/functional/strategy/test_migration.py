@@ -76,7 +76,7 @@ def test_migrated_strategy_can_call_harvest(
 
     assert vault.strategies(strategy).dict()["totalGain"] == 0
     chain.sleep(1)
-    vault.setStrategyEnforeChangeLimit(strategy, False, {"from": gov})
+    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
     strategy.harvest({"from": gov})
     assert vault.strategies(strategy).dict()["totalGain"] == 10 ** token.decimals()
 

@@ -217,7 +217,7 @@ def test_withdrawal_with_empty_queue(
 
     chain.sleep(8640)
     chain.sleep(1)
-    vault.setStrategyEnforeChangeLimit(strategy, False, {"from": gov})
+    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
     strategy.harvest({"from": gov})
     assert token.balanceOf(vault) < vault.totalAssets()
 
@@ -279,7 +279,7 @@ def test_withdrawal_with_reentrancy(
     # move funds into strategy
     chain.sleep(1)  # Needs to be a second ahead, at least
     chain.sleep(1)
-    vault.setStrategyEnforeChangeLimit(strategy, False, {"from": gov})
+    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
     strategy.harvest({"from": gov})
 
     # To simulate reentrancy we need strategy to have some balance
@@ -305,7 +305,7 @@ def test_user_withdraw(chain, gov, token, vault, strategy, rando):
     pricePerShareBefore = vault.pricePerShare()
     token.transfer(strategy, vault.totalAssets(), {"from": gov})  # seed some profit
     chain.sleep(1)
-    vault.setStrategyEnforeChangeLimit(strategy, False, {"from": gov})
+    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
     strategy.harvest({"from": gov})
 
     chain.sleep(1)
@@ -329,7 +329,7 @@ def test_profit_degradation(chain, gov, token, vault, strategy, rando):
     deposit = vault.totalAssets()
     token.transfer(strategy, deposit, {"from": gov})  # seed some profit
     chain.sleep(1)
-    vault.setStrategyEnforeChangeLimit(strategy, False, {"from": gov})
+    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
     strategy.harvest({"from": gov})
 
     vault.withdraw({"from": gov})
@@ -367,7 +367,7 @@ def test_withdraw_partial_delegate_assets(chain, gov, token, vault, strategy, ra
     pricePerShareBefore = vault.pricePerShare()
     token.transfer(strategy, vault.totalAssets(), {"from": gov})  # seed some profit
     chain.sleep(1)
-    vault.setStrategyEnforeChangeLimit(strategy, False, {"from": gov})
+    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
     strategy.harvest({"from": gov})
 
     chain.sleep(1)

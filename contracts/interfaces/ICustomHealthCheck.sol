@@ -4,6 +4,6 @@ interface ICustomHealthCheck {
     function check(
         uint256 profit,
         uint256 loss,
-        uint256 callerStrategy
+        address callerStrategy
     ) external view returns (bool);
 }

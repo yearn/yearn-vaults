@@ -1311,7 +1311,7 @@ def updateStrategyPerformanceFee(
 
 
 @external
-def setStrategyEnforeChangeLimit(strategy: address, enabled: bool):
+def setStrategyEnforceChangeLimit(strategy: address, enabled: bool):
     assert msg.sender in [self.management, self.governance]
     assert self.strategies[strategy].activation > 0
     self.strategies[strategy].enforceChangeLimit = enabled 
@@ -1334,6 +1334,8 @@ def setStrategyCustomCheck(strategy: address, _customCheck: address):
     @param _customCheck The contract that should perform the check, can be set to 0x0. 
     """
     assert msg.sender in [self.management, self.governance]
+    if _customCheck != ZERO_ADDRESS:
+        assert(CustomHealthCheck(_customCheck).check(0, 0, strategy)) #dev: can't call check
     self.strategies[strategy].customCheck = _customCheck
 
 @internal
@@ -1623,7 +1625,7 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
     # NOTE: In effect, this reduces overall share price by the combined fee
     # NOTE: may throw if Vault.totalAssets() > 1e64, or not called for more than a year
     duration: uint256 = block.timestamp - self.strategies[strategy].lastReport
-    assert duration != 0 # can't assessFees twice within the same block
+    assert duration != 0 #dev: can't call assessFees twice within the same block
 
     if gain == 0:
         # NOTE: The fees are not charged if there hasn't been any gains reported
@@ -1728,9 +1730,9 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
             assert(gain <= ((totalDebt * self.strategies[msg.sender].profitLimitRatio) / MAX_BPS)) # dev: gain too high
             assert(loss <= ((totalDebt * self.strategies[msg.sender].lossLimitRatio) / MAX_BPS)) # dev: loss too high
     else:
-        self.strategies[msg.sender].enforceChangeLimit = True
+        self.strategies[msg.sender].enforceChangeLimit = True # The check is turned off only once and turned back on.
 
-    # We have a loss to report, do it before the rest of the calculations
+    # We have a loss to report, do it before the rest of the calculations 
     if loss > 0:
         self._reportLoss(msg.sender, loss)
 
