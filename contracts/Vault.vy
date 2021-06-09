@@ -192,7 +192,7 @@ event StrategyAddedToQueue:
 strategies: public(HashMap[address, StrategyParams])
 MAXIMUM_STRATEGIES: constant(uint256) = 20
 DEGRADATION_COEFFICIENT: constant(uint256) = 10 ** 18
-SET_SIZE: constant(uint256) = 2 * MAXIMUM_STRATEGIES
+SET_SIZE: constant(uint256) = 32 # 2 * MAXIMUM_STRATEGIES
 
 # Ordering that `withdraw` uses to determine which strategies to pull funds from
 # NOTE: Does *NOT* have to match the ordering of all the current strategies that
@@ -533,27 +533,6 @@ def getHash(val: address) -> uint256:
     return convert(val, uint256)
 
 
-# @internal
-# def checkAndInsertInSet(set: address[SET_SIZE], val: address) -> bool:
-#     hash: uint256 = self.getHash(val)
-#     mask: uint256 = SET_SIZE - 1
-#     key: uint256 = bitwise_and(hash, mask)
-#     assert key < SET_SIZE
-#     for i in range(SET_SIZE):
-#         if set[i] == val: 
-#             return True
-#         if set[i] == ZERO_ADDRESS:
-#             set[i] = val
-#             return False
-#     for i in range(0, key):
-#         if set[i] == val:
-#             return True
-#         if set[i] == ZERO_ADDRESS:
-#             set[i] = val
-#             return False
-#     assert False
-
-
 @external
 def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
     """
@@ -597,20 +576,22 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
         mask: uint256 = SET_SIZE - 1
         key: uint256 = bitwise_and(hash, mask)
         assert key < SET_SIZE
-        for k in range(key, key + SET_SIZE):
-            if k >= SET_SIZE:
+        for m in range(key, key + SET_SIZE):
+            if m >= SET_SIZE:
+                for n in range(SET_SIZE):
+                    if n >= key:
+                        break
+                    if set[n] == queue[i]:
+                        assert False
+                    if set[n] == ZERO_ADDRESS:
+                        set[n] = queue[i]
+                        break
                 break
-            if set[k] == queue[i]: 
+            if set[m] == queue[i]: 
                 assert False
-            if set[k] == ZERO_ADDRESS:
-                set[k] = queue[i]
-        for k in range(SET_SIZE):
-            if k >= key:
+            if set[m] == ZERO_ADDRESS:
+                set[m] = queue[i]
                 break
-            if set[k] == queue[i]:
-                assert False
-            if set[k] == ZERO_ADDRESS:
-                set[k] = queue[i]
 
         self.withdrawalQueue[i] = queue[i]
 
