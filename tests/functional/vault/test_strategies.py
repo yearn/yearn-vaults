@@ -467,7 +467,7 @@ def test_addStategyToQueue(
     # Can't add a strategy to an already full queue
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(20)]
     for s in strategies:
-        vault.addStrategy(s, 100, 10, 20, 1000, {"from": gov}) 
+        vault.addStrategy(s, 100, 10, 20, 1000, {"from": gov})
     with brownie.reverts():
         vault.addStrategyToQueue(strategy, {"from": gov})
 

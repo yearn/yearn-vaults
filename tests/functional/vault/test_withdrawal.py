@@ -32,7 +32,7 @@ def test_multiple_withdrawals(token, gov, Vault, TestStrategy, chain):
     chain.sleep(1)
 
     for s in strategies:  # Seed all the strategies with debt
-        s.harvest({"from": gov}) 
+        s.harvest({"from": gov})
 
     assert token.balanceOf(vault) == starting_balance // 2  # 50% in strategies
     for s in strategies:  # All of them have debt (10% each)
@@ -142,7 +142,7 @@ def test_progressive_withdrawal(
 
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(2)]
     for s in strategies:
-        vault.addStrategy(s, 1000, 0, 10, 1000, {"from": gov}) 
+        vault.addStrategy(s, 1000, 0, 10, 1000, {"from": gov})
 
     token.approve(vault, 2 ** 256 - 1, {"from": gov})
     vault.deposit(1000, {"from": gov})
