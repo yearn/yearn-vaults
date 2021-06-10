@@ -329,7 +329,8 @@ def test_ordering(gov, vault, TestStrategy, rando):
             {"from": gov},
         )
 
-    [vault.addStrategy(s, 100, 10, 20, 1000, {"from": gov}) for s in strategies]
+    for s in strategies:
+        vault.addStrategy(s, 100, 10, 20, 1000, {"from": gov})
 
     for idx, strategy in enumerate(strategies):
         assert vault.withdrawalQueue(idx) == strategy
@@ -465,7 +466,8 @@ def test_addStategyToQueue(
 
     # Can't add a strategy to an already full queue
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(20)]
-    [vault.addStrategy(s, 100, 10, 20, 1000, {"from": gov}) for s in strategies]
+    for s in strategies:
+        vault.addStrategy(s, 100, 10, 20, 1000, {"from": gov}) 
     with brownie.reverts():
         vault.addStrategyToQueue(strategy, {"from": gov})
 
