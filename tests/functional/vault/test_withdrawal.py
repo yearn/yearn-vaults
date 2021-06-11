@@ -91,6 +91,7 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
     # One of our strategies suffers a loss
     total_assets = vault.totalAssets()
     loss = token.balanceOf(strategies[0]) // 2  # 10% of total
+    vault.setStrategySetLimitRatio(strategies[0], 5000, 5000, {"from": gov})
     strategies[0]._takeFunds(loss, {"from": gov})
     # Harvest the loss
     assert vault.strategies(strategies[0]).dict()["totalLoss"] == 0
@@ -120,6 +121,7 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
     chain.revert()  # Back before the withdrawal
 
     # Scenario 2: we wait, and only suffer a minor loss
+
     strategies[0].harvest({"from": gov})
     assert vault.strategies(strategies[0]).dict()["totalLoss"] == loss
     assert token.balanceOf(rando) == 0
@@ -220,6 +222,7 @@ def test_withdrawal_with_empty_queue(
 
     chain.sleep(8640)
     chain.sleep(1)
+    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
     strategy.harvest({"from": gov})
     assert token.balanceOf(vault) < vault.totalAssets()
 
@@ -281,6 +284,7 @@ def test_withdrawal_with_reentrancy(
     # move funds into strategy
     chain.sleep(1)  # Needs to be a second ahead, at least
     chain.sleep(1)
+    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
     strategy.harvest({"from": gov})
 
     # To simulate reentrancy we need strategy to have some balance
@@ -306,6 +310,7 @@ def test_user_withdraw(chain, gov, token, vault, strategy, rando):
     pricePerShareBefore = vault.pricePerShare()
     token.transfer(strategy, vault.totalAssets(), {"from": gov})  # seed some profit
     chain.sleep(1)
+    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
     strategy.harvest({"from": gov})
 
     chain.sleep(1)
@@ -329,6 +334,7 @@ def test_profit_degradation(chain, gov, token, vault, strategy, rando):
     deposit = vault.totalAssets()
     token.transfer(strategy, deposit, {"from": gov})  # seed some profit
     chain.sleep(1)
+    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
     strategy.harvest({"from": gov})
 
     vault.withdraw({"from": gov})
@@ -366,6 +372,7 @@ def test_withdraw_partial_delegate_assets(chain, gov, token, vault, strategy, ra
     pricePerShareBefore = vault.pricePerShare()
     token.transfer(strategy, vault.totalAssets(), {"from": gov})  # seed some profit
     chain.sleep(1)
+    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
     strategy.harvest({"from": gov})
 
     chain.sleep(1)

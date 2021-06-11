@@ -16,6 +16,10 @@ struct StrategyParams {
     uint256 totalDebt;
     uint256 totalGain;
     uint256 totalLoss;
+    bool enforceChangeLimit;
+    uint256 profitLimitRatio;
+    uint256 lossLimitRatio;
+    address customCheck;
 }
 
 interface VaultAPI is IERC20 {
