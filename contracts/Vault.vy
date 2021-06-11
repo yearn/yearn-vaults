@@ -58,6 +58,10 @@ interface Strategy:
     def migrate(_newStrategy: address): nonpayable
 
 
+interface CustomHealthCheck:
+    def check(profit: uint256, loss: uint256, callerStrategy: address) -> bool: view
+
+
 event Transfer:
     sender: indexed(address)
     receiver: indexed(address)
@@ -94,7 +98,10 @@ struct StrategyParams:
     totalDebt: uint256  # Total outstanding debt that Strategy has
     totalGain: uint256  # Total returns that Strategy has realized for Vault
     totalLoss: uint256  # Total losses that Strategy has realized for Vault
-
+    enforceChangeLimit: bool # Allow bypassing the lossRatioLimit checks 
+    profitLimitRatio: uint256 # Allowed Percentage of price per share positive changes
+    lossLimitRatio: uint256 # Allowed Percentage of price per share negative changes
+    customCheck: address
 
 event StrategyAdded:
     strategy: indexed(address)
@@ -1151,6 +1158,8 @@ def addStrategy(
     minDebtPerHarvest: uint256,
     maxDebtPerHarvest: uint256,
     performanceFee: uint256,
+    profitLimitRatio: uint256 = 300, # 3%
+    lossLimitRatio: uint256 = 300 # 3%
 ):
     """
     @notice
@@ -1199,6 +1208,10 @@ def addStrategy(
         totalDebt: 0,
         totalGain: 0,
         totalLoss: 0,
+        profitLimitRatio: profitLimitRatio,
+        lossLimitRatio: lossLimitRatio,
+        enforceChangeLimit: True,
+        customCheck: ZERO_ADDRESS
     })
     log StrategyAdded(strategy, debtRatio, minDebtPerHarvest, maxDebtPerHarvest, performanceFee)
 
@@ -1297,6 +1310,34 @@ def updateStrategyPerformanceFee(
     log StrategyUpdatePerformanceFee(strategy, performanceFee)
 
 
+@external
+def setStrategyEnforceChangeLimit(strategy: address, enabled: bool):
+    assert msg.sender in [self.management, self.governance]
+    assert self.strategies[strategy].activation > 0
+    self.strategies[strategy].enforceChangeLimit = enabled 
+
+@external
+def setStrategySetLimitRatio(strategy: address, _lossRatioLimit: uint256, _profitLimitRatio: uint256):
+    assert msg.sender in [self.management, self.governance]
+    assert self.strategies[strategy].activation > 0
+    self.strategies[strategy].lossLimitRatio = _lossRatioLimit
+    self.strategies[strategy].profitLimitRatio = _profitLimitRatio
+
+@external
+def setStrategyCustomCheck(strategy: address, _customCheck: address):
+    """
+    @notice
+        Change the custom strategy, default value is 0x0, when set to a non
+        null address, the vault will check the strategy health using this address.
+        If set to 0x0 it will use default checks.
+    @param strategy The Strategy to update.
+    @param _customCheck The contract that should perform the check, can be set to 0x0. 
+    """
+    assert msg.sender in [self.management, self.governance]
+    if _customCheck != ZERO_ADDRESS:
+        assert(CustomHealthCheck(_customCheck).check(0, 0, strategy)) #dev: can't call check
+    self.strategies[strategy].customCheck = _customCheck
+
 @internal
 def _revokeStrategy(strategy: address):
     self.debtRatio -= self.strategies[strategy].debtRatio
@@ -1345,6 +1386,10 @@ def migrateStrategy(oldVersion: address, newVersion: address):
         totalDebt: strategy.totalDebt,
         totalGain: 0,
         totalLoss: 0,
+        profitLimitRatio: strategy.profitLimitRatio,
+        lossLimitRatio: strategy.lossLimitRatio,
+        enforceChangeLimit: True,
+        customCheck: strategy.customCheck
     })
 
     Strategy(oldVersion).migrate(newVersion)
@@ -1580,7 +1625,7 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
     # NOTE: In effect, this reduces overall share price by the combined fee
     # NOTE: may throw if Vault.totalAssets() > 1e64, or not called for more than a year
     duration: uint256 = block.timestamp - self.strategies[strategy].lastReport
-    assert duration != 0 # can't assessFees twice within the same block
+    assert duration != 0 #dev: can't call assessFees twice within the same block
 
     if gain == 0:
         # NOTE: The fees are not charged if there hasn't been any gains reported
@@ -1673,10 +1718,24 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     assert self.strategies[msg.sender].activation > 0
     # No lying about total available to withdraw!
     assert self.token.balanceOf(msg.sender) >= gain + _debtPayment
+    
+    # Check report is within healty ranges
 
-    # We have a loss to report, do it before the rest of the calculations
+    if self.strategies[msg.sender].enforceChangeLimit:
+        if self.strategies[msg.sender].customCheck != ZERO_ADDRESS:
+            assert(CustomHealthCheck(self.strategies[msg.sender].customCheck).check(gain, loss, msg.sender)) #dev: custom check
+        else:
+            totalDebt: uint256 = self.strategies[msg.sender].totalDebt
+
+            assert(gain <= ((totalDebt * self.strategies[msg.sender].profitLimitRatio) / MAX_BPS)) # dev: gain too high
+            assert(loss <= ((totalDebt * self.strategies[msg.sender].lossLimitRatio) / MAX_BPS)) # dev: loss too high
+    else:
+        self.strategies[msg.sender].enforceChangeLimit = True # The check is turned off only once and turned back on.
+
+    # We have a loss to report, do it before the rest of the calculations 
     if loss > 0:
         self._reportLoss(msg.sender, loss)
+
 
     # Assess both management fee and performance fee, and issue both as shares of the vault
     totalFees: uint256 = self._assessFees(msg.sender, gain)
@@ -1749,7 +1808,6 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     else:
         # Otherwise, just return what we have as debt outstanding
         return debt
-
 
 @external
 def sweep(token: address, amount: uint256 = MAX_UINT256):
