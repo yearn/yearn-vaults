@@ -624,7 +624,6 @@ abstract contract BaseStrategy {
         // We usually don't need tend, but if there are positions that need
         // active maintainence, overriding this function is how you would
         // signal for that.
-        uint256 callCost = ethToWant(callCostInWei);
         return false;
     }
 
