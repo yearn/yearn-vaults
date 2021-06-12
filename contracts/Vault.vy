@@ -1602,7 +1602,7 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
             / SECS_PER_YEAR
         )
 
-         # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
+        # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
         performance_fee = (
             # NOTE: Fee is applied to gain in same ratio as we have for undelegated assets to total assets
             gain
