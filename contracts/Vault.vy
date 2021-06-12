@@ -576,6 +576,7 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
         for m in range(key, key + SET_SIZE):
             # We've exhausted the set but still need to place this item
             if m >= SET_SIZE:
+                # So we're starting over from the beginning of the set to find space in the set
                 for n in range(SET_SIZE):
                     # Note: This only means SET_SIZE is lower than MAXIMUM_STRATEGIES
                     assert n < key
