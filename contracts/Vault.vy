@@ -574,6 +574,7 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
         # Most of the times following for loop only run once which is making it highly gas efficient 
         # but in the worst case of key collision it will run linearly and find first empty slot.
         for m in range(key, key + SET_SIZE):
+            # We've exhausted the set but still need to place this item
             if m >= SET_SIZE:
                 for n in range(SET_SIZE):
                     # Note: This only means SET_SIZE is lower than MAXIMUM_STRATEGIES
