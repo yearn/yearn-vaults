@@ -20,7 +20,7 @@ def test_multiple_withdrawals(token, gov, Vault, TestStrategy, chain):
 
     starting_balance = token.balanceOf(vault)
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(5)]
-    [
+    for s in strategies:
         vault.addStrategy(
             s,
             1_000,  # 10% of all tokens in Vault
@@ -29,11 +29,10 @@ def test_multiple_withdrawals(token, gov, Vault, TestStrategy, chain):
             0,  # No fee
             {"from": gov},
         )
-        for s in strategies
-    ]
     chain.sleep(1)
 
-    [s.harvest({"from": gov}) for s in strategies]  # Seed all the strategies with debt
+    for s in strategies:  # Seed all the strategies with debt
+        s.harvest({"from": gov})
 
     assert token.balanceOf(vault) == starting_balance // 2  # 50% in strategies
     for s in strategies:  # All of them have debt (10% each)
@@ -57,7 +56,8 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
     vault.setManagementFee(0, {"from": gov})  # Just makes it easier later
     # Add strategies
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(5)]
-    [vault.addStrategy(s, 2_000, 0, 10 ** 21, 1000, {"from": gov}) for s in strategies]
+    for s in strategies:
+        vault.addStrategy(s, 2_000, 0, 10 ** 21, 1000, {"from": gov})
 
     # Send tokens to random user
     token.approve(gov, 2 ** 256 - 1, {"from": gov})
@@ -78,7 +78,8 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
     # the vault and the strategies
     while vault.totalDebt() < vault.totalAssets():
         chain.sleep(1)
-        [s.harvest({"from": gov}) for s in strategies]
+        for s in strategies:
+            s.harvest({"from": gov})
         with brownie.reverts():
             vault.withdraw(5000, {"from": rando})
 
@@ -140,7 +141,8 @@ def test_progressive_withdrawal(
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
 
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(2)]
-    [vault.addStrategy(s, 1000, 0, 10, 1000, {"from": gov}) for s in strategies]
+    for s in strategies:
+        vault.addStrategy(s, 1000, 0, 10, 1000, {"from": gov})
 
     token.approve(vault, 2 ** 256 - 1, {"from": gov})
     vault.deposit(1000, {"from": gov})
@@ -153,7 +155,8 @@ def test_progressive_withdrawal(
 
     # Deposit something in strategies
     chain.sleep(1)  # Needs to be a second ahead, at least
-    [s.harvest({"from": gov}) for s in strategies]
+    for s in strategies:
+        s.harvest({"from": gov})
     assert token.balanceOf(vault) < vault.totalAssets()  # Some debt is in strategies
 
     # Trying to withdraw 0 shares. It should revert
