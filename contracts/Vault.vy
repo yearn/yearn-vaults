@@ -570,7 +570,7 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
         # hash will have hash of the address in uint256.
         # `mask = SET_SIZE - 1` will be used to get key for the set for indexing
         hash: uint256 = convert(queue[i], uint256)
-        key: uint256 = bitwise_and(hash, SET_SIZE - 1)  # Key is first `SET_SIZE` bits of address
+        key: uint256 = bitwise_and(hash, SET_SIZE - 1)  # Key is first `log_2(SET_SIZE)` bits of address
         # Most of the times following for loop only run once which is making it highly gas efficient 
         # but in the worst case of key collision it will run linearly and find first empty slot.
         for m in range(key, key + SET_SIZE):
