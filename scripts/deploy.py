@@ -143,10 +143,8 @@ def main():
             click.echo(f"Experimental Vault deployed [{vault.address}]")
             click.echo("    NOTE: Vault is not registered in Registry!")
         else:
+            args.append(guardian)
             args.append(management)
-            if guardian != dev.address:
-                # NOTE: Only need to include if guardian is not self
-                args.append(guardian)
             vault = dev.deploy(Vault)
             vault.initialize(*args)
             click.echo(f"New Vault Release deployed [{vault.address}]")
