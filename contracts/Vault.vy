@@ -568,8 +568,7 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
         assert self.strategies[queue[i]].activation > 0
 
         # NOTE: `key` is first `log_2(SET_SIZE)` bits of address (which is a hash)
-        hash: uint256 = convert(queue[i], uint256)
-        key: uint256 = bitwise_and(hash, SET_SIZE - 1)  
+        key: uint256 = bitwise_and(convert(queue[i], uint256), SET_SIZE - 1)  
         # Most of the times following for loop only run once which is making it highly gas efficient 
         # but in the worst case of key collision it will run linearly and find first empty slot in the set.
         for j in range(key, key + SET_SIZE):
