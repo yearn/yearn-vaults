@@ -571,9 +571,9 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
         key: uint256 = bitwise_and(convert(queue[i], uint256), SET_SIZE - 1)  
         # Most of the times following for loop only run once which is making it highly gas efficient 
         # but in the worst case of key collision it will run linearly and find first empty slot in the set.
-        for j in range(key, key + SET_SIZE):
+        for j in range(SET_SIZE):
             # NOTE: we can always find space by treating set as circular (as long as `SET_SIZE >= MAXIMUM_STRATEGIES`)
-            idx: uint256 = j % SET_SIZE
+            idx: uint256 = (key + j) % SET_SIZE
             assert set[idx] != queue[i]  # dev: duplicate in set
             if set[idx] == ZERO_ADDRESS:
                 set[idx] = queue[i]
