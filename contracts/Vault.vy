@@ -573,21 +573,11 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
         key: uint256 = bitwise_and(hash, SET_SIZE - 1)  # Key is first `log_2(SET_SIZE)` bits of address
         # Most of the times following for loop only run once which is making it highly gas efficient 
         # but in the worst case of key collision it will run linearly and find first empty slot.
-        for m in range(key, key + SET_SIZE):
-            # We've exhausted the set but still need to place this item
-            if m >= SET_SIZE:
-                # So we're starting over from the beginning of the set to find space in the set
-                for n in range(SET_SIZE):
-                    # Note: This only means SET_SIZE is lower than MAXIMUM_STRATEGIES
-                    assert n < key
-                    assert set[n] != queue[i]
-                    if set[n] == ZERO_ADDRESS:
-                        set[n] = queue[i]
-                        break
-                break
-            assert set[m] != queue[i]
-            if set[m] == ZERO_ADDRESS:
-                set[m] = queue[i]
+        for j in range(key, key + SET_SIZE):
+            idx: uint256 = j % SET_SIZE  # traverse set for empty space in circular manner
+            assert set[idx] != queue[i]  # duplicate check
+            if set[idx] == ZERO_ADDRESS:
+                set[idx] = queue[i]
                 break
 
         self.withdrawalQueue[i] = queue[i]
