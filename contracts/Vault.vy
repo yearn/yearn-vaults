@@ -575,7 +575,7 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
         # but in the worst case of key collision it will run linearly and find first empty slot.
         for j in range(key, key + SET_SIZE):
             idx: uint256 = j % SET_SIZE  # traverse set for empty space in circular manner
-            assert set[idx] != queue[i]  # duplicate check
+            assert set[idx] != queue[i]  # dev: duplicate in set
             if set[idx] == ZERO_ADDRESS:
                 set[idx] = queue[i]
                 break
