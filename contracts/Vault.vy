@@ -1036,6 +1036,7 @@ def withdraw(
         caller's address.
     @param maxLoss
         The maximum acceptable loss to sustain on withdrawal. Defaults to 0.01%.
+        The acceptable amount of token shares to be brunt to cover losses. 
     @return The quantity of tokens redeemed for `_shares`.
     """
     shares: uint256 = maxShares  # May reduce this number below
