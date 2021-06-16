@@ -6,15 +6,20 @@ pendingGovernance: public(address)
 event NewGovernance:
     governance: address
 
+event NewPendingGovernance:
+    governance: address
+
+event StrategyRegistered:
+    strategy: address
+    name: String[64]
+    apiVersion: String[8]
+
 interface Strategy:
     def name() -> String[64]: view
+    def apiVersion() -> String[8]: view
 
-struct StrategyInfo:
-    name: String[64]
-    numReleases: uint256 
-    versions: address[20]
-
-strategiesReleases: public(HashMap[bytes32, StrategyInfo])
+strategyVersions: public(HashMap[String[73], address])
+SEPARATOR: constant(String[1]) = "@"
 
 @external
 def __init__():
@@ -28,6 +33,7 @@ def setGovernance(governance: address):
     @param governance The next governance address
     """
     assert msg.sender == self.governance  # dev: unauthorized
+    log NewPendingGovernance(msg.sender)
     self.pendingGovernance = governance
 
 
@@ -48,23 +54,17 @@ def addNewRelease(strategy :address, name: String[64] = ""):
     """
     @notice add a new version of a strategy
     """
-    assert msg.sender == self.pendingGovernance  # dev: unauthorized
+    assert msg.sender == self.governance  # dev: unauthorized
     strategyName: String[64] = name 
     if name == "":
         strategyName = Strategy(strategy).name()
-    strategyHash: bytes32 = sha256(strategyName)
-    if self.strategiesReleases[strategyHash].numReleases == 0:
-	    self.strategiesReleases[strategyHash] = StrategyInfo({
-		    name: strategyName,
-		    numReleases: 0,
-		    versions: [ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS]
-	    })
-    numReleases: uint256 = self.strategiesReleases[strategyHash].numReleases
-    self.strategiesReleases[strategyHash].numReleases = numReleases + 1
-    self.strategiesReleases[strategyHash].versions[numReleases] = strategy
-
+        assert strategyName != ""
+    apiVersion: String[8] = Strategy(strategy).apiVersion()
+    key: String[73] = concat(strategyName, SEPARATOR, apiVersion)
+    self.strategyVersions[key] = strategy
+    log StrategyRegistered(strategy, strategyName, apiVersion)
+ 
 @external
-def latestRelease(name: String[64]) -> address:
-     strategyHash: bytes32 = sha256(name)
-     
-     return self.strategiesReleases[strategyHash].versions[self.strategiesReleases[strategyHash].numReleases - 1]
+def latestRelease(name: String[64], apiVersion: String[8]) -> address:
+    key: String[73] = concat(name, SEPARATOR, apiVersion)
+    return self.strategyVersions[key]
