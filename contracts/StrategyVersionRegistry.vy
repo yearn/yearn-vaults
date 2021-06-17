@@ -1,5 +1,4 @@
 # @version 0.2.12
-
 governance: public(address)
 pendingGovernance: public(address)
 
@@ -14,9 +13,14 @@ event StrategyRegistered:
     name: String[64]
     apiVersion: String[8]
 
+event Cloned:
+    clone: address
+
 interface Strategy:
     def name() -> String[64]: view
     def apiVersion() -> String[8]: view
+    def initialize(params: Bytes[128]): nonpayable
+    def isOriginal() -> bool: nonpayable
 
 strategyVersions: public(HashMap[String[73], address])
 SEPARATOR: constant(String[1]) = "@"
@@ -55,6 +59,7 @@ def addNewRelease(strategy :address, name: String[64] = ""):
     @notice add a new version of a strategy
     """
     assert msg.sender == self.governance  # dev: unauthorized
+    assert Strategy(strategy).isOriginal() # dev: not original 
     strategyName: String[64] = name 
     if name == "":
         strategyName = Strategy(strategy).name()
@@ -68,3 +73,13 @@ def addNewRelease(strategy :address, name: String[64] = ""):
 def latestRelease(name: String[64], apiVersion: String[8]) -> address:
     key: String[73] = concat(name, SEPARATOR, apiVersion)
     return self.strategyVersions[key]
+
+@external
+def clone(strategy: address, params: Bytes[128]):
+    assert Strategy(strategy).isOriginal()  # dev: not original
+
+    newStrategy: address = create_forwarder_to(strategy)
+ 
+    Strategy(newStrategy).initialize(params)
+
+    log Cloned(newStrategy)
