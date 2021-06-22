@@ -98,7 +98,7 @@ struct StrategyParams:
     totalDebt: uint256  # Total outstanding debt that Strategy has
     totalGain: uint256  # Total returns that Strategy has realized for Vault
     totalLoss: uint256  # Total losses that Strategy has realized for Vault
-    enforceChangeLimit: bool # Allow bypassing the lossRatioLimit checks 
+    enforceChangeLimit: bool # Allow bypassing the lossRatioLimit checks
     profitLimitRatio: uint256 # Allowed Percentage of price per share positive changes
     lossLimitRatio: uint256 # Allowed Percentage of price per share negative changes
     customCheck: address
@@ -199,9 +199,9 @@ event StrategyAddedToQueue:
 strategies: public(HashMap[address, StrategyParams])
 MAXIMUM_STRATEGIES: constant(uint256) = 20
 DEGRADATION_COEFFICIENT: constant(uint256) = 10 ** 18
-# SET_SIZE can be any number but having it in power of 2 will be more gas friendly and collision free. 
-# Note: Make sure SET_SIZE is greater than MAXIMUM_STRATEGIES 
-SET_SIZE: constant(uint256) = 32 
+# SET_SIZE can be any number but having it in power of 2 will be more gas friendly and collision free.
+# Note: Make sure SET_SIZE is greater than MAXIMUM_STRATEGIES
+SET_SIZE: constant(uint256) = 32
 
 # Ordering that `withdraw` uses to determine which strategies to pull funds from
 # NOTE: Does *NOT* have to match the ordering of all the current strategies that
@@ -267,7 +267,7 @@ def initialize(
         If `symbolOverride` is not specified, the symbol will be 'yv'
         combined with the symbol of `token`.
 
-        The token used by the vault should not change balances outside transfers and 
+        The token used by the vault should not change balances outside transfers and
         it must transfer the exact amount requested. Fee on transfer and rebasing are not supported.
     @param token The token that may be deposited into this Vault.
     @param governance The address authorized for governance interactions.
@@ -575,8 +575,8 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
         assert self.strategies[queue[i]].activation > 0
 
         # NOTE: `key` is first `log_2(SET_SIZE)` bits of address (which is a hash)
-        key: uint256 = bitwise_and(convert(queue[i], uint256), SET_SIZE - 1)  
-        # Most of the times following for loop only run once which is making it highly gas efficient 
+        key: uint256 = bitwise_and(convert(queue[i], uint256), SET_SIZE - 1)
+        # Most of the times following for loop only run once which is making it highly gas efficient
         # but in the worst case of key collision it will run linearly and find first empty slot in the set.
         for j in range(SET_SIZE):
             # NOTE: we can always find space by treating set as circular (as long as `SET_SIZE >= MAXIMUM_STRATEGIES`)
@@ -806,7 +806,7 @@ def _calculateLockedProfit() -> uint256:
                 * lockedProfit
                 / DEGRADATION_COEFFICIENT
             )
-    else:        
+    else:
         return 0
 
 @view
@@ -1027,9 +1027,9 @@ def withdraw(
         through external means, accounting for whatever exceptional scenarios
         exist for the Vault (that aren't covered by the Vault's own design.)
 
-        In the situation where a large withdrawal happens, it can empty the 
-        vault balance and the strategies in the withdrawal queue. 
-        Strategies not in the withdrawal queue will have to be harvested to 
+        In the situation where a large withdrawal happens, it can empty the
+        vault balance and the strategies in the withdrawal queue.
+        Strategies not in the withdrawal queue will have to be harvested to
         rebalance the funds and make the funds available again to withdraw.
     @param maxShares
         How many shares to try and redeem for tokens, defaults to all.
@@ -1198,7 +1198,7 @@ def addStrategy(
     # Check strategy parameters
     assert self.debtRatio + debtRatio <= MAX_BPS
     assert minDebtPerHarvest <= maxDebtPerHarvest
-    assert performanceFee <= MAX_BPS / 2 
+    assert performanceFee <= MAX_BPS / 2
 
     # Add strategy to approved strategies
     self.strategies[strategy] = StrategyParams({
@@ -1317,7 +1317,7 @@ def updateStrategyPerformanceFee(
 def setStrategyEnforceChangeLimit(strategy: address, enabled: bool):
     assert msg.sender in [self.management, self.governance]
     assert self.strategies[strategy].activation > 0
-    self.strategies[strategy].enforceChangeLimit = enabled 
+    self.strategies[strategy].enforceChangeLimit = enabled
 
 @external
 def setStrategySetLimitRatio(strategy: address, _lossRatioLimit: uint256, _profitLimitRatio: uint256):
@@ -1334,7 +1334,7 @@ def setStrategyCustomCheck(strategy: address, _customCheck: address):
         null address, the vault will check the strategy health using this address.
         If set to 0x0 it will use default checks.
     @param strategy The Strategy to update.
-    @param _customCheck The contract that should perform the check, can be set to 0x0. 
+    @param _customCheck The contract that should perform the check, can be set to 0x0.
     """
     assert msg.sender in [self.management, self.governance]
     if _customCheck != ZERO_ADDRESS:
@@ -1426,7 +1426,10 @@ def revokeStrategy(strategy: address = msg.sender):
     @param strategy The Strategy to revoke.
     """
     assert msg.sender in [strategy, self.governance, self.guardian]
-    assert self.strategies[strategy].debtRatio != 0 # dev: already zero
+    # NOTE: This function may be called via `BaseStrategy.setEmergencyExit` while the
+    #       strategy might have already been revoked or had the debt limit set to zero
+    if self.strategies[strategy].debtRatio == 0:
+        return # already set to zero, nothing to do
 
     self._revokeStrategy(strategy)
 
@@ -1525,7 +1528,7 @@ def _creditAvailable(strategy: address) -> uint256:
     if self.emergencyShutdown:
         return 0
     vault_totalAssets: uint256 = self._totalAssets()
-    vault_debtLimit: uint256 =  self.debtRatio * vault_totalAssets / MAX_BPS 
+    vault_debtLimit: uint256 =  self.debtRatio * vault_totalAssets / MAX_BPS
     vault_totalDebt: uint256 = self.totalDebt
     strategy_debtLimit: uint256 = self.strategies[strategy].debtRatio * vault_totalAssets / MAX_BPS
     strategy_totalDebt: uint256 = self.strategies[strategy].totalDebt
@@ -1637,7 +1640,7 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
     management_fee: uint256 = (
         (
             (self.strategies[strategy].totalDebt - Strategy(strategy).delegatedAssets())
-            * duration 
+            * duration
             * self.managementFee
         )
         / MAX_BPS
@@ -1721,7 +1724,7 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     assert self.strategies[msg.sender].activation > 0
     # No lying about total available to withdraw!
     assert self.token.balanceOf(msg.sender) >= gain + _debtPayment
-    
+
     # Check report is within healty ranges
 
     if self.strategies[msg.sender].enforceChangeLimit:
@@ -1735,7 +1738,7 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     else:
         self.strategies[msg.sender].enforceChangeLimit = True # The check is turned off only once and turned back on.
 
-    # We have a loss to report, do it before the rest of the calculations 
+    # We have a loss to report, do it before the rest of the calculations
     if loss > 0:
         self._reportLoss(msg.sender, loss)
 
@@ -1783,7 +1786,7 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     # Profit is locked and gradually released per block
     # NOTE: compute current locked profit and replace with sum of current and new
     lockedProfitBeforeLoss: uint256 = self._calculateLockedProfit() + gain - totalFees
-    if lockedProfitBeforeLoss > loss: 
+    if lockedProfitBeforeLoss > loss:
         self.lockedProfit = lockedProfitBeforeLoss - loss
     else:
         self.lockedProfit = 0
