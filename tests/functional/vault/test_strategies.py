@@ -315,12 +315,6 @@ def test_revokeStrategy(chain, gov, vault, strategy, rando):
         vault.revokeStrategy(strategy, {"from": rando})
 
     vault.revokeStrategy(strategy, {"from": gov})
-    # do not revoke twice
-    with brownie.reverts():
-        vault.revokeStrategy(strategy, {"from": gov})
-    # do not revoke non-existing strategy
-    with brownie.reverts():
-        vault.revokeStrategy(ZERO_ADDRESS, {"from": gov})
 
     assert vault.strategies(strategy).dict() == {
         "performanceFee": 1000,
@@ -688,3 +682,20 @@ def test_update_healt_check_report(gov, rando, vault, strategy, chain):
         "totalLoss": 0,
         "customCheck": "0x0000000000000000000000000000000000000000",
     }
+
+
+def test_setEmergencyExit_after_revokeStrategy(chain, gov, vault, strategy, rando):
+    vault.addStrategy(strategy, 100, 10, 20, 1000, {"from": gov})
+    activation_timestamp = chain[-1]["timestamp"]
+
+    # Not just anyone can revoke a strategy
+    with brownie.reverts():
+        vault.revokeStrategy(strategy, {"from": rando})
+
+    vault.revokeStrategy(strategy, {"from": gov})
+
+    strategy.setEmergencyExit({"from": gov})
+
+    assert vault.withdrawalQueue(0) == strategy
+    vault.removeStrategyFromQueue(strategy, {"from": gov})
+    assert vault.withdrawalQueue(0) == ZERO_ADDRESS
