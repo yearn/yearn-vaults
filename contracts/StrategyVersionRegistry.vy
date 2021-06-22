@@ -80,7 +80,7 @@ def latestRelease(name: String[64], apiVersion: String[8]) -> address:
     return self.strategyVersions[key]
 
 @external
-def clone(strategy: address, params: Bytes[128]):
+def clone(strategy: address, params: Bytes[256]):
     assert Strategy(strategy).isOriginal()  # dev: not original
 
     newStrategy: address = create_forwarder_to(strategy)
@@ -88,4 +88,3 @@ def clone(strategy: address, params: Bytes[128]):
     Strategy(newStrategy).initialize(params)
 
     log Cloned(newStrategy)
-
