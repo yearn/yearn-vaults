@@ -44,19 +44,19 @@ def test_clone(
     guardian,
     TestStrategy,
     rando,
-    strategyVersionRegisrty,
+    strategyVersionRegistry,
 ):
     params = encode_abi(
         ["address", "address", "address", "address"],
         [other_vault.address, gov.address, guardian.address, strategist.address],
     )
-    tx = strategyVersionRegisrty.clone(strategy, params, {"from": rando})
+    tx = strategyVersionRegistry.clone(strategy, params, {"from": rando})
     address = tx.events["Cloned"]["clone"]
     new_strategy = TestStrategy.at(address)
 
     assert new_strategy.isOriginal() == False
     with brownie.reverts():
-        strategyVersionRegisrty.clone(new_strategy, params, {"from": rando})
+        strategyVersionRegistry.clone(new_strategy, params, {"from": rando})
 
     assert new_strategy.strategist() == gov
     assert new_strategy.rewards() == guardian

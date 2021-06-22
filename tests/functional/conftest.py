@@ -83,7 +83,7 @@ def strategy(
     vault,
     TestStrategy,
     request,
-    strategyVersionRegisrty,
+    strategyVersionRegistry,
 ):
     strategy = strategist.deploy(TestStrategy, vault)
 
@@ -93,7 +93,7 @@ def strategy(
             ["address", "address", "address", "address"],
             [vault.address, strategist.address, rewards.address, keeper.address],
         )
-        tx = strategyVersionRegisrty.clone(strategy, params)
+        tx = strategyVersionRegistry.clone(strategy, params)
 
         # strategy proxy address is returned in the event `Cloned`
         strategyAddress = tx.events["Cloned"]["clone"]
@@ -123,5 +123,5 @@ def registry(gov, Registry):
 
 
 @pytest.fixture
-def strategyVersionRegisrty(gov, StrategyVersionRegistry):
+def strategyVersionRegistry(gov, StrategyVersionRegistry):
     yield gov.deploy(StrategyVersionRegistry)

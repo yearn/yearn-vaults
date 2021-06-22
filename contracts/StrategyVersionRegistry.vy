@@ -28,6 +28,11 @@ strategyVersions: public(HashMap[String[73], address])
 def __init__():
     self.governance = msg.sender
 
+@pure
+@internal
+def _computeKey(name: String[64], version: String[8]) -> String[73]:
+    return concat(name, "@", version)
+
 @external
 def setGovernance(governance: address):
     """
@@ -67,7 +72,8 @@ def addNewRelease(strategy :address, name: String[64] = ""):
     key: String[73] = self._computeKey(strategyName, apiVersion)
     self.strategyVersions[key] = strategy
     log StrategyRegistered(strategy, strategyName, apiVersion)
- 
+
+@view 
 @external
 def latestRelease(name: String[64], apiVersion: String[8]) -> address:
     key: String[73] = self._computeKey(name, apiVersion)
@@ -83,7 +89,3 @@ def clone(strategy: address, params: Bytes[128]):
 
     log Cloned(newStrategy)
 
-@pure
-@internal
-def _computeKey(name: String[64], version: String[8]) -> String[73]:
-    return concat(name, "@", version)
