@@ -126,6 +126,9 @@ event StrategyReported:
 event UpdateGovernance:
     governance: address # New active governance
 
+event NewPendingGovernance:
+    governance: address # New pending governance
+
 
 event UpdateManagement:
     management: address # New active manager
@@ -375,6 +378,7 @@ def setGovernance(governance: address):
     @param governance The address requested to take over Vault governance.
     """
     assert msg.sender == self.governance
+    log NewPendingGovernance(msg.sender)
     self.pendingGovernance = governance
 
 
