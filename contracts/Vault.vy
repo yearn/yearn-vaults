@@ -1421,8 +1421,10 @@ def revokeStrategy(strategy: address = msg.sender):
     @param strategy The Strategy to revoke.
     """
     assert msg.sender in [strategy, self.governance, self.guardian]
+    # NOTE: This function may be called via `BaseStrategy.setEmergencyExit` while the
+    #       strategy might have already been revoked or had the debt limit set to zero
     if self.strategies[strategy].debtRatio == 0:
-        return # no-op
+        return # already set to zero, nothing to do
 
     self._revokeStrategy(strategy)
 
