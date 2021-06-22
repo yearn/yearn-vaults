@@ -19,11 +19,10 @@ event Cloned:
 interface Strategy:
     def name() -> String[64]: view
     def apiVersion() -> String[8]: view
-    def initialize(params: Bytes[128]): nonpayable
+    def initialize(params: Bytes[256]): nonpayable
     def isOriginal() -> bool: nonpayable
 
 strategyVersions: public(HashMap[String[73], address])
-SEPARATOR: constant(String[1]) = "@"
 
 @external
 def __init__():
@@ -65,13 +64,13 @@ def addNewRelease(strategy :address, name: String[64] = ""):
         strategyName = Strategy(strategy).name()
         assert strategyName != ""
     apiVersion: String[8] = Strategy(strategy).apiVersion()
-    key: String[73] = concat(strategyName, SEPARATOR, apiVersion)
+    key: String[73] = self._computeKey(strategyName, apiVersion)
     self.strategyVersions[key] = strategy
     log StrategyRegistered(strategy, strategyName, apiVersion)
  
 @external
 def latestRelease(name: String[64], apiVersion: String[8]) -> address:
-    key: String[73] = concat(name, SEPARATOR, apiVersion)
+    key: String[73] = self._computeKey(name, apiVersion)
     return self.strategyVersions[key]
 
 @external
@@ -83,3 +82,8 @@ def clone(strategy: address, params: Bytes[128]):
     Strategy(newStrategy).initialize(params)
 
     log Cloned(newStrategy)
+
+@pure
+@internal
+def _computeKey(name: String[64], version: String[8]) -> String[73]:
+    return concat(name, "@", version)
