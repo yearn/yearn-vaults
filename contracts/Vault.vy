@@ -196,21 +196,9 @@ event StrategyAddedToQueue:
 
 ## NEW ##
 # New Functionality for Badger
-## Block for Lock - Used for Deposit and Withdrawal, to avoid single attacker exploits
+## NOTE Block for Lock - Used for Deposit and Withdrawal, to avoid single attacker exploits
 blockLock: public(HashMap[address, uint256])
-
-"""
-Pausing
-
-Used in:
-Deposit
-Withdraw
-Transfer
-transferFrom
-Approve
-decreaseAllowance
-increaseAllowance
-"""
+## NOTE Paused, to block deposit, withdrawals, transfers and approval functions
 paused: public(bool)
 
 # NOTE: Track the total for overhead targeting purposes
@@ -621,11 +609,11 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
     log UpdateWithdrawalQueue(queue)
 
 @internal
-def lock_for_block(address account):
+def lock_for_block(account: address):
     """
     @notice used to force one operation per block per EOA
     """
-    blockLock[account] = block.number
+    self.blockLock[account] = block.number
 
 @internal
 def erc20_safe_transfer(token: address, receiver: address, amount: uint256):
@@ -688,10 +676,10 @@ def transfer(receiver: address, amount: uint256) -> bool:
         True if transfer is sent to an address other than this contract's or
         0x0, otherwise the transaction will fail.
     """
-    assert not paused
+    assert not self.paused
 
-    assert blockLock[msg.sender] < block.number, "blockLocked"
-    lock_for_block(msg.sender)
+    assert self.blockLock[msg.sender] < block.number
+    self.lock_for_block(msg.sender)
 
     self._transfer(msg.sender, receiver, amount)
     return True
@@ -716,10 +704,10 @@ def transferFrom(sender: address, receiver: address, amount: uint256) -> bool:
         True if transfer is sent to an address other than this contract's or
         0x0, otherwise the transaction will fail.
     """
-    assert not paused
+    assert not self.paused
 
-    assert blockLock[msg.sender] < block.number, "blockLocked"
-    lock_for_block(msg.sender)
+    assert self.blockLock[msg.sender] < block.number
+    self.lock_for_block(msg.sender)
 
     # Unlimited approval (saves an SSTORE)
     if (self.allowance[sender][msg.sender] < MAX_UINT256):
@@ -741,10 +729,10 @@ def approve(spender: address, amount: uint256) -> bool:
     @param spender The address which will spend the funds.
     @param amount The amount of tokens to be spent.
     """
-    assert not paused
+    assert not self.paused
 
-    assert blockLock[msg.sender] < block.number, "blockLocked"
-    lock_for_block(msg.sender)
+    assert self.blockLock[msg.sender] < block.number
+    self.lock_for_block(msg.sender)
 
     self.allowance[msg.sender][spender] = amount
     log Approval(msg.sender, spender, amount)
@@ -761,10 +749,10 @@ def increaseAllowance(spender: address, amount: uint256) -> bool:
     @param spender The address which will spend the funds.
     @param amount The amount of tokens to increase the allowance by.
     """
-    assert not paused
+    assert not self.paused
     
-    assert blockLock[msg.sender] < block.number, "blockLocked"
-    lock_for_block(msg.sender)
+    assert self.blockLock[msg.sender] < block.number
+    self.lock_for_block(msg.sender)
 
     self.allowance[msg.sender][spender] += amount
     log Approval(msg.sender, spender, self.allowance[msg.sender][spender])
@@ -781,10 +769,10 @@ def decreaseAllowance(spender: address, amount: uint256) -> bool:
     @param spender The address which will spend the funds.
     @param amount The amount of tokens to decrease the allowance by.
     """
-    assert not paused
+    assert not self.paused
 
-    assert blockLock[msg.sender] < block.number, "blockLocked"
-    lock_for_block(msg.sender)
+    assert self.blockLock[msg.sender] < block.number
+    self.lock_for_block(msg.sender)
 
     self.allowance[msg.sender][spender] -= amount
     log Approval(msg.sender, spender, self.allowance[msg.sender][spender])
@@ -931,12 +919,12 @@ def deposit(_amount: uint256 = MAX_UINT256, recipient: address = msg.sender) -> 
         caller's address.
     @return The issued Vault shares.
     """
-    assert not paused ## Not if paused
+    assert not self.paused ## Not if paused
     assert not self.emergencyShutdown  # Deposits are locked out
     assert recipient not in [self, ZERO_ADDRESS]
 
-    assert blockLock[msg.sender] < block.number, "blockLocked"
-    lock_for_block(msg.sender)
+    assert self.blockLock[msg.sender] < block.number
+    self.lock_for_block(msg.sender)
 
     amount: uint256 = _amount
 
@@ -1101,10 +1089,10 @@ def withdraw(
         The maximum acceptable loss to sustain on withdrawal. Defaults to 0.01%.
     @return The quantity of tokens redeemed for `_shares`.
     """
-    assert not paused ## Not if paused
+    assert not self.paused ## Not if paused
 
-    assert blockLock[msg.sender] < block.number, "blockLocked"
-    lock_for_block(msg.sender)
+    assert self.blockLock[msg.sender] < block.number
+    self.lock_for_block(msg.sender)
 
     shares: uint256 = maxShares  # May reduce this number below
 

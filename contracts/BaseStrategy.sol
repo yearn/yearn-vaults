@@ -5,7 +5,9 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin2/contracts/utils/PausableUpgradeable.sol";
+
+// Cannot import 2 remapped github repo from same author, see: https://github.com/eth-brownie/brownie/issues/1116
+import "@upgradeable/contracts/utils/PausableUpgradeable.sol";
 
 struct StrategyParams {
     uint256 performanceFee;
