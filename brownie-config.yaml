@@ -7,6 +7,7 @@ autofetch_sources: true
 # require OpenZepplin Contracts
 dependencies:
   - OpenZeppelin/openzeppelin-contracts@3.1.0
+  - OpenZeppelin/openzeppelin-contracts-upgradeable@3.2.0
 
 # path remapping to support OpenZepplin imports with NPM-style path
 compiler:
@@ -14,6 +15,7 @@ compiler:
     version: 0.6.12
     remappings:
       - "@openzeppelin=OpenZeppelin/openzeppelin-contracts@3.1.0"
+      - "@openzeppelin2=OpenZeppelin/openzeppelin-contracts-upgradeable@3.2.0"
 
 reports:
   exclude_paths:

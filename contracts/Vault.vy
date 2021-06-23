@@ -194,6 +194,24 @@ event StrategyRemovedFromQueue:
 event StrategyAddedToQueue:
     strategy: indexed(address) # Address of the strategy that is added to the withdrawal queue
 
+## NEW ##
+# New Functionality for Badger
+## Block for Lock - Used for Deposit and Withdrawal, to avoid single attacker exploits
+blockLock: public(HashMap[address, uint256])
+
+"""
+Pausing
+
+Used in:
+Deposit
+Withdraw
+Transfer
+transferFrom
+Approve
+decreaseAllowance
+increaseAllowance
+"""
+paused: public(bool)
 
 # NOTE: Track the total for overhead targeting purposes
 strategies: public(HashMap[address, StrategyParams])
@@ -503,6 +521,16 @@ def setGuardian(guardian: address):
     self.guardian = guardian
     log UpdateGuardian(guardian)
 
+@external
+def set_paused(newPaused: bool):
+    """
+    @notice
+        Used to pause and unpause
+    
+    @param newPaused whether to pause or not
+    """
+    assert msg.sender in [self.guardian, self.management, self.governance]
+    self.paused = newPaused
 
 @external
 def setEmergencyShutdown(active: bool):
@@ -592,6 +620,12 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
         self.withdrawalQueue[i] = queue[i]
     log UpdateWithdrawalQueue(queue)
 
+@internal
+def lock_for_block(address account):
+    """
+    @notice used to force one operation per block per EOA
+    """
+    blockLock[account] = block.number
 
 @internal
 def erc20_safe_transfer(token: address, receiver: address, amount: uint256):
@@ -654,6 +688,11 @@ def transfer(receiver: address, amount: uint256) -> bool:
         True if transfer is sent to an address other than this contract's or
         0x0, otherwise the transaction will fail.
     """
+    assert not paused
+
+    assert blockLock[msg.sender] < block.number, "blockLocked"
+    lock_for_block(msg.sender)
+
     self._transfer(msg.sender, receiver, amount)
     return True
 
@@ -677,6 +716,11 @@ def transferFrom(sender: address, receiver: address, amount: uint256) -> bool:
         True if transfer is sent to an address other than this contract's or
         0x0, otherwise the transaction will fail.
     """
+    assert not paused
+
+    assert blockLock[msg.sender] < block.number, "blockLocked"
+    lock_for_block(msg.sender)
+
     # Unlimited approval (saves an SSTORE)
     if (self.allowance[sender][msg.sender] < MAX_UINT256):
         allowance: uint256 = self.allowance[sender][msg.sender] - amount
@@ -697,6 +741,11 @@ def approve(spender: address, amount: uint256) -> bool:
     @param spender The address which will spend the funds.
     @param amount The amount of tokens to be spent.
     """
+    assert not paused
+
+    assert blockLock[msg.sender] < block.number, "blockLocked"
+    lock_for_block(msg.sender)
+
     self.allowance[msg.sender][spender] = amount
     log Approval(msg.sender, spender, amount)
     return True
@@ -712,6 +761,11 @@ def increaseAllowance(spender: address, amount: uint256) -> bool:
     @param spender The address which will spend the funds.
     @param amount The amount of tokens to increase the allowance by.
     """
+    assert not paused
+    
+    assert blockLock[msg.sender] < block.number, "blockLocked"
+    lock_for_block(msg.sender)
+
     self.allowance[msg.sender][spender] += amount
     log Approval(msg.sender, spender, self.allowance[msg.sender][spender])
     return True
@@ -727,6 +781,11 @@ def decreaseAllowance(spender: address, amount: uint256) -> bool:
     @param spender The address which will spend the funds.
     @param amount The amount of tokens to decrease the allowance by.
     """
+    assert not paused
+
+    assert blockLock[msg.sender] < block.number, "blockLocked"
+    lock_for_block(msg.sender)
+
     self.allowance[msg.sender][spender] -= amount
     log Approval(msg.sender, spender, self.allowance[msg.sender][spender])
     return True
@@ -872,8 +931,12 @@ def deposit(_amount: uint256 = MAX_UINT256, recipient: address = msg.sender) -> 
         caller's address.
     @return The issued Vault shares.
     """
+    assert not paused ## Not if paused
     assert not self.emergencyShutdown  # Deposits are locked out
     assert recipient not in [self, ZERO_ADDRESS]
+
+    assert blockLock[msg.sender] < block.number, "blockLocked"
+    lock_for_block(msg.sender)
 
     amount: uint256 = _amount
 
@@ -900,7 +963,7 @@ def deposit(_amount: uint256 = MAX_UINT256, recipient: address = msg.sender) -> 
     self.erc20_safe_transferFrom(self.token.address, msg.sender, self, amount)
 
     return shares  # Just in case someone wants them
-
+    
 
 @view
 @internal
@@ -1038,6 +1101,11 @@ def withdraw(
         The maximum acceptable loss to sustain on withdrawal. Defaults to 0.01%.
     @return The quantity of tokens redeemed for `_shares`.
     """
+    assert not paused ## Not if paused
+
+    assert blockLock[msg.sender] < block.number, "blockLocked"
+    lock_for_block(msg.sender)
+
     shares: uint256 = maxShares  # May reduce this number below
 
     # Max Loss is <=100%, revert otherwise
