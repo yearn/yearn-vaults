@@ -200,10 +200,12 @@ event StrategyAddedToQueue:
 blockLock: public(HashMap[address, uint256])
 
 ## Approved Contracts
-approved public(HashMap[address, bool])
+approved: public(HashMap[address, bool])
 
 ## NOTE Paused, to block deposit, withdrawals, transfers and approval functions
 paused: public(bool)
+
+## End New
 
 # NOTE: Track the total for overhead targeting purposes
 strategies: public(HashMap[address, StrategyParams])
@@ -323,7 +325,7 @@ def initialize(
             convert(self, bytes32)
         )
     )
-    self.paused = true ## Paused on Launch
+    self.paused = True ## Paused on Launch
 
 
 
@@ -518,14 +520,13 @@ def setGuardian(guardian: address):
 @external
 def approveContractAccess(account: address):
     assert msg.sender in [self.governance]
-    self.approved[account] = true
+    self.approved[account] = True
 
 
 @external
 def revokeContractAccess(account: address):
     assert msg.sender in [self.governance]
-    self.approved[account] = false
-}
+    self.approved[account] = False
 
 @external
 def pause():
@@ -534,7 +535,7 @@ def pause():
         Used to pause, can be done by guardian and governance
     """
     assert msg.sender in [self.guardian, self.governance]
-    self.paused = true
+    self.paused = True
 
 @external
 def unpause():
@@ -545,7 +546,7 @@ def unpause():
 
     """
     assert msg.sender in [self.governance]
-    self.paused = false
+    self.paused = False
 
 @external
 def setEmergencyShutdown(active: bool):
@@ -953,7 +954,7 @@ def deposit(_amount: uint256 = MAX_UINT256, recipient: address = msg.sender) -> 
     assert self.blockLock[msg.sender] < block.number # dev: locked for block
     self.lock_for_block(msg.sender)
 
-    assert self.approved[msg.sender] || msg.sender == tx.origin # dev: defend
+    assert self.approved[msg.sender] or msg.sender == tx.origin # dev: defend
 
 
     amount: uint256 = _amount
@@ -1124,7 +1125,7 @@ def withdraw(
     assert self.blockLock[msg.sender] < block.number # dev: locked for block
     self.lock_for_block(msg.sender)
 
-    assert self.approved[msg.sender] || msg.sender == tx.origin # dev: defend
+    assert self.approved[msg.sender] or msg.sender == tx.origin # dev: defend
 
     shares: uint256 = maxShares  # May reduce this number below
 
