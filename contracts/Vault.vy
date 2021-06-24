@@ -319,6 +319,8 @@ def initialize(
             convert(self, bytes32)
         )
     )
+    self.paused = true ## Paused on Launch
+
 
 
 @pure
