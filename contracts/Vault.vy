@@ -510,15 +510,24 @@ def setGuardian(guardian: address):
     log UpdateGuardian(guardian)
 
 @external
-def set_paused(newPaused: bool):
+def pause():
     """
     @notice
-        Used to pause and unpause
-    
-    @param newPaused whether to pause or not
+        Used to pause, can be done by guardian and governance
     """
-    assert msg.sender in [self.guardian, self.management, self.governance]
-    self.paused = newPaused
+    assert msg.sender in [self.guardian, self.governance]
+    self.paused = true
+
+@external
+def unpause():
+    """
+    @notice
+        Used to unpause
+        Can only be done by governance
+
+    """
+    assert msg.sender in [self.governance]
+    self.paused = false
 
 @external
 def setEmergencyShutdown(active: bool):
