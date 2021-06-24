@@ -198,6 +198,10 @@ event StrategyAddedToQueue:
 # New Functionality for Badger
 ## NOTE Block for Lock - Used for Deposit and Withdrawal, to avoid single attacker exploits
 blockLock: public(HashMap[address, uint256])
+
+## Approved Contracts
+approved public(HashMap[address, bool])
+
 ## NOTE Paused, to block deposit, withdrawals, transfers and approval functions
 paused: public(bool)
 
@@ -512,6 +516,18 @@ def setGuardian(guardian: address):
     log UpdateGuardian(guardian)
 
 @external
+def approveContractAccess(account: address):
+    assert msg.sender in [self.governance]
+    self.approved[account] = true
+
+
+@external
+def revokeContractAccess(account: address):
+    assert msg.sender in [self.governance]
+    self.approved[account] = false
+}
+
+@external
 def pause():
     """
     @notice
@@ -687,9 +703,9 @@ def transfer(receiver: address, amount: uint256) -> bool:
         True if transfer is sent to an address other than this contract's or
         0x0, otherwise the transaction will fail.
     """
-    assert not self.paused
+    assert not self.paused # dev: paused
 
-    assert self.blockLock[msg.sender] < block.number
+    assert self.blockLock[msg.sender] < block.number # dev: locked for block
     self.lock_for_block(msg.sender)
 
     self._transfer(msg.sender, receiver, amount)
@@ -715,9 +731,9 @@ def transferFrom(sender: address, receiver: address, amount: uint256) -> bool:
         True if transfer is sent to an address other than this contract's or
         0x0, otherwise the transaction will fail.
     """
-    assert not self.paused
+    assert not self.paused # dev: paused
 
-    assert self.blockLock[msg.sender] < block.number
+    assert self.blockLock[msg.sender] < block.number # dev: locked for block
     self.lock_for_block(msg.sender)
 
     # Unlimited approval (saves an SSTORE)
@@ -740,9 +756,9 @@ def approve(spender: address, amount: uint256) -> bool:
     @param spender The address which will spend the funds.
     @param amount The amount of tokens to be spent.
     """
-    assert not self.paused
+    assert not self.paused # dev: paused
 
-    assert self.blockLock[msg.sender] < block.number
+    assert self.blockLock[msg.sender] < block.number # dev: locked for block
     self.lock_for_block(msg.sender)
 
     self.allowance[msg.sender][spender] = amount
@@ -760,9 +776,9 @@ def increaseAllowance(spender: address, amount: uint256) -> bool:
     @param spender The address which will spend the funds.
     @param amount The amount of tokens to increase the allowance by.
     """
-    assert not self.paused
+    assert not self.paused # dev: paused
     
-    assert self.blockLock[msg.sender] < block.number
+    assert self.blockLock[msg.sender] < block.number # dev: locked for block
     self.lock_for_block(msg.sender)
 
     self.allowance[msg.sender][spender] += amount
@@ -780,9 +796,9 @@ def decreaseAllowance(spender: address, amount: uint256) -> bool:
     @param spender The address which will spend the funds.
     @param amount The amount of tokens to decrease the allowance by.
     """
-    assert not self.paused
+    assert not self.paused # dev: paused
 
-    assert self.blockLock[msg.sender] < block.number
+    assert self.blockLock[msg.sender] < block.number # dev: locked for block
     self.lock_for_block(msg.sender)
 
     self.allowance[msg.sender][spender] -= amount
@@ -930,12 +946,15 @@ def deposit(_amount: uint256 = MAX_UINT256, recipient: address = msg.sender) -> 
         caller's address.
     @return The issued Vault shares.
     """
-    assert not self.paused ## Not if paused
+    assert not self.paused # dev: paused
     assert not self.emergencyShutdown  # Deposits are locked out
     assert recipient not in [self, ZERO_ADDRESS]
 
-    assert self.blockLock[msg.sender] < block.number
+    assert self.blockLock[msg.sender] < block.number # dev: locked for block
     self.lock_for_block(msg.sender)
+
+    assert self.approved[msg.sender] || msg.sender == tx.origin # dev: defend
+
 
     amount: uint256 = _amount
 
@@ -1100,10 +1119,12 @@ def withdraw(
         The maximum acceptable loss to sustain on withdrawal. Defaults to 0.01%.
     @return The quantity of tokens redeemed for `_shares`.
     """
-    assert not self.paused ## Not if paused
+    assert not self.paused # dev: paused
 
-    assert self.blockLock[msg.sender] < block.number
+    assert self.blockLock[msg.sender] < block.number # dev: locked for block
     self.lock_for_block(msg.sender)
+
+    assert self.approved[msg.sender] || msg.sender == tx.origin # dev: defend
 
     shares: uint256 = maxShares  # May reduce this number below
 
