@@ -1,4 +1,4 @@
-# @version 0.2.11
+# @version 0.2.12
 """
 @title Yearn Token Vault
 @license GNU AGPLv3
@@ -35,7 +35,7 @@
     https://github.com/iearn-finance/yearn-vaults/blob/master/SPECIFICATION.md
 """
 
-API_VERSION: constant(String[28]) = "0.3.5"
+API_VERSION: constant(String[28]) = "0.4.2"
 
 from vyper.interfaces import ERC20
 
@@ -56,6 +56,10 @@ interface Strategy:
     def estimatedTotalAssets() -> uint256: view
     def withdraw(_amount: uint256) -> uint256: nonpayable
     def migrate(_newStrategy: address): nonpayable
+
+
+interface CustomHealthCheck:
+    def check(profit: uint256, loss: uint256, callerStrategy: address) -> bool: view
 
 
 event Transfer:
@@ -94,7 +98,10 @@ struct StrategyParams:
     totalDebt: uint256  # Total outstanding debt that Strategy has
     totalGain: uint256  # Total returns that Strategy has realized for Vault
     totalLoss: uint256  # Total losses that Strategy has realized for Vault
-
+    enforceChangeLimit: bool # Allow bypassing the lossRatioLimit checks
+    profitLimitRatio: uint256 # Allowed Percentage of price per share positive changes
+    lossLimitRatio: uint256 # Allowed Percentage of price per share negative changes
+    customCheck: address
 
 event StrategyAdded:
     strategy: indexed(address)
@@ -118,6 +125,9 @@ event StrategyReported:
 
 event UpdateGovernance:
     governance: address # New active governance
+
+event NewPendingGovernance:
+    governance: address # New pending governance
 
 
 event UpdateManagement:
@@ -191,7 +201,10 @@ event StrategyAddedToQueue:
 # NOTE: Track the total for overhead targeting purposes
 strategies: public(HashMap[address, StrategyParams])
 MAXIMUM_STRATEGIES: constant(uint256) = 20
-DEGREDATION_COEFFICIENT: constant(uint256) = 10 ** 18
+DEGRADATION_COEFFICIENT: constant(uint256) = 10 ** 18
+# SET_SIZE can be any number but having it in power of 2 will be more gas friendly and collision free.
+# Note: Make sure SET_SIZE is greater than MAXIMUM_STRATEGIES
+SET_SIZE: constant(uint256) = 32
 
 # Ordering that `withdraw` uses to determine which strategies to pull funds from
 # NOTE: Does *NOT* have to match the ordering of all the current strategies that
@@ -211,7 +224,7 @@ totalDebt: public(uint256)  # Amount of tokens that all strategies have borrowed
 lastReport: public(uint256)  # block.timestamp of last report
 activation: public(uint256)  # block.timestamp of contract deployment
 lockedProfit: public(uint256) # how much profit is locked and cant be withdrawn
-lockedProfitDegration: public(uint256) # rate per block of degration. DEGREDATION_COEFFICIENT is 100% per block
+lockedProfitDegradation: public(uint256) # rate per block of degradation. DEGRADATION_COEFFICIENT is 100% per block
 rewards: public(address)  # Rewards contract where Governance fees are sent to
 # Governance Fee for management of Vault (given to `rewards`)
 managementFee: public(uint256)
@@ -222,6 +235,8 @@ MAX_BPS: constant(uint256) = 10_000  # 100%, or 10k basis points
 #       So the average year has 365 + 97/400 = 365.2425 days
 #       ERROR(Julian): -0.0078
 #       ERROR(Gregorian): -0.0003
+#       A day = 24 * 60 * 60 sec = 86400 sec
+#       365.2425 * 86400 = 31556952.0
 SECS_PER_YEAR: constant(uint256) = 31_556_952  # 365.2425 days
 # `nonces` track `permit` approvals with signature.
 nonces: public(HashMap[address, uint256])
@@ -238,6 +253,7 @@ def initialize(
     nameOverride: String[64],
     symbolOverride: String[32],
     guardian: address = msg.sender,
+    management: address =  msg.sender,
 ):
     """
     @notice
@@ -251,14 +267,15 @@ def initialize(
         If `nameOverride` is not specified, the name will be 'yearn'
         combined with the name of `token`.
 
-        If `symbolOverride` is not specified, the symbol will be 'y'
+        If `symbolOverride` is not specified, the symbol will be 'yv'
         combined with the symbol of `token`.
 
-        The token used by the vault should not change balances outside transfers and 
+        The token used by the vault should not change balances outside transfers and
         it must transfer the exact amount requested. Fee on transfer and rebasing are not supported.
     @param token The token that may be deposited into this Vault.
     @param governance The address authorized for governance interactions.
     @param rewards The address to distribute rewards to.
+    @param management The address of the vault manager.
     @param nameOverride Specify a custom Vault name. Leave empty for default choice.
     @param symbolOverride Specify a custom Vault symbol name. Leave empty for default choice.
     @param guardian The address authorized for guardian interactions. Defaults to caller.
@@ -279,8 +296,8 @@ def initialize(
 
     self.governance = governance
     log UpdateGovernance(governance)
-    self.management = governance
-    log UpdateManagement(governance)
+    self.management = management
+    log UpdateManagement(management)
     self.rewards = rewards
     log UpdateRewards(rewards)
     self.guardian = guardian
@@ -291,7 +308,7 @@ def initialize(
     log UpdateManagementFee(convert(200, uint256))
     self.lastReport = block.timestamp
     self.activation = block.timestamp
-    self.lockedProfitDegration = convert(DEGREDATION_COEFFICIENT * 46 /10 ** 6 , uint256) # 6 hours in blocks
+    self.lockedProfitDegradation = convert(DEGRADATION_COEFFICIENT * 46 / 10 ** 6 , uint256) # 6 hours in blocks
     # EIP-712
     self.DOMAIN_SEPARATOR = keccak256(
         concat(
@@ -361,6 +378,7 @@ def setGovernance(governance: address):
     @param governance The address requested to take over Vault governance.
     """
     assert msg.sender == self.governance
+    log NewPendingGovernance(msg.sender)
     self.pendingGovernance = governance
 
 
@@ -418,16 +436,16 @@ def setRewards(rewards: address):
 
 
 @external
-def setLockedProfitDegration(degration: uint256):
+def setLockedProfitDegradation(degradation: uint256):
     """
     @notice
-        Changes the locked profit degration.
-    @param degration The rate of degration in percent per second scaled to 1e18.
+        Changes the locked profit degradation.
+    @param degradation The rate of degradation in percent per second scaled to 1e18.
     """
     assert msg.sender == self.governance
-    # Since "degration" is of type uint256 it can never be less than zero
-    assert degration <= DEGREDATION_COEFFICIENT
-    self.lockedProfitDegration = degration
+    # Since "degradation" is of type uint256 it can never be less than zero
+    assert degradation <= DEGRADATION_COEFFICIENT
+    self.lockedProfitDegradation = degradation
 
 
 @external
@@ -459,7 +477,7 @@ def setPerformanceFee(fee: uint256):
     @param fee The new performance fee to use.
     """
     assert msg.sender == self.governance
-    assert fee <= MAX_BPS
+    assert fee <= MAX_BPS / 2
     self.performanceFee = fee
     log UpdatePerformanceFee(fee)
 
@@ -549,36 +567,31 @@ def setWithdrawalQueue(queue: address[MAXIMUM_STRATEGIES]):
     """
     assert msg.sender in [self.management, self.governance]
 
-    # HACK: Temporary until Vyper adds support for Dynamic arrays
-    old_queue: address[MAXIMUM_STRATEGIES] = empty(address[MAXIMUM_STRATEGIES])
+    set: address[SET_SIZE] = empty(address[SET_SIZE])
     for i in range(MAXIMUM_STRATEGIES):
-        old_queue[i] = self.withdrawalQueue[i] 
         if queue[i] == ZERO_ADDRESS:
             # NOTE: Cannot use this method to remove entries from the queue
-            assert old_queue[i] == ZERO_ADDRESS
+            assert self.withdrawalQueue[i] == ZERO_ADDRESS
             break
         # NOTE: Cannot use this method to add more entries to the queue
-        assert old_queue[i] != ZERO_ADDRESS
+        assert self.withdrawalQueue[i] != ZERO_ADDRESS
 
         assert self.strategies[queue[i]].activation > 0
 
-        existsInOldQueue: bool = False
-        for j in range(MAXIMUM_STRATEGIES):
-            if queue[j] == ZERO_ADDRESS:
-                existsInOldQueue = True
+        # NOTE: `key` is first `log_2(SET_SIZE)` bits of address (which is a hash)
+        key: uint256 = bitwise_and(convert(queue[i], uint256), SET_SIZE - 1)
+        # Most of the times following for loop only run once which is making it highly gas efficient
+        # but in the worst case of key collision it will run linearly and find first empty slot in the set.
+        for j in range(SET_SIZE):
+            # NOTE: we can always find space by treating set as circular (as long as `SET_SIZE >= MAXIMUM_STRATEGIES`)
+            idx: uint256 = (key + j) % SET_SIZE
+            assert set[idx] != queue[i]  # dev: duplicate in set
+            if set[idx] == ZERO_ADDRESS:
+                set[idx] = queue[i]
                 break
-            if queue[i] == old_queue[j]:
-                # NOTE: Ensure that every entry in queue prior to reordering exists now
-                existsInOldQueue = True
-
-            if j <= i:
-                # NOTE: This will only check for duplicate entries in queue after `i`
-                continue
-            assert queue[i] != queue[j]  # dev: do not add duplicate strategies
-
-        assert existsInOldQueue # dev: do not add new strategies
 
         self.withdrawalQueue[i] = queue[i]
+
     log UpdateWithdrawalQueue(queue)
 
 
@@ -785,6 +798,21 @@ def totalAssets() -> uint256:
     return self._totalAssets()
 
 
+@view
+@internal
+def _calculateLockedProfit() -> uint256:
+    lockedFundsRatio: uint256 = (block.timestamp - self.lastReport) * self.lockedProfitDegradation
+
+    if(lockedFundsRatio < DEGRADATION_COEFFICIENT):
+        lockedProfit: uint256 = self.lockedProfit
+        return lockedProfit - (
+                lockedFundsRatio
+                * lockedProfit
+                / DEGRADATION_COEFFICIENT
+            )
+    else:
+        return 0
+
 @internal
 def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
     # Issues `amount` Vault shares to `to`.
@@ -792,12 +820,13 @@ def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
     # calculation will be wrong. This means that only *trusted* tokens
     # (with no capability for exploitative behavior) can be used.
     shares: uint256 = 0
-    # HACK: Saves 2 SLOADs (~4000 gas)
+    # HACK: Saves 2 SLOADs (~200 gas, post-Berlin)
     totalSupply: uint256 = self.totalSupply
     if totalSupply > 0:
         # Mint amount of shares based on what the Vault is managing overall
         # NOTE: if sqrt(token.totalSupply()) > 1e39, this could potentially revert
-        shares =  amount * totalSupply / self._totalAssets()
+        freeFunds: uint256 = self._totalAssets() - self._calculateLockedProfit()
+        shares =  amount * totalSupply / freeFunds  # dev: no free funds
     else:
         # No existing shares, so mint 1:1
         shares = amount
@@ -883,22 +912,11 @@ def _shareValue(shares: uint256) -> uint256:
         return shares
 
     # Determines the current value of `shares`.
-        # NOTE: if sqrt(Vault.totalAssets()) >>> 1e39, this could potentially revert
-    lockedFundsRatio: uint256 = (block.timestamp - self.lastReport) * self.lockedProfitDegration
-    freeFunds: uint256 = self._totalAssets()
-    if(lockedFundsRatio < DEGREDATION_COEFFICIENT):
-        freeFunds -= (
-            self.lockedProfit
-             - (
-                 lockedFundsRatio
-                 * self.lockedProfit
-                 / DEGREDATION_COEFFICIENT
-    
-             )
-         )
-    # NOTE: using 1e3 for extra precision here, when decimals is low
+    # NOTE: if sqrt(Vault.totalAssets()) >>> 1e39, this could potentially revert
+    freeFunds: uint256 = self._totalAssets() - self._calculateLockedProfit()
+
     return (
-       shares
+        shares
         * freeFunds
         / self.totalSupply
     )
@@ -956,19 +974,20 @@ def _reportLoss(strategy: address, loss: uint256):
     assert totalDebt >= loss
 
     # Also, make sure we reduce our trust with the strategy by the amount of loss
-    ratio_change: uint256 = 0
     if self.debtRatio != 0: # if vault with single strategy that is set to EmergencyOne
-        ratio_change = min(
+        # NOTE: The context to this calculation is different than the calculation in `_reportLoss`,
+        # this calculation intentionally approximates via `totalDebt` to avoid manipulatable results
+        ratio_change: uint256 = min(
             # NOTE: This calculation isn't 100% precise, the adjustment is ~10%-20% more severe due to EVM math
             loss * self.debtRatio / self.totalDebt,
             self.strategies[strategy].debtRatio,
-    )
+        )
+        self.strategies[strategy].debtRatio -= ratio_change
+        self.debtRatio -= ratio_change
     # Finally, adjust our strategy's parameters by the loss
     self.strategies[strategy].totalLoss += loss
     self.strategies[strategy].totalDebt = totalDebt - loss
     self.totalDebt -= loss
-    self.strategies[strategy].debtRatio -= ratio_change
-    self.debtRatio -= ratio_change
 
 
 @external
@@ -1008,9 +1027,9 @@ def withdraw(
         through external means, accounting for whatever exceptional scenarios
         exist for the Vault (that aren't covered by the Vault's own design.)
 
-        In the situation where a large withdrawal happens, it can empty the 
-        vault balance and the strategies in the withdrawal queue. 
-        Strategies not in the withdrawal queue will have to be harvested to 
+        In the situation where a large withdrawal happens, it can empty the
+        vault balance and the strategies in the withdrawal queue.
+        Strategies not in the withdrawal queue will have to be harvested to
         rebalance the funds and make the funds available again to withdraw.
     @param maxShares
         How many shares to try and redeem for tokens, defaults to all.
@@ -1019,6 +1038,7 @@ def withdraw(
         caller's address.
     @param maxLoss
         The maximum acceptable loss to sustain on withdrawal. Defaults to 0.01%.
+        If a loss is specified, up to that amount of shares may be burnt to cover losses on withdrawal.
     @return The quantity of tokens redeemed for `_shares`.
     """
     shares: uint256 = maxShares  # May reduce this number below
@@ -1039,8 +1059,8 @@ def withdraw(
     # See @dev note, above.
     value: uint256 = self._shareValue(shares)
 
-    totalLoss: uint256 = 0
     if value > self.token.balanceOf(self):
+        totalLoss: uint256 = 0
         # We need to go get some from our strategies in the withdrawal queue
         # NOTE: This performs forced withdrawals from each Strategy. During
         #       forced withdrawal, a Strategy may realize a loss. That loss
@@ -1082,19 +1102,19 @@ def withdraw(
             self.strategies[strategy].totalDebt -= withdrawn
             self.totalDebt -= withdrawn
 
-    # NOTE: We have withdrawn everything possible out of the withdrawal queue
-    #       but we still don't have enough to fully pay them back, so adjust
-    #       to the total amount we've freed up through forced withdrawals
-    vault_balance: uint256 = self.token.balanceOf(self)
-    if value > vault_balance:
-        value = vault_balance
-        # NOTE: Burn # of shares that corresponds to what Vault has on-hand,
-        #       including the losses that were incurred above during withdrawals
-        shares = self._sharesForAmount(value + totalLoss)
+        # NOTE: We have withdrawn everything possible out of the withdrawal queue
+        #       but we still don't have enough to fully pay them back, so adjust
+        #       to the total amount we've freed up through forced withdrawals
+        vault_balance: uint256 = self.token.balanceOf(self)
+        if value > vault_balance:
+            value = vault_balance
+            # NOTE: Burn # of shares that corresponds to what Vault has on-hand,
+            #       including the losses that were incurred above during withdrawals
+            shares = self._sharesForAmount(value + totalLoss)
 
-    # NOTE: This loss protection is put in place to revert if losses from
-    #       withdrawing are more than what is considered acceptable.
-    assert totalLoss <= maxLoss * (value + totalLoss) / MAX_BPS 
+        # NOTE: This loss protection is put in place to revert if losses from
+        #       withdrawing are more than what is considered acceptable.
+        assert totalLoss <= maxLoss * (value + totalLoss) / MAX_BPS
 
     # Burn shares (full value of what is being withdrawn)
     self.totalSupply -= shares
@@ -1141,6 +1161,8 @@ def addStrategy(
     minDebtPerHarvest: uint256,
     maxDebtPerHarvest: uint256,
     performanceFee: uint256,
+    profitLimitRatio: uint256 = 300, # 3%
+    lossLimitRatio: uint256 = 300 # 3%
 ):
     """
     @notice
@@ -1176,7 +1198,7 @@ def addStrategy(
     # Check strategy parameters
     assert self.debtRatio + debtRatio <= MAX_BPS
     assert minDebtPerHarvest <= maxDebtPerHarvest
-    assert performanceFee <= MAX_BPS / 2 
+    assert performanceFee <= MAX_BPS / 2
 
     # Add strategy to approved strategies
     self.strategies[strategy] = StrategyParams({
@@ -1189,6 +1211,10 @@ def addStrategy(
         totalDebt: 0,
         totalGain: 0,
         totalLoss: 0,
+        profitLimitRatio: profitLimitRatio,
+        lossLimitRatio: lossLimitRatio,
+        enforceChangeLimit: True,
+        customCheck: ZERO_ADDRESS
     })
     log StrategyAdded(strategy, debtRatio, minDebtPerHarvest, maxDebtPerHarvest, performanceFee)
 
@@ -1281,11 +1307,39 @@ def updateStrategyPerformanceFee(
     @param performanceFee The new fee the strategist will receive.
     """
     assert msg.sender == self.governance
-    assert performanceFee <= MAX_BPS - self.performanceFee
+    assert performanceFee <= MAX_BPS / 2
     assert self.strategies[strategy].activation > 0
     self.strategies[strategy].performanceFee = performanceFee
     log StrategyUpdatePerformanceFee(strategy, performanceFee)
 
+
+@external
+def setStrategyEnforceChangeLimit(strategy: address, enabled: bool):
+    assert msg.sender in [self.management, self.governance]
+    assert self.strategies[strategy].activation > 0
+    self.strategies[strategy].enforceChangeLimit = enabled
+
+@external
+def setStrategySetLimitRatio(strategy: address, _lossRatioLimit: uint256, _profitLimitRatio: uint256):
+    assert msg.sender in [self.management, self.governance]
+    assert self.strategies[strategy].activation > 0
+    self.strategies[strategy].lossLimitRatio = _lossRatioLimit
+    self.strategies[strategy].profitLimitRatio = _profitLimitRatio
+
+@external
+def setStrategyCustomCheck(strategy: address, _customCheck: address):
+    """
+    @notice
+        Change the custom strategy, default value is 0x0, when set to a non
+        null address, the vault will check the strategy health using this address.
+        If set to 0x0 it will use default checks.
+    @param strategy The Strategy to update.
+    @param _customCheck The contract that should perform the check, can be set to 0x0.
+    """
+    assert msg.sender in [self.management, self.governance]
+    if _customCheck != ZERO_ADDRESS:
+        assert(CustomHealthCheck(_customCheck).check(0, 0, strategy)) #dev: can't call check
+    self.strategies[strategy].customCheck = _customCheck
 
 @internal
 def _revokeStrategy(strategy: address):
@@ -1335,6 +1389,10 @@ def migrateStrategy(oldVersion: address, newVersion: address):
         totalDebt: strategy.totalDebt,
         totalGain: 0,
         totalLoss: 0,
+        profitLimitRatio: strategy.profitLimitRatio,
+        lossLimitRatio: strategy.lossLimitRatio,
+        enforceChangeLimit: True,
+        customCheck: strategy.customCheck
     })
 
     Strategy(oldVersion).migrate(newVersion)
@@ -1368,7 +1426,10 @@ def revokeStrategy(strategy: address = msg.sender):
     @param strategy The Strategy to revoke.
     """
     assert msg.sender in [strategy, self.governance, self.guardian]
-    assert self.strategies[strategy].debtRatio != 0 # dev: already zero
+    # NOTE: This function may be called via `BaseStrategy.setEmergencyExit` while the
+    #       strategy might have already been revoked or had the debt limit set to zero
+    if self.strategies[strategy].debtRatio == 0:
+        return # already set to zero, nothing to do
 
     self._revokeStrategy(strategy)
 
@@ -1429,14 +1490,13 @@ def removeStrategyFromQueue(strategy: address):
 @internal
 def _debtOutstanding(strategy: address) -> uint256:
     # See note on `debtOutstanding()`.
-    if self.emergencyShutdown:
-        return self.strategies[strategy].totalDebt
     if self.debtRatio == 0:
         return self.strategies[strategy].totalDebt
+
     strategy_debtLimit: uint256 = (
         self.strategies[strategy].debtRatio
-        * self.totalDebt
-        / self.debtRatio
+        * self._totalAssets()
+        / MAX_BPS
     )
     strategy_totalDebt: uint256 = self.strategies[strategy].totalDebt
 
@@ -1466,7 +1526,7 @@ def _creditAvailable(strategy: address) -> uint256:
     if self.emergencyShutdown:
         return 0
     vault_totalAssets: uint256 = self._totalAssets()
-    vault_debtLimit: uint256 =  self.debtRatio * vault_totalAssets / MAX_BPS 
+    vault_debtLimit: uint256 =  self.debtRatio * vault_totalAssets / MAX_BPS
     vault_totalDebt: uint256 = self.totalDebt
     strategy_debtLimit: uint256 = self.strategies[strategy].debtRatio * vault_totalAssets / MAX_BPS
     strategy_totalDebt: uint256 = self.strategies[strategy].totalDebt
@@ -1569,33 +1629,31 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
     # NOTE: In effect, this reduces overall share price by the combined fee
     # NOTE: may throw if Vault.totalAssets() > 1e64, or not called for more than a year
     duration: uint256 = block.timestamp - self.strategies[strategy].lastReport
-    assert duration != 0 # can't assessFees twice within the same block
+    assert duration != 0 #dev: can't call assessFees twice within the same block
+
+    if gain == 0:
+        # NOTE: The fees are not charged if there hasn't been any gains reported
+        return 0
 
     management_fee: uint256 = (
         (
             (self.strategies[strategy].totalDebt - Strategy(strategy).delegatedAssets())
-            * duration 
+            * duration
             * self.managementFee
         )
         / MAX_BPS
         / SECS_PER_YEAR
     )
 
-    # Only applies in certain conditions
-    strategist_fee: uint256 = 0
-    performance_fee: uint256 = 0
-
     # NOTE: Applies if Strategy is not shutting down, or it is but all debt paid off
     # NOTE: No fee is taken when a Strategy is unwinding it's position, until all debt is paid
-    if gain > 0:
-        # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
-        strategist_fee = (
-            gain
-            * self.strategies[strategy].performanceFee
-            / MAX_BPS
-        )
-        # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
-        performance_fee = gain * self.performanceFee / MAX_BPS
+    strategist_fee: uint256 = (
+        gain
+        * self.strategies[strategy].performanceFee
+        / MAX_BPS
+    )
+    # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
+    performance_fee: uint256 = gain * self.performanceFee / MAX_BPS
 
     # NOTE: This must be called prior to taking new collateral,
     #       or the calculation will be wrong!
@@ -1605,8 +1663,6 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
     # ensure total_fee is not more than gain
     if total_fee > gain:
         total_fee = gain
-        # if total performance fee is greater than 100% then this will cause an underflow
-        management_fee = gain - performance_fee - strategist_fee
     if total_fee > 0:  # NOTE: If mgmt fee is 0% and no gains were realized, skip
         reward: uint256 = self._issueSharesForAmount(self, total_fee)
 
@@ -1667,15 +1723,32 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     # No lying about total available to withdraw!
     assert self.token.balanceOf(msg.sender) >= gain + _debtPayment
 
+    # Check report is within healty ranges
+
+    if self.strategies[msg.sender].enforceChangeLimit:
+        if self.strategies[msg.sender].customCheck != ZERO_ADDRESS:
+            assert(CustomHealthCheck(self.strategies[msg.sender].customCheck).check(gain, loss, msg.sender)) #dev: custom check
+        else:
+            totalDebt: uint256 = self.strategies[msg.sender].totalDebt
+
+            assert(gain <= ((totalDebt * self.strategies[msg.sender].profitLimitRatio) / MAX_BPS)) # dev: gain too high
+            assert(loss <= ((totalDebt * self.strategies[msg.sender].lossLimitRatio) / MAX_BPS)) # dev: loss too high
+    else:
+        self.strategies[msg.sender].enforceChangeLimit = True # The check is turned off only once and turned back on.
+
     # We have a loss to report, do it before the rest of the calculations
     if loss > 0:
         self._reportLoss(msg.sender, loss)
+
 
     # Assess both management fee and performance fee, and issue both as shares of the vault
     totalFees: uint256 = self._assessFees(msg.sender, gain)
 
     # Returns are always "realized gains"
     self.strategies[msg.sender].totalGain += gain
+
+    # Compute the line of credit the Vault is able to offer the Strategy (if any)
+    credit: uint256 = self._creditAvailable(msg.sender)
 
     # Outstanding debt the Strategy wants to take back from the Vault (if any)
     # NOTE: debtOutstanding <= StrategyParams.totalDebt
@@ -1687,9 +1760,6 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
         self.totalDebt -= debtPayment
         debt -= debtPayment
         # NOTE: `debt` is being tracked for later
-
-    # Compute the line of credit the Vault is able to offer the Strategy (if any)
-    credit: uint256 = self._creditAvailable(msg.sender)
 
     # Update the actual debt based on the full credit we are extending to the Strategy
     # or the returns if we are taking funds back
@@ -1711,10 +1781,17 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
         self.erc20_safe_transferFrom(self.token.address, msg.sender, self, totalAvail - credit)
     # else, don't do anything because it is balanced
 
+    # Profit is locked and gradually released per block
+    # NOTE: compute current locked profit and replace with sum of current and new
+    lockedProfitBeforeLoss: uint256 = self._calculateLockedProfit() + gain - totalFees
+    if lockedProfitBeforeLoss > loss:
+        self.lockedProfit = lockedProfitBeforeLoss - loss
+    else:
+        self.lockedProfit = 0
+
     # Update reporting time
     self.strategies[msg.sender].lastReport = block.timestamp
     self.lastReport = block.timestamp
-    self.lockedProfit = gain  - totalFees  # profit is locked and gradually released per block
 
     log StrategyReported(
         msg.sender,
@@ -1735,7 +1812,6 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     else:
         # Otherwise, just return what we have as debt outstanding
         return debt
-
 
 @external
 def sweep(token: address, amount: uint256 = MAX_UINT256):

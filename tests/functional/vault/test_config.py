@@ -11,7 +11,7 @@ PACKAGE_VERSION = yaml.safe_load(
 )["version"]
 
 
-DEGREDATION_COEFFICIENT = 10 ** 18
+DEGRADATION_COEFFICIENT = 10 ** 18
 
 
 def test_api_adherrance(check_api_adherrance, Vault, interface):
@@ -22,11 +22,16 @@ def test_vault_deployment(guardian, gov, rewards, token, Vault):
     # Deploy the Vault without any name/symbol overrides
     vault = guardian.deploy(Vault)
     vault.initialize(
-        token, gov, rewards, token.symbol() + " yVault", "yv" + token.symbol(), guardian
+        token,
+        gov,
+        rewards,
+        token.symbol() + " yVault",
+        "yv" + token.symbol(),
+        guardian,
     )
     # Addresses
     assert vault.governance() == gov
-    assert vault.management() == gov
+    assert vault.management() == guardian
     assert vault.guardian() == guardian
     assert vault.rewards() == rewards
     assert vault.token() == token
@@ -71,7 +76,7 @@ def test_vault_reinitialization(guardian, gov, rewards, token, Vault):
         ("emergencyShutdown", "setEmergencyShutdown", False, False),
         ("guardian", "setGuardian", None, True),
         ("rewards", "setRewards", None, False),
-        ("lockedProfitDegration", "setLockedProfitDegration", 1000, False),
+        ("lockedProfitDegradation", "setLockedProfitDegradation", 1000, False),
         ("management", "setManagement", None, False),
         ("performanceFee", "setPerformanceFee", 1000, False),
         ("managementFee", "setManagementFee", 1000, False),
@@ -200,12 +205,12 @@ def test_vault_setGovernance(gov, vault, rando):
         vault.acceptGovernance({"from": gov})
 
 
-def test_vault_setLockedProfitDegration_range(gov, vault):
-    # value must be between 0 and DEGREDATION_COEFFICIENT (inclusive)
-    vault.setLockedProfitDegration(0, {"from": gov})
-    vault.setLockedProfitDegration(DEGREDATION_COEFFICIENT, {"from": gov})
+def test_vault_setLockedProfitDegradation_range(gov, vault):
+    # value must be between 0 and DEGRADATION_COEFFICIENT (inclusive)
+    vault.setLockedProfitDegradation(0, {"from": gov})
+    vault.setLockedProfitDegradation(DEGRADATION_COEFFICIENT, {"from": gov})
     with brownie.reverts():
-        vault.setLockedProfitDegration(DEGREDATION_COEFFICIENT + 1, {"from": gov})
+        vault.setLockedProfitDegradation(DEGRADATION_COEFFICIENT + 1, {"from": gov})
 
 
 def test_vault_setParams_bad_vals(gov, vault):

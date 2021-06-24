@@ -20,7 +20,7 @@ def test_multiple_withdrawals(token, gov, Vault, TestStrategy, chain):
 
     starting_balance = token.balanceOf(vault)
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(5)]
-    [
+    for s in strategies:
         vault.addStrategy(
             s,
             1_000,  # 10% of all tokens in Vault
@@ -29,11 +29,10 @@ def test_multiple_withdrawals(token, gov, Vault, TestStrategy, chain):
             0,  # No fee
             {"from": gov},
         )
-        for s in strategies
-    ]
     chain.sleep(1)
 
-    [s.harvest({"from": gov}) for s in strategies]  # Seed all the strategies with debt
+    for s in strategies:  # Seed all the strategies with debt
+        s.harvest({"from": gov})
 
     assert token.balanceOf(vault) == starting_balance // 2  # 50% in strategies
     for s in strategies:  # All of them have debt (10% each)
@@ -57,7 +56,8 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
     vault.setManagementFee(0, {"from": gov})  # Just makes it easier later
     # Add strategies
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(5)]
-    [vault.addStrategy(s, 2_000, 0, 10 ** 21, 1000, {"from": gov}) for s in strategies]
+    for s in strategies:
+        vault.addStrategy(s, 2_000, 0, 10 ** 21, 1000, {"from": gov})
 
     # Send tokens to random user
     token.approve(gov, 2 ** 256 - 1, {"from": gov})
@@ -78,7 +78,8 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
     # the vault and the strategies
     while vault.totalDebt() < vault.totalAssets():
         chain.sleep(1)
-        [s.harvest({"from": gov}) for s in strategies]
+        for s in strategies:
+            s.harvest({"from": gov})
         with brownie.reverts():
             vault.withdraw(5000, {"from": rando})
 
@@ -88,6 +89,7 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
     # One of our strategies suffers a loss
     total_assets = vault.totalAssets()
     loss = token.balanceOf(strategies[0]) // 2  # 10% of total
+    vault.setStrategySetLimitRatio(strategies[0], 5000, 5000, {"from": gov})
     strategies[0]._takeFunds(loss, {"from": gov})
     # Harvest the loss
     assert vault.strategies(strategies[0]).dict()["totalLoss"] == 0
@@ -117,6 +119,7 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
     chain.revert()  # Back before the withdrawal
 
     # Scenario 2: we wait, and only suffer a minor loss
+
     strategies[0].harvest({"from": gov})
     assert vault.strategies(strategies[0]).dict()["totalLoss"] == loss
     assert token.balanceOf(rando) == 0
@@ -130,12 +133,18 @@ def test_progressive_withdrawal(
 ):
     vault = guardian.deploy(Vault)
     vault.initialize(
-        token, gov, rewards, token.symbol() + " yVault", "yv" + token.symbol(), guardian
+        token,
+        gov,
+        rewards,
+        token.symbol() + " yVault",
+        "yv" + token.symbol(),
+        guardian,
     )
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
 
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(2)]
-    [vault.addStrategy(s, 1000, 0, 10, 1000, {"from": gov}) for s in strategies]
+    for s in strategies:
+        vault.addStrategy(s, 1000, 0, 10, 1000, {"from": gov})
 
     token.approve(vault, 2 ** 256 - 1, {"from": gov})
     vault.deposit(1000, {"from": gov})
@@ -148,7 +157,8 @@ def test_progressive_withdrawal(
 
     # Deposit something in strategies
     chain.sleep(1)  # Needs to be a second ahead, at least
-    [s.harvest({"from": gov}) for s in strategies]
+    for s in strategies:
+        s.harvest({"from": gov})
     assert token.balanceOf(vault) < vault.totalAssets()  # Some debt is in strategies
 
     # Trying to withdraw 0 shares. It should revert
@@ -189,7 +199,12 @@ def test_withdrawal_with_empty_queue(
 ):
     vault = guardian.deploy(Vault)
     vault.initialize(
-        token, gov, rewards, token.symbol() + " yVault", "yv" + token.symbol(), guardian
+        token,
+        gov,
+        rewards,
+        token.symbol() + " yVault",
+        "yv" + token.symbol(),
+        guardian,
     )
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
 
@@ -205,6 +220,7 @@ def test_withdrawal_with_empty_queue(
 
     chain.sleep(8640)
     chain.sleep(1)
+    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
     strategy.harvest({"from": gov})
     assert token.balanceOf(vault) < vault.totalAssets()
 
@@ -245,7 +261,12 @@ def test_withdrawal_with_reentrancy(
 ):
     vault = guardian.deploy(Vault)
     vault.initialize(
-        token, gov, rewards, token.symbol() + " yVault", "yv" + token.symbol(), guardian
+        token,
+        gov,
+        rewards,
+        token.symbol() + " yVault",
+        "yv" + token.symbol(),
+        guardian,
     )
 
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
@@ -261,6 +282,7 @@ def test_withdrawal_with_reentrancy(
     # move funds into strategy
     chain.sleep(1)  # Needs to be a second ahead, at least
     chain.sleep(1)
+    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
     strategy.harvest({"from": gov})
 
     # To simulate reentrancy we need strategy to have some balance
@@ -279,13 +301,14 @@ def test_user_withdraw(chain, gov, token, vault, strategy, rando):
     vault.setPerformanceFee(0, {"from": gov})
     vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
 
-    vault.setLockedProfitDegration(
+    vault.setLockedProfitDegradation(
         1e18, {"from": gov}
     )  # Set profit degradation to 1 sec.
     deposit = vault.totalAssets()
     pricePerShareBefore = vault.pricePerShare()
     token.transfer(strategy, vault.totalAssets(), {"from": gov})  # seed some profit
     chain.sleep(1)
+    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
     strategy.harvest({"from": gov})
 
     chain.sleep(1)
@@ -300,7 +323,7 @@ def test_user_withdraw(chain, gov, token, vault, strategy, rando):
     assert token.balanceOf(vault) == 0  # everything is withdrawn
 
 
-def test_profit_degration(chain, gov, token, vault, strategy, rando):
+def test_profit_degradation(chain, gov, token, vault, strategy, rando):
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
     vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
@@ -309,6 +332,7 @@ def test_profit_degration(chain, gov, token, vault, strategy, rando):
     deposit = vault.totalAssets()
     token.transfer(strategy, deposit, {"from": gov})  # seed some profit
     chain.sleep(1)
+    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
     strategy.harvest({"from": gov})
 
     vault.withdraw({"from": gov})
@@ -339,13 +363,14 @@ def test_withdraw_partial_delegate_assets(chain, gov, token, vault, strategy, ra
     vault.setPerformanceFee(0, {"from": gov})
     vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
 
-    vault.setLockedProfitDegration(
+    vault.setLockedProfitDegradation(
         1e18, {"from": gov}
     )  # Set profit degradation to 1 sec.
     deposit = vault.totalAssets()
     pricePerShareBefore = vault.pricePerShare()
     token.transfer(strategy, vault.totalAssets(), {"from": gov})  # seed some profit
     chain.sleep(1)
+    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
     strategy.harvest({"from": gov})
 
     chain.sleep(1)
@@ -370,3 +395,35 @@ def test_withdraw_partial_delegate_assets(chain, gov, token, vault, strategy, ra
         strategy_delegated_assets_after
         == vault.strategies(strategy).dict()["totalDebt"]
     )
+
+
+def test_token_amount_does_not_change_on_deposit_withdrawal(
+    web3, chain, gov, token, vault, strategy, rando
+):
+    # set fees to 0
+    vault.setManagementFee(0, {"from": gov})
+    vault.setPerformanceFee(0, {"from": gov})
+    vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
+    vault.setLockedProfitDegradation(1e10, {"from": gov})
+    # test is only valid if some profit are locked.
+    chain.sleep(1)
+    strategy.harvest()
+    token.transfer(strategy, 100, {"from": gov})
+    chain.sleep(1)
+    strategy.harvest()
+    assert vault.lockedProfit() == 100
+
+    token.transfer(rando, 1000, {"from": gov})
+    token.approve(vault, 1000, {"from": rando})
+    balanceBefore = token.balanceOf(rando)
+    web3.provider.make_request("miner_stop", [])
+
+    deposit = vault.deposit(1000, {"from": rando, "required_confs": 0})
+    withdraw = vault.withdraw({"from": rando, "required_confs": 0})
+
+    # When ganache is started with automing this is the only way to get two transactions within the same block.
+    web3.provider.make_request("evm_mine", [chain.time() + 5])
+    web3.provider.make_request("miner_start", [])
+
+    assert deposit.block_number == withdraw.block_number
+    assert token.balanceOf(rando) == balanceBefore

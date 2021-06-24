@@ -21,7 +21,7 @@ def vault(gov, management, token, Vault):
     # NOTE: Because the fixture has tokens in it already
     vault = gov.deploy(Vault)
     vault.initialize(
-        token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
+        token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov, gov
     )
     vault.setDepositLimit(MAX_UINT256, {"from": gov})
     vault.setManagement(management, {"from": gov})
@@ -31,7 +31,7 @@ def vault(gov, management, token, Vault):
 @pytest.fixture
 def other_vault(gov, Vault, other_token):
     vault = gov.deploy(Vault)
-    vault.initialize(other_token, gov, gov, "", "", gov)
+    vault.initialize(other_token, gov, gov, "", "", gov, gov)
     yield vault
 
 
@@ -48,7 +48,7 @@ def test_credit_available_minDebtPerHarvest_larger_than_available(
 ):
     vault = gov.deploy(Vault)
     vault.initialize(
-        token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
+        token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov, gov
     )
     vault.setDepositLimit(MAX_UINT256, {"from": gov})
     strategy = gov.deploy(TestStrategy, vault)
@@ -73,7 +73,7 @@ def test_credit_available_minDebtPerHarvest_larger_than_available(
     strategyDebtExceedsLimit = strategy_totalDebt >= strategy_debtLimit
     vaultDebtExceedsLimit = vault_totalDebt >= vault_debtLimit
     exhaustedCreditLine = vaultDebtExceedsLimit or strategyDebtExceedsLimit
-    assert exhaustedCreditLine == False
+    assert not exhaustedCreditLine
 
     # Start with debt limit left for the Strategy
     available = strategy_debtLimit - strategy_totalDebt
@@ -87,7 +87,7 @@ def test_credit_available_minDebtPerHarvest_larger_than_available(
     vault.updateStrategyMinDebtPerHarvest(strategy, available + 1, {"from": gov})
     strategy_minDebtPerHarvest = vault.strategies(strategy).dict()["minDebtPerHarvest"]
     minDebtPerHarvestExceedsAvailable = strategy_minDebtPerHarvest > available
-    assert minDebtPerHarvestExceedsAvailable == True
+    assert minDebtPerHarvestExceedsAvailable
 
     creditAvalable = vault.creditAvailable(strategy)
     assert creditAvalable == 0
@@ -231,22 +231,6 @@ def test_deposit_withdraw_faillure(token, gov, vault):
 
     with brownie.reverts():
         vault.withdraw(vault.balanceOf(gov), {"from": gov})
-
-
-def test_report_loss(chain, token, gov, vault, strategy, accounts):
-    token.approve(vault, MAX_UINT256, {"from": gov})
-    vault.deposit({"from": gov})
-    chain.sleep(1)
-    strategy.harvest()
-    strategy._takeFunds(token.balanceOf(strategy), {"from": gov})
-    assert token.balanceOf(strategy) == 0
-
-    # Make sure we do not send more funds to the strategy.
-    chain.sleep(1)
-    strategy.harvest()
-    assert token.balanceOf(strategy) == 0
-
-    assert vault.debtRatio() == 0
 
 
 def test_sandwich_attack(

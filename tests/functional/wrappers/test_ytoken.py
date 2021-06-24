@@ -5,12 +5,12 @@ from eth_account import Account
 
 def test_config(gov, token, vault, registry, ytoken):
     assert ytoken.token() == token
+    assert ytoken.name() == "Yearn " + token.name()
+    assert ytoken.symbol() == "y" + token.symbol()
+    assert ytoken.decimals() == token.decimals()
 
     # No vault added to the registry yet, so these methods should fail
     assert registry.numVaults(token) == 0
-
-    with brownie.reverts():
-        ytoken.bestVault()
 
     # This won't revert though, there's no Vaults yet
     assert ytoken.allVaults() == []
@@ -19,9 +19,6 @@ def test_config(gov, token, vault, registry, ytoken):
     registry.newRelease(vault, {"from": gov})
     registry.endorseVault(vault, {"from": gov})
     assert ytoken.bestVault() == vault
-    assert ytoken.name() == "Yearn " + token.name()
-    assert ytoken.symbol() == "y" + token.symbol()
-    assert ytoken.decimals() == token.decimals()
     assert ytoken.allVaults() == [vault]
 
 

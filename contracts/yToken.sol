@@ -1,11 +1,27 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.3;
+pragma solidity >=0.8.0 <0.9.0;
 
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {VaultAPI, BaseWrapper} from "./BaseWrapper.sol";
+
+interface IERC20Metadata {
+    /**
+     * @dev Returns the name of the token.
+     */
+    function name() external view returns (string memory);
+
+    /**
+     * @dev Returns the symbol of the token.
+     */
+    function symbol() external view returns (string memory);
+
+    /**
+     * @dev Returns the decimals places of the token.
+     */
+    function decimals() external view returns (uint8);
+}
 
 contract yToken is IERC20, BaseWrapper {
     mapping(address => mapping(address => uint256)) public override allowance;
@@ -24,11 +40,11 @@ contract yToken is IERC20, BaseWrapper {
         return IERC20Metadata(address(token)).decimals();
     }
 
-    function totalSupply() external override view returns (uint256 total) {
+    function totalSupply() external view override returns (uint256 total) {
         return totalAssets();
     }
 
-    function balanceOf(address account) external override view returns (uint256 balance) {
+    function balanceOf(address account) external view override returns (uint256 balance) {
         return totalVaultBalance(account);
     }
 

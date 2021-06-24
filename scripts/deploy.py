@@ -67,6 +67,8 @@ def main():
         0.3.3 => 4
         0.3.4 => 5 (DO NOT USE) 
         0.3.5 => 6
+        0.4.0 => 7 (DO NOT USE)
+        0.4.1 => 8
         """
         )
         target_release_index = click.prompt(
@@ -77,6 +79,7 @@ def main():
         if click.confirm("Deploy a Proxy Vault", default="Y"):
             use_proxy = True
     elif Version(PACKAGE_VERSION) > latest_release:
+        target_release_index = num_releases + 1
         if not click.confirm(f"Deploy {PACKAGE_VERSION} as new release"):
             return
 
@@ -91,11 +94,18 @@ def main():
     gov = get_address("Yearn Governance", default=gov_default)
 
     rewards = get_address("Rewards contract", default="treasury.ychad.eth")
-    guardian = get_address("Vault Guardian", default="dev.ychad.eth")
+    guardian = gov
+    if use_proxy == False:
+        guardian = get_address("Vault Guardian", default="dev.ychad.eth")
+    management = get_address("Vault Management", default="ychad.eth")
     name = click.prompt(f"Set description", default=DEFAULT_VAULT_NAME(token))
     symbol = click.prompt(f"Set symbol", default=DEFAULT_VAULT_SYMBOL(token))
-    target_release = Vault.at(registry.releases(target_release_index)).apiVersion()
     release_delta = num_releases - target_release_index
+    target_release = (
+        Vault.at(registry.releases(target_release_index)).apiVersion()
+        if release_delta >= 0
+        else PACKAGE_VERSION
+    )
 
     click.echo(
         f"""
@@ -107,6 +117,7 @@ def main():
      token address: {token.address}
       token symbol: {DEFAULT_VAULT_SYMBOL(token)}
         governance: {gov}
+        management: {management}
            rewards: {rewards}
           guardian: {guardian}
               name: '{name}'
@@ -132,9 +143,8 @@ def main():
             click.echo(f"Experimental Vault deployed [{vault.address}]")
             click.echo("    NOTE: Vault is not registered in Registry!")
         else:
-            if guardian != dev.address:
-                # NOTE: Only need to include if guardian is not self
-                args.append(guardian)
+            args.append(guardian)
+            args.append(management)
             vault = dev.deploy(Vault)
             vault.initialize(*args)
             click.echo(f"New Vault Release deployed [{vault.address}]")

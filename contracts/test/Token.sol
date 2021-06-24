@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.3;
+pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
@@ -25,7 +25,7 @@ contract Token is ERC20 {
         super._beforeTokenTransfer(from, to, amount);
     }
 
-    function decimals() public virtual override view returns (uint8) {
+    function decimals() public view virtual override returns (uint8) {
         return _decimals;
     }
 }

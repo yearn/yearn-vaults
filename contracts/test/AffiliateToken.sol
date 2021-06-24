@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.3;
+pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
@@ -93,9 +93,9 @@ contract AffiliateToken is ERC20, BaseWrapper {
         return withdraw(balanceOf(msg.sender));
     }
 
-    function withdraw(uint256 shares) public returns (uint256) {
+    function withdraw(uint256 shares) public returns (uint256 withdrawn) {
+        withdrawn = _withdraw(address(this), msg.sender, _shareValue(shares), true); // `true` = withdraw from `bestVault`
         _burn(msg.sender, shares);
-        return _withdraw(address(this), msg.sender, _shareValue(shares), true); // `true` = withdraw from `bestVault`
     }
 
     function migrate() external onlyAffiliate returns (uint256) {
@@ -141,7 +141,7 @@ contract AffiliateToken is ERC20, BaseWrapper {
         _approve(owner, spender, amount);
     }
 
-    function decimals() public virtual override view returns (uint8) {
+    function decimals() public view virtual override returns (uint8) {
         return _decimals;
     }
 }

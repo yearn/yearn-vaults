@@ -73,7 +73,13 @@ class ReleaseTest:
 
         vault = Vault.at(
             self.registry.newExperimentalVault(
-                token, self.gov, self.gov, self.gov, "", "", {"from": self.gov}
+                token,
+                self.gov,
+                self.gov,
+                self.gov,
+                "",
+                "",
+                {"from": self.gov},
             ).return_value
         )
 

@@ -15,6 +15,10 @@ struct StrategyParams {
     uint256 totalDebt;
     uint256 totalGain;
     uint256 totalLoss;
+    bool enforceChangeLimit;
+    uint256 profitLimitRatio;
+    uint256 lossLimitRatio;
+    address customCheck;
 }
 
 interface VaultAPI is IERC20 {
@@ -174,6 +178,7 @@ interface StrategyAPI {
  *  accurate picture of the Strategy's performance. See  `vault.report()`,
  *  `harvest()`, and `harvestTrigger()` for further details.
  */
+
 abstract contract BaseStrategy {
     using SafeERC20 for IERC20;
     string public metadataURI;
@@ -186,7 +191,7 @@ abstract contract BaseStrategy {
      * @return A string which holds the current API version of this contract.
      */
     function apiVersion() public pure returns (string memory) {
-        return "0.3.5";
+        return "0.4.2";
     }
 
     /**
@@ -197,7 +202,7 @@ abstract contract BaseStrategy {
      *  `apiVersion()` function above.
      * @return This Strategy's name.
      */
-    function name() external virtual view returns (string memory);
+    function name() external view virtual returns (string memory);
 
     /**
      * @notice
@@ -214,7 +219,7 @@ abstract contract BaseStrategy {
      *  The amount of assets this strategy manages that should not be included in Yearn's Total Value
      *  Locked (TVL) calculation across it's ecosystem.
      */
-    function delegatedAssets() external virtual view returns (uint256) {
+    function delegatedAssets() external view virtual returns (uint256) {
         return 0;
     }
 
@@ -271,6 +276,14 @@ abstract contract BaseStrategy {
         _;
     }
 
+    modifier onlyEmergencyAuthorized() {
+        require(
+            msg.sender == strategist || msg.sender == governance() || msg.sender == vault.guardian() || msg.sender == vault.management(),
+            "!authorized"
+        );
+        _;
+    }
+
     modifier onlyStrategist() {
         require(msg.sender == strategist, "!strategist");
         _;
@@ -303,6 +316,11 @@ abstract contract BaseStrategy {
      *  contract is deployed.
      * @dev `_vault` should implement `VaultAPI`.
      * @param _vault The address of the Vault responsible for this Strategy.
+     * @param _strategist The address to assign as `strategist`.
+     * The strategist is able to change the reward address
+     * @param _rewards  The address to use for pulling rewards.
+     * @param _keeper The adddress of the _keeper. _keeper
+     * can harvest and tend a strategy.
      */
     function _initialize(
         address _vault,
@@ -477,7 +495,7 @@ abstract contract BaseStrategy {
      * @param _amtInWei The amount (in wei/1e-18 ETH) to convert to `want`
      * @return The amount in `want` of `_amtInEth` converted to `want`
      **/
-    function ethToWant(uint256 _amtInWei) public virtual view returns (uint256);
+    function ethToWant(uint256 _amtInWei) public view virtual returns (uint256);
 
     /**
      * @notice
@@ -503,7 +521,7 @@ abstract contract BaseStrategy {
      *  value to be "safe".
      * @return The estimated total assets in this Strategy.
      */
-    function estimatedTotalAssets() public virtual view returns (uint256);
+    function estimatedTotalAssets() public view virtual returns (uint256);
 
     /*
      * @notice
@@ -527,7 +545,7 @@ abstract contract BaseStrategy {
      * This method returns any realized profits and/or realized losses
      * incurred, and should return the total amounts of profits/losses/debt
      * payments (in `want` tokens) for the Vault's accounting (e.g.
-     * `want.balanceOf(this) >= _debtPayment + _profit - _loss`).
+     * `want.balanceOf(this) >= _debtPayment + _profit`).
      *
      * `_debtOutstanding` will be 0 if the Strategy is not past the configured
      * debt limit, otherwise its value will be how far past the debt limit
@@ -568,12 +586,18 @@ abstract contract BaseStrategy {
      * liquidation. If there is a difference between them, `_loss` indicates whether the
      * difference is due to a realized loss, or if there is some other sitution at play
      * (e.g. locked funds) where the amount made available is less than what is needed.
-     * This function is used during emergency exit instead of `prepareReturn()` to
-     * liquidate all of the Strategy's positions back to the Vault.
      *
      * NOTE: The invariant `_liquidatedAmount + _loss <= _amountNeeded` should always be maintained
      */
     function liquidatePosition(uint256 _amountNeeded) internal virtual returns (uint256 _liquidatedAmount, uint256 _loss);
+
+    /**
+     * Liquidate everything and returns the amount that got freed.
+     * This function is used during emergency exit instead of `prepareReturn()` to
+     * liquidate all of the Strategy's positions back to the Vault.
+     */
+
+    function liquidateAllPositions() internal virtual returns (uint256 _amountFreed);
 
     /**
      * @notice
@@ -593,11 +617,13 @@ abstract contract BaseStrategy {
      * @param callCostInWei The keeper's estimated gas cost to call `tend()` (in wei).
      * @return `true` if `tend()` should be called, `false` otherwise.
      */
-    function tendTrigger(uint256 callCostInWei) public virtual view returns (bool) {
+    function tendTrigger(uint256 callCostInWei) public view virtual returns (bool) {
         // We usually don't need tend, but if there are positions that need
         // active maintainence, overriding this function is how you would
         // signal for that.
-        uint256 callCost = ethToWant(callCostInWei);
+        // If your implementation uses the cost of the call in want, you can
+        // use uint256 callCost = ethToWant(callCostInWei);
+
         return false;
     }
 
@@ -645,7 +671,7 @@ abstract contract BaseStrategy {
      * @param callCostInWei The keeper's estimated gas cost to call `harvest()` (in wei).
      * @return `true` if `harvest()` should be called, `false` otherwise.
      */
-    function harvestTrigger(uint256 callCostInWei) public virtual view returns (bool) {
+    function harvestTrigger(uint256 callCostInWei) public view virtual returns (bool) {
         uint256 callCost = ethToWant(callCostInWei);
         StrategyParams memory params = vault.strategies(address(this));
 
@@ -704,14 +730,13 @@ abstract contract BaseStrategy {
         uint256 debtPayment = 0;
         if (emergencyExit) {
             // Free up as much capital as possible
-            uint256 totalAssets = estimatedTotalAssets();
-            // NOTE: use the larger of total assets or debt outstanding to book losses properly
-            (debtPayment, loss) = liquidatePosition(totalAssets > debtOutstanding ? totalAssets : debtOutstanding);
-            // NOTE: take up any remainder here as profit
-            if (debtPayment > debtOutstanding) {
-                profit = debtPayment - debtOutstanding;
-                debtPayment = debtOutstanding;
+            uint256 amountFreed = liquidateAllPositions();
+            if (amountFreed < debtOutstanding) {
+                loss = debtOutstanding - amountFreed;
+            } else if (amountFreed > debtOutstanding) {
+                profit = amountFreed - debtOutstanding;
             }
+            debtPayment = debtOutstanding - loss;
         } else {
             // Free up returns for Vault to pull
             (profit, loss, debtPayment) = prepareReturn(debtOutstanding);
@@ -782,7 +807,7 @@ abstract contract BaseStrategy {
      * @dev
      *  See `vault.setEmergencyShutdown()` and `harvest()` for further details.
      */
-    function setEmergencyExit() external onlyAuthorized {
+    function setEmergencyExit() external onlyEmergencyAuthorized {
         emergencyExit = true;
         vault.revokeStrategy();
 
@@ -797,7 +822,7 @@ abstract contract BaseStrategy {
      * NOTE: Do *not* include `want`, already included in `sweep` below.
      *
      * Example:
-     *
+     * ```
      *    function protectedTokens() internal override view returns (address[] memory) {
      *      address[] memory protected = new address[](3);
      *      protected[0] = tokenA;
@@ -805,8 +830,9 @@ abstract contract BaseStrategy {
      *      protected[2] = tokenC;
      *      return protected;
      *    }
+     * ```
      */
-    function protectedTokens() internal virtual view returns (address[] memory);
+    function protectedTokens() internal view virtual returns (address[] memory);
 
     /**
      * @notice
@@ -837,6 +863,7 @@ abstract contract BaseStrategy {
 }
 
 abstract contract BaseStrategyInitializable is BaseStrategy {
+    bool public isOriginal = true;
     event Cloned(address indexed clone);
 
     constructor(address _vault) BaseStrategy(_vault) {}
@@ -851,6 +878,7 @@ abstract contract BaseStrategyInitializable is BaseStrategy {
     }
 
     function clone(address _vault) external returns (address) {
+        require(isOriginal, "!clone");
         return this.clone(_vault, msg.sender, msg.sender, msg.sender);
     }
 

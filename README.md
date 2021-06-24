@@ -29,7 +29,7 @@ You will need [yarn](https://yarnpkg.com/lang/en/docs/install/) installed.
 It is recommended to use a Python virtual environment.
 
 ```bash
-git clone https://github.com/iearn-finance/yearn-vaults
+git clone https://github.com/yearn/yearn-vaults
 cd yearn-vaults
 yarn install --lock-file
 ```
@@ -87,7 +87,7 @@ Any command `in code blocks` is meant to be executed from a Mac/Linux terminal o
 11. Close & re-open your terminal before proceeding (to get the new environment variable values)
 12. If you don't have git yet, go [set it up](https://docs.github.com/en/free-pro-team@latest/github/getting-started-with-github/set-up-git)
 13. Pull the repository from GitHub and install its dependencies
-    - `git clone https://github.com/iearn-finance/yearn-vaults`
+    - `git clone https://github.com/yearn/yearn-vaults`
     - `cd yearn-vaults`
     - `yarn install --lock-file`
       - You may have to install with `--ignore-engines` (try this if you get an error)
@@ -99,11 +99,11 @@ Any command `in code blocks` is meant to be executed from a Mac/Linux terminal o
     - If you're in Windows using WSL, type `code .` to launch VSCode
       - At this point install [Solidity Compiler](https://marketplace.visualstudio.com/items?itemName=JuanBlanco.solidity) - be sure to _Install in WSL_
       - Install [Vyper](https://marketplace.visualstudio.com/items?itemName=tintinweb.vscode-vyper) as well on WSL
-    - Open one of the .sol files, right click the code and click _Solidity: Change Workspace compiler version (Remote)_, Change to 0.8.3
+    - Open one of the .sol files, right click the code and click _Solidity: Change Workspace compiler version (Remote)_, Change to 0.8.4
       - Alternatively, go to File -> Preferences -> Settings
       - If you’re using WSL, go to the Remote [WSL] tab
       - Otherwise choose the Workspace tab
-        - Search for _Solidity_ and copy and paste _v0.8.3_ into the _Solidity: Compile Using Remote Version_ textbox
+        - Search for _Solidity_ and copy and paste _v0.8.4_ into the _Solidity: Compile Using Remote Version_ textbox
     - Set Black as the linter.
       - You'll see a toast notification the bottom right asking about linting, choose _black_
       - If you don't see this, just go to _File_ -> _Preferences_ -> _Settings_
@@ -174,7 +174,7 @@ black .
 
 ## Security
 
-For security concerns, please visit [Bug Bounty](https://github.com/iearn-finance/yearn-vaults/security/policy).
+For security concerns, please visit [Bug Bounty](https://github.com/yearn/yearn-vaults/security/policy).
 
 ## Documentation
 

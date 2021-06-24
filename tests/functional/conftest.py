@@ -45,7 +45,7 @@ def create_vault(gov, guardian, rewards, create_token, patch_vault_version):
         if token is None:
             token = create_token()
         vault = patch_vault_version(version).deploy({"from": guardian})
-        vault.initialize(token, governance, rewards, "", "", guardian)
+        vault.initialize(token, governance, rewards, "", "", guardian, governance)
         vault.setDepositLimit(2 ** 256 - 1, {"from": governance})
         return vault
 
