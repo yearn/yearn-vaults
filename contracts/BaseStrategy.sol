@@ -273,25 +273,23 @@ abstract contract BaseStrategy {
 
     // modifiers
     modifier onlyAuthorized() {
-        require(msg.sender == strategist || msg.sender == governance(), "!authorized");
+        require(msg.sender == strategist || msg.sender == governance());
         _;
     }
 
     modifier onlyEmergencyAuthorized() {
         require(
-            msg.sender == strategist || msg.sender == governance() || msg.sender == vault.guardian() || msg.sender == vault.management(),
-            "!authorized"
-        );
+            msg.sender == strategist || msg.sender == governance() || msg.sender == vault.guardian() || msg.sender == vault.management());
         _;
     }
 
     modifier onlyStrategist() {
-        require(msg.sender == strategist, "!strategist");
+        require(msg.sender == strategist);
         _;
     }
 
     modifier onlyGovernance() {
-        require(msg.sender == governance(), "!authorized");
+        require(msg.sender == governance());
         _;
     }
 
@@ -301,9 +299,7 @@ abstract contract BaseStrategy {
                 msg.sender == strategist ||
                 msg.sender == governance() ||
                 msg.sender == vault.guardian() ||
-                msg.sender == vault.management(),
-            "!authorized"
-        );
+                msg.sender == vault.management());
         _;
     }
 
@@ -764,7 +760,7 @@ abstract contract BaseStrategy {
      * @return _loss Any realized losses
      */
     function withdraw(uint256 _amountNeeded) external returns (uint256 _loss) {
-        require(msg.sender == address(vault), "!vault");
+        require(msg.sender == address(vault));
         // Liquidate as much as possible to `want`, up to `_amountNeeded`
         uint256 amountFreed;
         (amountFreed, _loss) = liquidatePosition(_amountNeeded);
@@ -854,11 +850,11 @@ abstract contract BaseStrategy {
      * @param _token The token to transfer out of this vault.
      */
     function sweep(address _token) external onlyGovernance {
-        require(_token != address(want), "!want");
-        require(_token != address(vault), "!shares");
+        require(_token != address(want));
+        require(_token != address(vault));
 
         address[] memory _protectedTokens = protectedTokens();
-        for (uint256 i; i < _protectedTokens.length; i++) require(_token != _protectedTokens[i], "!protected");
+        for (uint256 i; i < _protectedTokens.length; i++) require(_token != _protectedTokens[i]);
 
         SafeERC20.safeTransfer(IERC20(_token), governance(), IERC20(_token).balanceOf(address(this)));
     }
@@ -880,7 +876,7 @@ abstract contract BaseStrategyInitializable is BaseStrategy {
     }
 
     function clone(address _vault) external returns (address) {
-        require(isOriginal, "!clone");
+        require(isOriginal);
         return this.clone(_vault, msg.sender, msg.sender, msg.sender);
     }
 
