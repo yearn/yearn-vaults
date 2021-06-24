@@ -46,6 +46,7 @@ def create_vault(gov, guardian, rewards, create_token, patch_vault_version):
             token = create_token()
         vault = patch_vault_version(version).deploy({"from": guardian})
         vault.initialize(token, governance, rewards, "", "", guardian, governance)
+        vault.unpause({"from": gov})
         vault.setDepositLimit(2 ** 256 - 1, {"from": governance})
         return vault
 
@@ -59,7 +60,6 @@ def vault(gov, management, token, create_vault):
 
     # Make it so vault has some AUM to start
     token.approve(vault, token.balanceOf(gov) // 2, {"from": gov})
-    vault.unpause({"from": gov})
     vault.deposit(token.balanceOf(gov) // 2, {"from": gov})
     yield vault
 

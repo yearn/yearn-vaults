@@ -759,9 +759,6 @@ def approve(spender: address, amount: uint256) -> bool:
     """
     assert not self.paused # dev: paused
 
-    assert self.blockLock[msg.sender] < block.number # dev: locked for block
-    self.lock_for_block(msg.sender)
-
     self.allowance[msg.sender][spender] = amount
     log Approval(msg.sender, spender, amount)
     return True
@@ -778,9 +775,6 @@ def increaseAllowance(spender: address, amount: uint256) -> bool:
     @param amount The amount of tokens to increase the allowance by.
     """
     assert not self.paused # dev: paused
-    
-    assert self.blockLock[msg.sender] < block.number # dev: locked for block
-    self.lock_for_block(msg.sender)
 
     self.allowance[msg.sender][spender] += amount
     log Approval(msg.sender, spender, self.allowance[msg.sender][spender])
@@ -798,9 +792,6 @@ def decreaseAllowance(spender: address, amount: uint256) -> bool:
     @param amount The amount of tokens to decrease the allowance by.
     """
     assert not self.paused # dev: paused
-
-    assert self.blockLock[msg.sender] < block.number # dev: locked for block
-    self.lock_for_block(msg.sender)
 
     self.allowance[msg.sender][spender] -= amount
     log Approval(msg.sender, spender, self.allowance[msg.sender][spender])
