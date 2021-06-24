@@ -59,6 +59,7 @@ def vault(gov, management, token, create_vault):
 
     # Make it so vault has some AUM to start
     token.approve(vault, token.balanceOf(gov) // 2, {"from": gov})
+    vault.unpause({"from": gov})
     vault.deposit(token.balanceOf(gov) // 2, {"from": gov})
     yield vault
 
