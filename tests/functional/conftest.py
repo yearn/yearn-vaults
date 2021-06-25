@@ -57,6 +57,7 @@ def create_vault(gov, guardian, rewards, create_token, patch_vault_version):
 def vault(gov, management, token, create_vault):
     vault = create_vault(token=token, governance=gov)
     vault.setManagement(management, {"from": gov})
+    vault.unpause({"from": gov})
 
     # Make it so vault has some AUM to start
     token.approve(vault, token.balanceOf(gov) // 2, {"from": gov})

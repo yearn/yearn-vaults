@@ -939,6 +939,7 @@ def deposit(_amount: uint256 = MAX_UINT256, recipient: address = msg.sender) -> 
     @return The issued Vault shares.
     """
     assert not self.paused # dev: paused
+    
     assert not self.emergencyShutdown  # Deposits are locked out
     assert recipient not in [self, ZERO_ADDRESS]
 
