@@ -7,7 +7,8 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 // Cannot import 2 remapped github repo from same author, see: https://github.com/eth-brownie/brownie/issues/1116
-import "@upgradeable/contracts/utils/PausableUpgradeable.sol";
+// NOTE: If you want to use PausableUpgradeable
+// import "@upgradeable/contracts/utils/PausableUpgradeable.sol";
 
 struct StrategyParams {
     uint256 performanceFee;
@@ -183,7 +184,7 @@ interface StrategyAPI {
  *  `harvest()`, and `harvestTrigger()` for further details.
  */
 
-abstract contract BaseStrategy is PausableUpgradeable {
+abstract contract BaseStrategy {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
     string public metadataURI;
