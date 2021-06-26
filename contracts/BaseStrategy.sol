@@ -298,10 +298,6 @@ abstract contract BaseStrategy {
         );
     }
 
-    function onlyManagement() internal {
-        require(msg.sender == governance() || msg.sender == vault.management());
-    }
-
     constructor(address _vault) public {
         _initialize(_vault, msg.sender, msg.sender, msg.sender);
     }
