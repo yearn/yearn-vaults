@@ -513,19 +513,19 @@ def setGuardian(guardian: address):
         This may only be called by governance or the existing guardian.
     @param guardian The new guardian address to use.
     """
-    assert msg.sender in [self.guardian, self.governance]
+    assert msg.sender in [self.guardian, self.governance] # dev: only guardian or governance
     self.guardian = guardian
     log UpdateGuardian(guardian)
 
 @external
 def approveContractAccess(account: address):
-    assert msg.sender in [self.governance]
+    assert msg.sender in [self.governance] # dev: only governance
     self.approved[account] = True
 
 
 @external
 def revokeContractAccess(account: address):
-    assert msg.sender in [self.governance]
+    assert msg.sender in [self.governance] # dev: only governance
     self.approved[account] = False
 
 @external
