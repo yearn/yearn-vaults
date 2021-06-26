@@ -1,6 +1,6 @@
 import pytest
 
-from brownie import Token, TokenNoReturn
+from brownie import Token, TokenNoReturn, TestDeposit, TestFlashLoan
 
 
 @pytest.fixture
@@ -63,6 +63,20 @@ def vault(gov, management, token, create_vault):
     token.approve(vault, token.balanceOf(gov) // 2, {"from": gov})
     vault.deposit(token.balanceOf(gov) // 2, {"from": gov})
     yield vault
+
+@pytest.fixture
+def deposit_contract(gov, token, vault):
+    contract = gov.deploy(TestDeposit, token, vault)
+    token.approve(contract, token.balanceOf(gov) // 2, {"from": gov})
+    return contract
+
+
+
+@pytest.fixture
+def flashloan_contract(gov, token, vault):
+    contract = gov.deploy(TestFlashLoan, token, vault)
+    token.approve(contract, token.balanceOf(gov) // 2, {"from": gov})
+    return contract
 
 
 @pytest.fixture

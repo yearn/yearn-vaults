@@ -83,6 +83,7 @@ def test_vault_reinitialization(guardian, gov, rewards, token, Vault):
         ("depositLimit", "setDepositLimit", 1000, False),
     ],
 )
+
 def test_vault_setParams(
     chain,
     gov,
