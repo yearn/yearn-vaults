@@ -929,10 +929,11 @@ def _sharesForAmount(amount: uint256) -> uint256:
     # See dev note on `deposit`.
     if self._totalAssets() > 0:
         # NOTE: if sqrt(token.totalSupply()) > 1e37, this could potentially revert
+        freeFunds: uint256 = self._totalAssets() - self._calculateLockedProfit()
         return  (
             amount
             * self.totalSupply
-            / self._totalAssets()
+            / freeFunds
         )
     else:
         return 0
