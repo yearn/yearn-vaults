@@ -445,6 +445,7 @@ def setLockedProfitDegradation(degradation: uint256):
     assert msg.sender == self.governance
     # Since "degradation" is of type uint256 it can never be less than zero
     assert degradation <= DEGRADATION_COEFFICIENT
+    assert degradation != 0
     self.lockedProfitDegradation = degradation
 
 
