@@ -930,12 +930,13 @@ def _shareValue(shares: uint256) -> uint256:
 def _sharesForAmount(amount: uint256) -> uint256:
     # Determines how many shares `amount` of token would receive.
     # See dev note on `deposit`.
-    if self._totalAssets() > 0:
+    _freeFunds: uint256 = self._freeFunds()
+    if _freeFunds > 0:
         # NOTE: if sqrt(token.totalSupply()) > 1e37, this could potentially revert
         return  (
             amount
             * self.totalSupply
-            / self._freeFunds()
+            / _freeFunds 
         )
     else:
         return 0
