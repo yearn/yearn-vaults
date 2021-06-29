@@ -286,39 +286,30 @@ abstract contract BaseStrategy {
     bool public emergencyExit;
 
     // modifiers
-    modifier onlyAuthorized() {
-        require(msg.sender == strategist || msg.sender == governance(), "!authorized");
-        _;
+    function _onlyAuthorized() internal {
+        require(msg.sender == strategist || msg.sender == governance());
     }
 
-    modifier onlyEmergencyAuthorized() {
-        require(
-            msg.sender == strategist || msg.sender == governance() || msg.sender == vault.guardian() || msg.sender == vault.management(),
-            "!authorized"
-        );
-        _;
+    function _onlyEmergencyAuthorized() internal {
+        require(msg.sender == strategist || msg.sender == governance() || msg.sender == vault.guardian() || msg.sender == vault.management());
     }
 
-    modifier onlyStrategist() {
-        require(msg.sender == strategist, "!strategist");
-        _;
+    function _onlyStrategist() internal {
+        require(msg.sender == strategist);
     }
 
-    modifier onlyGovernance() {
-        require(msg.sender == governance(), "!authorized");
-        _;
+    function _onlyGovernance() internal {
+        require(msg.sender == governance());
     }
 
-    modifier onlyKeepers() {
+    function _onlyKeepers() internal {
         require(
             msg.sender == keeper ||
                 msg.sender == strategist ||
                 msg.sender == governance() ||
                 msg.sender == vault.guardian() ||
-                msg.sender == vault.management(),
-            "!authorized"
+                msg.sender == vault.management()
         );
-        _;
     }
 
     modifier onlyVaultManagers() {
@@ -383,7 +374,8 @@ abstract contract BaseStrategy {
      *  This may only be called by governance or the existing strategist.
      * @param _strategist The new address to assign as `strategist`.
      */
-    function setStrategist(address _strategist) external onlyAuthorized {
+    function setStrategist(address _strategist) external {
+        _onlyAuthorized();
         require(_strategist != address(0));
         strategist = _strategist;
         emit UpdatedStrategist(_strategist);
@@ -402,7 +394,8 @@ abstract contract BaseStrategy {
      *  This may only be called by governance or the strategist.
      * @param _keeper The new address to assign as `keeper`.
      */
-    function setKeeper(address _keeper) external onlyAuthorized {
+    function setKeeper(address _keeper) external {
+        _onlyAuthorized();
         require(_keeper != address(0));
         keeper = _keeper;
         emit UpdatedKeeper(_keeper);
@@ -416,7 +409,8 @@ abstract contract BaseStrategy {
      *  This may only be called by the strategist.
      * @param _rewards The address to use for pulling rewards.
      */
-    function setRewards(address _rewards) external onlyStrategist {
+    function setRewards(address _rewards) external {
+        _onlyStrategist();
         require(_rewards != address(0));
         vault.approve(rewards, 0);
         rewards = _rewards;
@@ -436,7 +430,8 @@ abstract contract BaseStrategy {
      *  This may only be called by governance or the strategist.
      * @param _delay The minimum number of seconds to wait between harvests.
      */
-    function setMinReportDelay(uint256 _delay) external onlyAuthorized {
+    function setMinReportDelay(uint256 _delay) external {
+        _onlyAuthorized();
         minReportDelay = _delay;
         emit UpdatedMinReportDelay(_delay);
     }
@@ -453,7 +448,8 @@ abstract contract BaseStrategy {
      *  This may only be called by governance or the strategist.
      * @param _delay The maximum number of seconds to wait between harvests.
      */
-    function setMaxReportDelay(uint256 _delay) external onlyAuthorized {
+    function setMaxReportDelay(uint256 _delay) external {
+        _onlyAuthorized();
         maxReportDelay = _delay;
         emit UpdatedMaxReportDelay(_delay);
     }
@@ -468,7 +464,8 @@ abstract contract BaseStrategy {
      * @param _profitFactor A ratio to multiply anticipated
      * `harvest()` gas cost against.
      */
-    function setProfitFactor(uint256 _profitFactor) external onlyAuthorized {
+    function setProfitFactor(uint256 _profitFactor) external {
+        _onlyAuthorized();
         profitFactor = _profitFactor;
         emit UpdatedProfitFactor(_profitFactor);
     }
@@ -486,7 +483,8 @@ abstract contract BaseStrategy {
      * @param _debtThreshold How big of a loss this Strategy may carry without
      * being required to report to the Vault.
      */
-    function setDebtThreshold(uint256 _debtThreshold) external onlyAuthorized {
+    function setDebtThreshold(uint256 _debtThreshold) external {
+        _onlyAuthorized();
         debtThreshold = _debtThreshold;
         emit UpdatedDebtThreshold(_debtThreshold);
     }
@@ -499,7 +497,8 @@ abstract contract BaseStrategy {
      *  This may only be called by governance or the strategist.
      * @param _metadataURI The URI that describe the strategy.
      */
-    function setMetadataURI(string calldata _metadataURI) external onlyAuthorized {
+    function setMetadataURI(string calldata _metadataURI) external {
+        _onlyAuthorized();
         metadataURI = _metadataURI;
         emit UpdatedMetadataURI(_metadataURI);
     }
@@ -667,7 +666,8 @@ abstract contract BaseStrategy {
      *
      *  This may only be called by governance, the strategist, or the keeper.
      */
-    function tend() external onlyKeepers {
+    function tend() external {
+        _onlyKeepers();
         // Don't take profits with this call, but adjust for better gains
         adjustPosition(vault.debtOutstanding());
     }
@@ -754,7 +754,8 @@ abstract contract BaseStrategy {
      *  called to report to the Vault on the Strategy's position, especially if
      *  any losses have occurred.
      */
-    function harvest() external onlyKeepers {
+    function harvest() external {
+        _onlyKeepers();
         uint256 profit = 0;
         uint256 loss = 0;
         uint256 debtOutstanding = vault.debtOutstanding();
@@ -847,7 +848,8 @@ abstract contract BaseStrategy {
      * @dev
      *  See `vault.setEmergencyShutdown()` and `harvest()` for further details.
      */
-    function setEmergencyExit() external onlyEmergencyAuthorized {
+    function setEmergencyExit() external {
+        _onlyEmergencyAuthorized();
         emergencyExit = true;
         vault.revokeStrategy();
 
@@ -891,7 +893,8 @@ abstract contract BaseStrategy {
      *  should be protected from sweeping in addition to `want`.
      * @param _token The token to transfer out of this vault.
      */
-    function sweep(address _token) external onlyGovernance {
+    function sweep(address _token) external {
+        _onlyGovernance();
         require(_token != address(want), "!want");
         require(_token != address(vault), "!shares");
 
