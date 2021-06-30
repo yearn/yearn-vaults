@@ -813,6 +813,11 @@ def _calculateLockedProfit() -> uint256:
     else:
         return 0
 
+@view
+@internal
+def _freeFunds() -> uint256:
+    return self._totalAssets() - self._calculateLockedProfit()
+
 @internal
 def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
     # Issues `amount` Vault shares to `to`.
@@ -825,8 +830,7 @@ def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
     if totalSupply > 0:
         # Mint amount of shares based on what the Vault is managing overall
         # NOTE: if sqrt(token.totalSupply()) > 1e39, this could potentially revert
-        freeFunds: uint256 = self._totalAssets() - self._calculateLockedProfit()
-        shares =  amount * totalSupply / freeFunds  # dev: no free funds
+        shares =  amount * totalSupply / self._freeFunds()  # dev: no free funds
     else:
         # No existing shares, so mint 1:1
         shares = amount
@@ -913,11 +917,10 @@ def _shareValue(shares: uint256) -> uint256:
 
     # Determines the current value of `shares`.
     # NOTE: if sqrt(Vault.totalAssets()) >>> 1e39, this could potentially revert
-    freeFunds: uint256 = self._totalAssets() - self._calculateLockedProfit()
 
     return (
         shares
-        * freeFunds
+        * self._freeFunds()
         / self.totalSupply
     )
 
@@ -927,12 +930,13 @@ def _shareValue(shares: uint256) -> uint256:
 def _sharesForAmount(amount: uint256) -> uint256:
     # Determines how many shares `amount` of token would receive.
     # See dev note on `deposit`.
-    if self._totalAssets() > 0:
+    _freeFunds: uint256 = self._freeFunds()
+    if _freeFunds > 0:
         # NOTE: if sqrt(token.totalSupply()) > 1e37, this could potentially revert
         return  (
             amount
             * self.totalSupply
-            / self._totalAssets()
+            / _freeFunds 
         )
     else:
         return 0
