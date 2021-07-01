@@ -50,7 +50,6 @@ def test_normal_operation(
         1000,  # 10% performance fee for Strategist
         {"from": gov},
     )
-    chain.sleep(1)
     strategy.harvest({"from": keeper})
     assert token.balanceOf(vault) == 0
     state_machine(

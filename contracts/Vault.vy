@@ -1634,6 +1634,9 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
     # Issue new shares to cover fees
     # NOTE: In effect, this reduces overall share price by the combined fee
     # NOTE: may throw if Vault.totalAssets() > 1e64, or not called for more than a year
+    if self.strategies[strategy].activation == block.timestamp:
+        return 0  # NOTE: Just added, no fees to assess
+
     duration: uint256 = block.timestamp - self.strategies[strategy].lastReport
     assert duration != 0 #dev: can't call assessFees twice within the same block
 

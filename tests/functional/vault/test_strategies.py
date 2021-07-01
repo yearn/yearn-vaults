@@ -42,7 +42,6 @@ def test_liquidation_after_hack(chain, gov, vault, token, TestStrategy):
     # Deploy strategy and seed it with debt
     strategy = gov.deploy(TestStrategy, vault)
     vault.addStrategy(strategy, 2_000, 0, 10 ** 21, 1000, {"from": gov})
-    chain.sleep(1)
     strategy.harvest({"from": gov})
 
     # The strategy suffers a loss
@@ -594,7 +593,6 @@ def test_health_report_check(gov, token, vault, strategy, chain):
     token.approve(vault, MAX_UINT256, {"from": gov})
     vault.addStrategy(strategy, 10_000, 0, 1000, 0, {"from": gov})
     vault.deposit(1000, {"from": gov})
-    chain.sleep(1)
     strategy.harvest()
 
     # Small price change won't trigger the emergency
@@ -626,7 +624,6 @@ def test_custom_health_check(gov, token, vault, strategy, chain, TestHealthCheck
     token.approve(vault, MAX_UINT256, {"from": gov})
     vault.addStrategy(strategy, 10_000, 0, 1000, 0, {"from": gov})
     vault.deposit(1000, {"from": gov})
-    chain.sleep(1)
     strategy.harvest()
     check = TestHealthCheck.deploy({"from": gov})
     vault.setStrategyCustomCheck(strategy, check, {"from": gov})
