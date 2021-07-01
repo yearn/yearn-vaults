@@ -59,7 +59,6 @@ def test_strategy_setEmergencyExit(strategy, gov, strategist, rando, chain):
 def test_strategy_harvest_permission(
     strategy, gov, strategist, guardian, management, keeper, rando, chain
 ):
-    chain.sleep(1)
     strategy.harvest({"from": gov})
     chain.sleep(1)
     strategy.harvest({"from": strategist})

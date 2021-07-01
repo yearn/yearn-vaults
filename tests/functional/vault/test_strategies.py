@@ -42,7 +42,6 @@ def test_liquidation_after_hack(chain, gov, vault, token, TestStrategy):
     # Deploy strategy and seed it with debt
     strategy = gov.deploy(TestStrategy, vault)
     vault.addStrategy(strategy, 2_000, 0, 10 ** 21, 1000, {"from": gov})
-    chain.sleep(1)
     strategy.harvest({"from": gov})
 
     # The strategy suffers a loss

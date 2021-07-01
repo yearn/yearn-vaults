@@ -27,7 +27,6 @@ def test_losses(chain, vault, strategy, gov, token):
     vault.deposit(5000, {"from": gov})
 
     chain.sleep(DAY // 10)
-    chain.sleep(1)
     strategy.harvest({"from": gov})
     assert token.balanceOf(strategy) == 500
 
@@ -68,7 +67,6 @@ def test_total_loss(chain, vault, strategy, gov, token):
     vault.addStrategy(strategy, 10_000, 0, 2 ** 256 - 1, 1_000, {"from": gov})
     token.approve(vault, 2 ** 256 - 1, {"from": gov})
     vault.deposit(5000, {"from": gov})
-    chain.sleep(1)
     strategy.harvest({"from": gov})
     assert token.balanceOf(strategy) == 5000
 
