@@ -153,11 +153,10 @@ abstract contract BaseWrapper {
         VaultAPI _bestVault = bestVault();
 
         if (pullFunds) {
-            if (amount != DEPOSIT_EVERYTHING) {
-                SafeERC20.safeTransferFrom(token, depositor, address(this), amount);
-            } else {
-                SafeERC20.safeTransferFrom(token, depositor, address(this), token.balanceOf(depositor));
+            if (amount == DEPOSIT_EVERYTHING) {
+                amount = token.balanceOf(depositor);
             }
+            SafeERC20.safeTransferFrom(token, depositor, address(this), amount);
         }
 
         if (token.allowance(address(this), address(_bestVault)) < amount) {
