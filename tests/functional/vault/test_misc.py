@@ -251,7 +251,6 @@ def test_sandwich_attack(
     vault.addStrategy(strategy, 4_000, 0, MAX_UINT256, 0, {"from": gov})
     vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
 
-    chain.sleep(1)
     strategy.harvest({"from": strategist})
     # strategy is returning 0.02%. Equivalent to 35.6% a year at 5 harvests a day
     profit_to_be_returned = token.balanceOf(strategy) / 5000
