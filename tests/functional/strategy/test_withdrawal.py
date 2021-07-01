@@ -5,7 +5,6 @@ def test_withdraw(chain, gov, token, vault, strategy, rando):
     token.approve(vault, token.balanceOf(gov), {"from": gov})
     vault.deposit(token.balanceOf(gov) // 2, {"from": gov})
     chain.sleep(8640)
-    chain.sleep(1)
     strategy.harvest({"from": gov})  # Seed some debt in there
     assert strategy.estimatedTotalAssets() > 0
 

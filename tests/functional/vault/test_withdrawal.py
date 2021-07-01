@@ -29,7 +29,6 @@ def test_multiple_withdrawals(token, gov, Vault, TestStrategy, chain):
             0,  # No fee
             {"from": gov},
         )
-    chain.sleep(1)
 
     for s in strategies:  # Seed all the strategies with debt
         s.harvest({"from": gov})
@@ -219,7 +218,6 @@ def test_withdrawal_with_empty_queue(
     token.transferFrom(gov, guardian, token.balanceOf(gov), {"from": gov})
 
     chain.sleep(8640)
-    chain.sleep(1)
     vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
     strategy.harvest({"from": gov})
     assert token.balanceOf(vault) < vault.totalAssets()
@@ -307,7 +305,6 @@ def test_user_withdraw(chain, gov, token, vault, strategy, rando):
     deposit = vault.totalAssets()
     pricePerShareBefore = vault.pricePerShare()
     token.transfer(strategy, vault.totalAssets(), {"from": gov})  # seed some profit
-    chain.sleep(1)
     vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
     strategy.harvest({"from": gov})
 
@@ -406,7 +403,6 @@ def test_token_amount_does_not_change_on_deposit_withdrawal(
     vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
     vault.setLockedProfitDegradation(1e10, {"from": gov})
     # test is only valid if some profit are locked.
-    chain.sleep(1)
     strategy.harvest()
     token.transfer(strategy, 100, {"from": gov})
     chain.sleep(1)
