@@ -1,6 +1,6 @@
 import pytest
 
-from brownie import Token, TokenNoReturn
+from brownie import Token, TokenNoReturn, TestDeposit, TestFlashLoan
 
 
 @pytest.fixture
@@ -45,7 +45,8 @@ def create_vault(gov, guardian, rewards, create_token, patch_vault_version):
         if token is None:
             token = create_token()
         vault = patch_vault_version(version).deploy({"from": guardian})
-        vault.initialize(token, governance, rewards, "", "", guardian)
+        vault.initialize(token, governance, rewards, "", "", guardian, governance)
+        vault.unpause({"from": governance})
         vault.setDepositLimit(2 ** 256 - 1, {"from": governance})
         return vault
 
@@ -56,11 +57,26 @@ def create_vault(gov, guardian, rewards, create_token, patch_vault_version):
 def vault(gov, management, token, create_vault):
     vault = create_vault(token=token, governance=gov)
     vault.setManagement(management, {"from": gov})
+    vault.unpause({"from": gov})
 
     # Make it so vault has some AUM to start
     token.approve(vault, token.balanceOf(gov) // 2, {"from": gov})
     vault.deposit(token.balanceOf(gov) // 2, {"from": gov})
     yield vault
+
+@pytest.fixture
+def deposit_contract(gov, token, vault):
+    contract = gov.deploy(TestDeposit, token, vault)
+    token.approve(contract, token.balanceOf(gov) // 2, {"from": gov})
+    return contract
+
+
+
+@pytest.fixture
+def flashloan_contract(gov, token, vault):
+    contract = gov.deploy(TestFlashLoan, token, vault)
+    token.approve(contract, token.balanceOf(gov) // 2, {"from": gov})
+    return contract
 
 
 @pytest.fixture

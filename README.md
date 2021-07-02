@@ -29,7 +29,7 @@ You will need [yarn](https://yarnpkg.com/lang/en/docs/install/) installed.
 It is recommended to use a Python virtual environment.
 
 ```bash
-git clone https://github.com/iearn-finance/yearn-vaults
+git clone https://github.com/yearn/yearn-vaults
 cd yearn-vaults
 yarn install --lock-file
 ```
@@ -87,7 +87,7 @@ Any command `in code blocks` is meant to be executed from a Mac/Linux terminal o
 11. Close & re-open your terminal before proceeding (to get the new environment variable values)
 12. If you don't have git yet, go [set it up](https://docs.github.com/en/free-pro-team@latest/github/getting-started-with-github/set-up-git)
 13. Pull the repository from GitHub and install its dependencies
-    - `git clone https://github.com/iearn-finance/yearn-vaults`
+    - `git clone https://github.com/yearn/yearn-vaults`
     - `cd yearn-vaults`
     - `yarn install --lock-file`
       - You may have to install with `--ignore-engines` (try this if you get an error)
@@ -174,7 +174,7 @@ black .
 
 ## Security
 
-For security concerns, please visit [Bug Bounty](https://github.com/iearn-finance/yearn-vaults/security/policy).
+For security concerns, please visit [Bug Bounty](https://github.com/yearn/yearn-vaults/security/policy).
 
 ## Documentation
 

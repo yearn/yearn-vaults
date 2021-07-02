@@ -13,11 +13,6 @@ def vault(gov, token, Vault):
     yield vault
 
 
-@pytest.fixture
-def guest_list(gov, TestGuestList):
-    yield gov.deploy(TestGuestList)
-
-
 def test_deposit_with_zero_funds(vault, token, rando):
     assert token.balanceOf(rando) == 0
     token.approve(vault, 2 ** 256 - 1, {"from": rando})
@@ -32,37 +27,13 @@ def test_deposit_with_wrong_amount(vault, token, gov):
         vault.deposit(balance, {"from": gov})
 
 
-def test_deposit_with_guest_list(vault, guest_list, token, gov, rando, history):
-    # Make sure we're attempting to deposit something
-    token.transfer(rando, token.balanceOf(gov) // 2, {"from": gov})
-    balance = token.balanceOf(rando)
-    token.approve(vault, balance, {"from": rando})
-
-    # Note - don't need to call guest_list.setGuests, since nobody's invited by
-    # default.
-    # gov is our bouncer
-    vault.setGuestList(guest_list, {"from": gov})
-
-    # Ensure rando's not permitted to deposit
+def test_deposit_with_wrong_recipient(vault, token, gov):
+    balance = token.balanceOf(gov)
+    token.approve(vault, 2 ** 256 - 1, {"from": gov})
     with brownie.reverts():
-        vault.deposit(balance, {"from": rando})
-
-    # Ensure authorized was called and that the deposit didn't revert for a
-    # different reason.
-    assert history[-1].subcalls[-1]["function"] == "authorized(address,uint256)"
-    assert history[-1].subcalls[-1]["return_value"][0] == False
-
-    # Allow rando into the party
-    guests = [rando]
-    invited = [True]
-    guest_list.setGuests(guests, invited, {"from": gov})
-
-    # Deposit balance
-    vault.deposit(balance, {"from": rando})
-
-    # Ensure the vault now has all rando's tokens
-    assert token.balanceOf(rando) == 0
-    assert vault.balanceOf(rando) == balance
+        vault.deposit(
+            balance, "0x0000000000000000000000000000000000000000", {"from": gov}
+        )
 
 
 def test_deposit_all_and_withdraw_all(gov, vault, token):
@@ -296,3 +267,12 @@ def test_transferFrom(accounts, token, vault):
 
     assert vault.balanceOf(a) == 0
     assert vault.balanceOf(b) == token.balanceOf(vault)
+
+
+def test_do_not_issue_zero_shares(gov, token, vault):
+    token.approve(vault, 500, {"from": gov})
+    vault.deposit(500, {"from": gov})
+    token.transfer(vault, 500)  # inflate price
+    assert vault.pricePerShare() == 2 * 10 ** token.decimals()  # 2:1 price
+    with brownie.reverts():
+        vault.deposit(1, {"from": gov})

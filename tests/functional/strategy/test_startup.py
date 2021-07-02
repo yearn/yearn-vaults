@@ -26,6 +26,7 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
     # Take on debt
     chain.mine(timestamp=chain.time() + DAY)
     assert vault.expectedReturn(strategy) == 0
+    chain.sleep(1)
     strategy.harvest({"from": keeper})
 
     # Check balance is increasing
@@ -48,6 +49,7 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
     profit = token.balanceOf(strategy) // 50
     assert profit > 0
     token.transfer(strategy, profit, {"from": gov})
+    chain.sleep(1)
     strategy.harvest({"from": keeper})
     assert vault.strategies(strategy).dict()["totalGain"] == profit
 
@@ -77,6 +79,7 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
         chain.mine(timestamp=chain.time() + DAY)
         assert expectedReturn() > 0
         token.transfer(strategy, expectedReturn(), {"from": gov})
+        chain.sleep(1)
         strategy.harvest({"from": keeper})
 
         # Check balance is increasing

@@ -42,6 +42,7 @@ def test_liquidation_after_hack(chain, gov, vault, token, TestStrategy):
     # Deploy strategy and seed it with debt
     strategy = gov.deploy(TestStrategy, vault)
     vault.addStrategy(strategy, 2_000, 0, 10 ** 21, 1000, {"from": gov})
+    chain.sleep(1)
     strategy.harvest({"from": gov})
 
     # The strategy suffers a loss
@@ -68,7 +69,12 @@ def test_liquidation_after_hack(chain, gov, vault, token, TestStrategy):
 def strategy_with_wrong_vault(gov, token, vault, Vault, TestStrategy):
     otherVault = gov.deploy(Vault)
     otherVault.initialize(
-        token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov,
+        token,
+        gov,
+        gov,
+        token.symbol() + " yVault",
+        "yv" + token.symbol(),
+        gov,
     )
     assert otherVault.token() == token
     assert otherVault != vault
@@ -118,6 +124,10 @@ def test_addStrategy(
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
+        "enforceChangeLimit": False,
+        "lossLimitRatio": 0,
+        "profitLimitRatio": 0,
+        "customCheck": "0x0000000000000000000000000000000000000000",
     }
 
     vault.addStrategy(strategy, 100, 10, 20, 1000, {"from": gov})
@@ -132,6 +142,10 @@ def test_addStrategy(
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
+        "enforceChangeLimit": True,
+        "lossLimitRatio": 300,
+        "profitLimitRatio": 300,
+        "customCheck": "0x0000000000000000000000000000000000000000",
     }
     assert vault.withdrawalQueue(0) == strategy
 
@@ -190,15 +204,19 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
 
     vault.updateStrategyDebtRatio(strategy, 500, {"from": gov})
     assert vault.strategies(strategy).dict() == {
-        "performanceFee": 1000,
         "activation": activation_timestamp,
         "debtRatio": 500,  # This changed
+        "performanceFee": 1000,
         "minDebtPerHarvest": 10,
         "maxDebtPerHarvest": 20,
         "lastReport": activation_timestamp,
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
+        "enforceChangeLimit": True,
+        "lossLimitRatio": 300,
+        "profitLimitRatio": 300,
+        "customCheck": "0x0000000000000000000000000000000000000000",
     }
 
     vault.updateStrategyMinDebtPerHarvest(strategy, 15, {"from": gov})
@@ -212,6 +230,10 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
+        "enforceChangeLimit": True,
+        "lossLimitRatio": 300,
+        "profitLimitRatio": 300,
+        "customCheck": "0x0000000000000000000000000000000000000000",
     }
 
     vault.updateStrategyMaxDebtPerHarvest(strategy, 15, {"from": gov})
@@ -225,6 +247,10 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
+        "enforceChangeLimit": True,
+        "lossLimitRatio": 300,
+        "profitLimitRatio": 300,
+        "customCheck": "0x0000000000000000000000000000000000000000",
     }
 
     vault.updateStrategyPerformanceFee(strategy, 75, {"from": gov})
@@ -238,6 +264,10 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
+        "enforceChangeLimit": True,
+        "lossLimitRatio": 300,
+        "profitLimitRatio": 300,
+        "customCheck": "0x0000000000000000000000000000000000000000",
     }
 
 
@@ -285,8 +315,16 @@ def test_revokeStrategy(chain, gov, vault, strategy, rando):
         vault.revokeStrategy(strategy, {"from": rando})
 
     vault.revokeStrategy(strategy, {"from": gov})
+    # do not revoke twice
+    with brownie.reverts():
+        vault.revokeStrategy(strategy, {"from": gov})
+    # do not revoke non-existing strategy
+    with brownie.reverts():
+        vault.revokeStrategy(ZERO_ADDRESS, {"from": gov})
+
     assert vault.strategies(strategy).dict() == {
         "performanceFee": 1000,
+        "enforceChangeLimit": True,
         "activation": activation_timestamp,
         "debtRatio": 0,  # This changed
         "minDebtPerHarvest": 10,
@@ -295,6 +333,9 @@ def test_revokeStrategy(chain, gov, vault, strategy, rando):
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
+        "lossLimitRatio": 300,
+        "profitLimitRatio": 300,
+        "customCheck": "0x0000000000000000000000000000000000000000",
     }
 
     assert vault.withdrawalQueue(0) == strategy
@@ -312,10 +353,12 @@ def test_ordering(gov, vault, TestStrategy, rando):
     # Can't add un-approved strategies
     with brownie.reverts():
         vault.setWithdrawalQueue(
-            strategies + [ZERO_ADDRESS] * (20 - len(strategies)), {"from": gov},
+            strategies + [ZERO_ADDRESS] * (20 - len(strategies)),
+            {"from": gov},
         )
 
-    [vault.addStrategy(s, 100, 10, 20, 1000, {"from": gov}) for s in strategies]
+    for s in strategies:
+        vault.addStrategy(s, 100, 10, 20, 1000, {"from": gov})
 
     for idx, strategy in enumerate(strategies):
         assert vault.withdrawalQueue(idx) == strategy
@@ -325,11 +368,45 @@ def test_ordering(gov, vault, TestStrategy, rando):
     # NOTE: Not just anyone can do this
     with brownie.reverts():
         vault.setWithdrawalQueue(
-            strategies + [ZERO_ADDRESS] * (20 - len(strategies)), {"from": rando},
+            strategies + [ZERO_ADDRESS] * (20 - len(strategies)),
+            {"from": rando},
         )
     vault.setWithdrawalQueue(
-        strategies + [ZERO_ADDRESS] * (20 - len(strategies)), {"from": gov},
+        strategies + [ZERO_ADDRESS] * (20 - len(strategies)),
+        {"from": gov},
     )
+
+    other_strat = gov.deploy(TestStrategy, vault)
+
+    # Do not add a strategy
+    with brownie.reverts():
+        vault.setWithdrawalQueue(
+            strategies + [other_strat] * (20 - len(strategies)),
+            {"from": gov},
+        )
+
+    # Do not remove strategies
+    with brownie.reverts():
+        vault.setWithdrawalQueue(
+            strategies[0:-2] + [ZERO_ADDRESS] * (20 - len(strategies[0:-2])),
+            {"from": gov},
+        )
+
+    # Do not add new strategies
+    other_strategy_list = strategies.copy()
+    other_strategy_list[0] = other_strat
+    with brownie.reverts():
+        vault.setWithdrawalQueue(
+            other_strategy_list + [ZERO_ADDRESS] * (20 - len(other_strategy_list)),
+            {"from": gov},
+        )
+
+    # can't use the same strategy twice
+    with brownie.reverts():
+        vault.setWithdrawalQueue(
+            [strategies[0], strategies[0]] + [ZERO_ADDRESS] * 18,
+            {"from": rando},
+        )
 
     for idx, strategy in enumerate(strategies):
         assert vault.withdrawalQueue(idx) == strategy
@@ -417,7 +494,8 @@ def test_addStategyToQueue(
 
     # Can't add a strategy to an already full queue
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(20)]
-    [vault.addStrategy(s, 100, 10, 20, 1000, {"from": gov}) for s in strategies]
+    for s in strategies:
+        vault.addStrategy(s, 100, 10, 20, 1000, {"from": gov})
     with brownie.reverts():
         vault.addStrategyToQueue(strategy, {"from": gov})
 
@@ -443,18 +521,21 @@ def test_reporting(vault, token, strategy, gov, rando):
         vault.report(0, loss, 0, {"from": strategy})
 
 
-def test_reporting_gains_without_fee(vault, token, strategy, gov, rando):
+def test_reporting_gains_without_fee(chain, vault, token, strategy, gov, rando):
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
     vault.addStrategy(strategy, 100, 10, 20, 1000, {"from": gov})
     gain = 1000000
     assert token.balanceOf(strategy) == 0
+    chain.sleep(1)
 
     # Can't lie about total available to withdraw
     with brownie.reverts():
         vault.report(gain, 0, 0, {"from": strategy})
 
     token.transfer(strategy, gain, {"from": gov})
+    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
+
     vault.report(gain, 0, 0, {"from": strategy})
 
 
@@ -513,3 +594,97 @@ def test_update_debtRatio_to_add_second_strategy(gov, vault, strategy, other_str
 
     # But 50% should work
     vault.addStrategy(other_strategy, 5_000, 0, 0, 0, {"from": gov})
+
+
+def test_health_report_check(gov, token, vault, strategy, chain):
+    token.approve(vault, MAX_UINT256, {"from": gov})
+    vault.addStrategy(strategy, 10_000, 0, 1000, 0, {"from": gov})
+    vault.deposit(1000, {"from": gov})
+    chain.sleep(1)
+    strategy.harvest()
+
+    # Small price change won't trigger the emergency
+    price = vault.pricePerShare()
+    strategy._takeFunds(30, {"from": gov})
+    chain.sleep(1)
+    strategy.harvest()
+    assert vault.pricePerShare() == 0.97 * 10 ** vault.decimals()
+
+    # Big price change isn't allowed
+    strategy._takeFunds(100, {"from": gov})
+    chain.sleep(1)
+    with brownie.reverts():
+        strategy.harvest()
+    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
+    strategy.harvest()
+    assert vault.pricePerShare() == 0.87 * 10 ** vault.decimals()
+
+    strategy._takeFunds(token.balanceOf(strategy) / 10, {"from": gov})
+    chain.sleep(1)
+    with brownie.reverts():
+        strategy.harvest()
+    vault.setStrategySetLimitRatio(strategy, 1000, 1000)  # 10%
+    strategy.harvest()
+    assert vault.pricePerShare() == 0.786 * 10 ** vault.decimals()
+
+
+def test_custom_health_check(gov, token, vault, strategy, chain, TestHealthCheck):
+    token.approve(vault, MAX_UINT256, {"from": gov})
+    vault.addStrategy(strategy, 10_000, 0, 1000, 0, {"from": gov})
+    vault.deposit(1000, {"from": gov})
+    chain.sleep(1)
+    strategy.harvest()
+    check = TestHealthCheck.deploy({"from": gov})
+    vault.setStrategyCustomCheck(strategy, check, {"from": gov})
+    strategy._takeFunds(100, {"from": gov})
+    chain.sleep(1)
+    strategy.harvest()
+    check.togglePass()
+    chain.sleep(1)
+    with brownie.reverts():
+        strategy.harvest()
+
+
+def test_update_healt_check_report(gov, rando, vault, strategy, chain):
+    vault.addStrategy(strategy, 10_000, 0, 1000, 0, {"from": gov})
+
+    activation_timestamp = chain[-1]["timestamp"]
+    # Not just anyone can update heath check report
+    with brownie.reverts():
+        vault.setStrategyEnforceChangeLimit(strategy, False, {"from": rando})
+    with brownie.reverts():
+        vault.setStrategySetLimitRatio(strategy, 50, 50, {"from": rando})
+
+    vault.setStrategyEnforceChangeLimit(strategy, True, {"from": gov})
+    assert vault.strategies(strategy).dict() == {
+        "activation": activation_timestamp,
+        "debtRatio": 10000,
+        "enforceChangeLimit": True,
+        "lossLimitRatio": 300,
+        "profitLimitRatio": 300,
+        "lastReport": activation_timestamp,
+        "maxDebtPerHarvest": 1000,
+        "minDebtPerHarvest": 0,
+        "performanceFee": 0,
+        "totalDebt": 0,
+        "totalGain": 0,
+        "totalLoss": 0,
+        "customCheck": "0x0000000000000000000000000000000000000000",
+    }
+
+    vault.setStrategySetLimitRatio(strategy, 50, 50, {"from": gov})
+    assert vault.strategies(strategy).dict() == {
+        "activation": activation_timestamp,
+        "debtRatio": 10000,
+        "enforceChangeLimit": True,
+        "lossLimitRatio": 50,
+        "profitLimitRatio": 50,
+        "lastReport": activation_timestamp,
+        "maxDebtPerHarvest": 1000,
+        "minDebtPerHarvest": 0,
+        "performanceFee": 0,
+        "totalDebt": 0,
+        "totalGain": 0,
+        "totalLoss": 0,
+        "customCheck": "0x0000000000000000000000000000000000000000",
+    }

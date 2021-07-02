@@ -4,7 +4,7 @@ import brownie
 MAX_UINT256 = 2 ** 256 - 1
 
 
-def test_harvest_tend_authority(gov, keeper, strategist, strategy, rando):
+def test_harvest_tend_authority(gov, keeper, strategist, strategy, rando, chain):
     # Only keeper, strategist, or gov can call tend
     strategy.tend({"from": keeper})
     strategy.tend({"from": strategist})
@@ -13,8 +13,12 @@ def test_harvest_tend_authority(gov, keeper, strategist, strategy, rando):
         strategy.tend({"from": rando})
 
     # Only keeper, strategist, or gov can call harvest
+    chain.sleep(1)
     strategy.harvest({"from": keeper})
+
+    chain.sleep(1)
     strategy.harvest({"from": strategist})
+    chain.sleep(1)
     strategy.harvest({"from": gov})
     with brownie.reverts("!authorized"):
         strategy.harvest({"from": rando})
@@ -44,13 +48,13 @@ def test_harvest_tend_trigger(chain, gov, vault, token, TestStrategy):
     # Check that trigger works if gas costs is less than profitFactor
     profit = 10 ** token.decimals()
     token.transfer(strategy, profit, {"from": gov})
-    chain.mine(timedelta=strategy.minReportDelay())
+    chain.mine(timedelta=strategy.minReportDelay() + 5)
     assert not strategy.harvestTrigger(profit // strategy.profitFactor())
     assert strategy.harvestTrigger(profit // strategy.profitFactor() - 1)
     strategy.harvest({"from": gov})
 
     # Check that trigger works if strategy is in debt using debt threshold
-    chain.mine(timedelta=strategy.minReportDelay())
+    chain.mine(timedelta=strategy.minReportDelay() + 5)
     assert vault.debtOutstanding(strategy) == 0
     vault.revokeStrategy(strategy, {"from": gov})
     assert vault.debtOutstanding(strategy) > strategy.debtThreshold()
@@ -76,6 +80,7 @@ def test_harvest_tend_trigger(chain, gov, vault, token, TestStrategy):
 
     # Stops after it runs out of balance
     while strategy.harvestTrigger(0):
+        chain.sleep(1)
         strategy.harvest({"from": gov})
 
     assert strategy.estimatedTotalAssets() == 0
@@ -181,3 +186,13 @@ def test_set_metadataURI(gov, strategy, strategist, rando):
     assert strategy.metadataURI() == "ipfs://test3"
     with brownie.reverts("!authorized"):
         strategy.setMetadataURI("ipfs://fake", {"from": rando})
+
+
+def test_reduce_debt_ratio(strategy, vault, gov, chain):
+    chain.sleep(1)
+    strategy.harvest({"from": gov})
+    assert vault.strategies(strategy).dict()["totalDebt"] > 0
+    old_debt_ratio = vault.strategies(strategy).dict()["debtRatio"]
+    vault.updateStrategyDebtRatio(strategy, old_debt_ratio // 2, {"from": gov})
+
+    assert vault.debtOutstanding(strategy) > 0

@@ -4,13 +4,14 @@ import yaml
 import pytest
 import brownie
 
+from brownie import ZERO_ADDRESS
 
 PACKAGE_VERSION = yaml.safe_load(
     (Path(__file__).parent.parent.parent.parent / "ethpm-config.yaml").read_text()
 )["version"]
 
 
-DEGREDATION_COEFFICIENT = 10 ** 18
+DEGRADATION_COEFFICIENT = 10 ** 18
 
 
 def test_api_adherrance(check_api_adherrance, Vault, interface):
@@ -21,11 +22,16 @@ def test_vault_deployment(guardian, gov, rewards, token, Vault):
     # Deploy the Vault without any name/symbol overrides
     vault = guardian.deploy(Vault)
     vault.initialize(
-        token, gov, rewards, token.symbol() + " yVault", "yv" + token.symbol(), guardian
+        token,
+        gov,
+        rewards,
+        token.symbol() + " yVault",
+        "yv" + token.symbol(),
+        guardian,
     )
     # Addresses
     assert vault.governance() == gov
-    assert vault.management() == gov
+    assert vault.management() == guardian
     assert vault.guardian() == guardian
     assert vault.rewards() == rewards
     assert vault.token() == token
@@ -69,17 +75,26 @@ def test_vault_reinitialization(guardian, gov, rewards, token, Vault):
         ("emergencyShutdown", "setEmergencyShutdown", True, True),
         ("emergencyShutdown", "setEmergencyShutdown", False, False),
         ("guardian", "setGuardian", None, True),
-        ("guestList", "setGuestList", None, False),
         ("rewards", "setRewards", None, False),
-        ("lockedProfitDegration", "setLockedProfitDegration", 1000, False),
+        ("lockedProfitDegradation", "setLockedProfitDegradation", 1000, False),
         ("management", "setManagement", None, False),
         ("performanceFee", "setPerformanceFee", 1000, False),
         ("managementFee", "setManagementFee", 1000, False),
         ("depositLimit", "setDepositLimit", 1000, False),
     ],
 )
+
 def test_vault_setParams(
-    chain, gov, guardian, management, vault, rando, getter, setter, val, guard_allowed,
+    chain,
+    gov,
+    guardian,
+    management,
+    vault,
+    rando,
+    getter,
+    setter,
+    val,
+    guard_allowed,
 ):
     if val is None:
         # Can't access fixtures, so use None to mean any random address
@@ -191,9 +206,17 @@ def test_vault_setGovernance(gov, vault, rando):
         vault.acceptGovernance({"from": gov})
 
 
-def test_vault_setLockedProfitDegration_range(gov, vault):
-    # value must be between 0 and DEGREDATION_COEFFICIENT (inclusive)
-    vault.setLockedProfitDegration(0, {"from": gov})
-    vault.setLockedProfitDegration(DEGREDATION_COEFFICIENT, {"from": gov})
+def test_vault_setLockedProfitDegradation_range(gov, vault):
+    # value must be between 0 and DEGRADATION_COEFFICIENT (inclusive)
+    vault.setLockedProfitDegradation(0, {"from": gov})
+    vault.setLockedProfitDegradation(DEGRADATION_COEFFICIENT, {"from": gov})
     with brownie.reverts():
-        vault.setLockedProfitDegration(DEGREDATION_COEFFICIENT + 1, {"from": gov})
+        vault.setLockedProfitDegradation(DEGRADATION_COEFFICIENT + 1, {"from": gov})
+
+
+def test_vault_setParams_bad_vals(gov, vault):
+    with brownie.reverts():
+        vault.setRewards(ZERO_ADDRESS, {"from": gov})
+
+    with brownie.reverts():
+        vault.setRewards(vault, {"from": gov})

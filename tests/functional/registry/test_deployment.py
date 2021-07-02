@@ -3,10 +3,17 @@ from brownie import ZERO_ADDRESS
 
 
 def test_deployment_management(
-    gov, guardian, rewards, registry, Vault, create_token, create_vault, rando
+    gov,
+    guardian,
+    rewards,
+    management,
+    registry,
+    Vault,
+    create_token,
+    create_vault,
+    rando,
 ):
     v1_token = create_token()
-
     # No deployments yet for token
     with brownie.reverts():
         registry.latestVault(v1_token)

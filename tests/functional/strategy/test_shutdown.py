@@ -14,6 +14,7 @@ def test_emergency_shutdown(token, gov, vault, strategy, keeper, chain):
         {"from": gov},
     )
     # Do it once to seed it with debt
+    chain.sleep(1)
     strategy.harvest({"from": keeper})
     add_yield = lambda: token.transfer(
         strategy, token.balanceOf(strategy) // 50, {"from": gov}
@@ -30,6 +31,7 @@ def test_emergency_shutdown(token, gov, vault, strategy, keeper, chain):
     while not debt_limit_hit():
         chain.sleep(DAY)
         add_yield()
+        chain.sleep(1)
         strategy.harvest({"from": keeper})
 
     # Call for a shutdown
@@ -52,6 +54,8 @@ def test_emergency_shutdown(token, gov, vault, strategy, keeper, chain):
 
     # Do it once more, for good luck (and also coverage)
     token.transfer(strategy, token.balanceOf(gov), {"from": gov})
+    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
+    chain.sleep(1)
     strategy.harvest({"from": keeper})
 
     # Vault didn't lose anything during shutdown
@@ -72,6 +76,7 @@ def test_emergency_exit(token, gov, vault, strategy, keeper, chain, withSurplus)
     )
 
     # Do it once to seed it with debt
+    chain.sleep(1)
     strategy.harvest({"from": keeper})
     add_yield = lambda: token.transfer(
         strategy, token.balanceOf(strategy) // 50, {"from": gov}
@@ -88,6 +93,7 @@ def test_emergency_exit(token, gov, vault, strategy, keeper, chain, withSurplus)
     while not debt_limit_hit():
         chain.sleep(DAY)
         add_yield()
+        chain.sleep(1)
         strategy.harvest({"from": keeper})
 
     if withSurplus:
@@ -95,10 +101,12 @@ def test_emergency_exit(token, gov, vault, strategy, keeper, chain, withSurplus)
         stolen_funds = 0
         added_funds = token.balanceOf(strategy) // 10
         token.transfer(strategy, added_funds, {"from": gov})
+        vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
     else:
         # Oh my! There was a hack!
         stolen_funds = token.balanceOf(strategy) // 10
         strategy._takeFunds(stolen_funds, {"from": gov})
+        vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
 
     # Call for an exit
     strategy.setEmergencyExit({"from": gov})
@@ -127,11 +135,7 @@ def test_emergency_exit(token, gov, vault, strategy, keeper, chain, withSurplus)
 def test_set_emergency_exit_authority(
     strategy, gov, strategist, keeper, rando, management, guardian
 ):
-    # Can only setEmergencyExit as governance or strategist
-    with brownie.reverts("!authorized"):
-        strategy.setEmergencyExit({"from": management})
-    with brownie.reverts("!authorized"):
-        strategy.setEmergencyExit({"from": guardian})
+    # Can only setEmergencyExit as governance, strategist, vault management and guardian
     with brownie.reverts("!authorized"):
         strategy.setEmergencyExit({"from": keeper})
     with brownie.reverts("!authorized"):
@@ -139,3 +143,7 @@ def test_set_emergency_exit_authority(
     strategy.setEmergencyExit({"from": gov})
     brownie.chain.undo()
     strategy.setEmergencyExit({"from": strategist})
+    brownie.chain.undo()
+    strategy.setEmergencyExit({"from": management})
+    brownie.chain.undo()
+    strategy.setEmergencyExit({"from": guardian})
