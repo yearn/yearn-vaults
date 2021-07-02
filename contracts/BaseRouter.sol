@@ -20,23 +20,21 @@ interface RegistryAPI {
 }
 
 /**
- * @title Yearn Base Wrapper
+ * @title Yearn Base Router
  * @author yearn.finance
  * @notice
- *  BaseWrapper implements all of the required functionality to interoperate
+ *  BaseRouter implements all of the required functionality to interoperate
  *  closely with the Vault contract. This contract should be inherited and the
- *  abstract methods implemented to adapt the Wrapper.
- *  A good starting point to build a wrapper is https://github.com/yearn/brownie-wrapper-mix
+ *  abstract methods implemented to adapt the Router.
+ *  A good starting point to build a router is https://github.com/yearn/brownie-router-mix
  *
  */
-abstract contract BaseWrapper {
+abstract contract BaseRouter {
     using Math for uint256;
     using SafeMath for uint256;
 
-    IERC20 public token;
-
     // Reduce number of external calls (SLOADs stay the same)
-    VaultAPI[] private _cachedVaults;
+    mapping(address => VaultAPI[]) private _cachedVaults;
 
     RegistryAPI public registry;
 
@@ -50,9 +48,7 @@ abstract contract BaseWrapper {
     // VaultsAPI.depositLimit is unlimited
     uint256 constant UNCAPPED_DEPOSITS = type(uint256).max;
 
-    constructor(address _token, address _registry) public {
-        // Recommended to use a token with a `Registry.latestVault(_token) != address(0)`
-        token = IERC20(_token);
+    constructor(address _registry) public {
         // Recommended to use `v2.registry.ychad.eth`
         registry = RegistryAPI(_registry);
     }
@@ -67,7 +63,7 @@ abstract contract BaseWrapper {
         // In case you want to override the registry instead of re-deploying
         registry = RegistryAPI(_registry);
         // Make sure there's no change in governance
-        // NOTE: Also avoid bricking the wrapper from setting a bad registry
+        // NOTE: Also avoid bricking the router from setting a bad registry
         require(msg.sender == registry.governance());
     }
 
@@ -76,8 +72,8 @@ abstract contract BaseWrapper {
      *  Used to get the most revent vault for the token using the registry.
      * @return An instance of a VaultAPI
      */
-    function bestVault() public view virtual returns (VaultAPI) {
-        return VaultAPI(registry.latestVault(address(token)));
+    function bestVault(address token) public view virtual returns (VaultAPI) {
+        return VaultAPI(registry.latestVault(token));
     }
 
     /**
@@ -85,46 +81,46 @@ abstract contract BaseWrapper {
      *  Used to get all vaults from the registery for the token
      * @return An array containing instances of VaultAPI
      */
-    function allVaults() public view virtual returns (VaultAPI[] memory) {
-        uint256 cache_length = _cachedVaults.length;
-        uint256 num_vaults = registry.numVaults(address(token));
+    function allVaults(address token) public view virtual returns (VaultAPI[] memory) {
+        uint256 cache_length = _cachedVaults[token].length;
+        uint256 num_vaults = registry.numVaults(token);
 
         // Use cached
         if (cache_length == num_vaults) {
-            return _cachedVaults;
+            return _cachedVaults[token];
         }
 
         VaultAPI[] memory vaults = new VaultAPI[](num_vaults);
 
         for (uint256 vault_id = 0; vault_id < cache_length; vault_id++) {
-            vaults[vault_id] = _cachedVaults[vault_id];
+            vaults[vault_id] = _cachedVaults[token][vault_id];
         }
 
         for (uint256 vault_id = cache_length; vault_id < num_vaults; vault_id++) {
-            vaults[vault_id] = VaultAPI(registry.vaults(address(token), vault_id));
+            vaults[vault_id] = VaultAPI(registry.vaults(token, vault_id));
         }
 
         return vaults;
     }
 
-    function _updateVaultCache(VaultAPI[] memory vaults) internal {
+    function _updateVaultCache(address token, VaultAPI[] memory vaults) internal {
         // NOTE: even though `registry` is update-able by Yearn, the intended behavior
         //       is that any future upgrades to the registry will replay the version
         //       history so that this cached value does not get out of date.
-        if (vaults.length > _cachedVaults.length) {
-            _cachedVaults = vaults;
+        if (vaults.length > _cachedVaults[token].length) {
+            _cachedVaults[token] = vaults;
         }
     }
 
     /**
      * @notice
      *  Used to get the balance of an account accross all the vaults for a token.
-     *  @dev will be used to get the wrapper balance using totalVaultBalance(address(this)).
+     *  @dev will be used to get the router balance using totalVaultBalance(address(this)).
      *  @param account The address of the account.
      *  @return balance of token for the account accross all the vaults.
      */
-    function totalVaultBalance(address account) public view returns (uint256 balance) {
-        VaultAPI[] memory vaults = allVaults();
+    function totalVaultBalance(address token, address account) public view returns (uint256 balance) {
+        VaultAPI[] memory vaults = allVaults(token);
 
         for (uint256 id = 0; id < vaults.length; id++) {
             balance = balance.add(vaults[id].balanceOf(account).mul(vaults[id].pricePerShare()).div(10**uint256(vaults[id].decimals())));
@@ -136,8 +132,8 @@ abstract contract BaseWrapper {
      *  Used to get the TVL on the underlying vaults.
      *  @return assets the sum of all the assets managed by the underlying vaults.
      */
-    function totalAssets() public view returns (uint256 assets) {
-        VaultAPI[] memory vaults = allVaults();
+    function totalAssets(address token) public view returns (uint256 assets) {
+        VaultAPI[] memory vaults = allVaults(token);
 
         for (uint256 id = 0; id < vaults.length; id++) {
             assets = assets.add(vaults[id].totalAssets());
@@ -145,12 +141,13 @@ abstract contract BaseWrapper {
     }
 
     function _deposit(
+        IERC20 token,
         address depositor,
         address receiver,
         uint256 amount, // if `MAX_UINT256`, just deposit everything
         bool pullFunds // If true, funds need to be pulled from `depositor` via `transferFrom`
     ) internal returns (uint256 deposited) {
-        VaultAPI _bestVault = bestVault();
+        VaultAPI _bestVault = bestVault(address(token));
 
         if (pullFunds) {
             if (amount == DEPOSIT_EVERYTHING) {
@@ -185,20 +182,21 @@ abstract contract BaseWrapper {
     }
 
     function _withdraw(
+        IERC20 token,
         address sender,
         address receiver,
         uint256 amount, // if `MAX_UINT256`, just withdraw everything
         bool withdrawFromBest // If true, also withdraw from `_bestVault`
     ) internal returns (uint256 withdrawn) {
-        VaultAPI _bestVault = bestVault();
+        VaultAPI _bestVault = bestVault(address(token));
 
-        VaultAPI[] memory vaults = allVaults();
-        _updateVaultCache(vaults);
+        VaultAPI[] memory vaults = allVaults(address(token));
+        _updateVaultCache(address(token), vaults);
 
         // NOTE: This loop will attempt to withdraw from each Vault in `allVaults` that `sender`
         //       is deposited in, up to `amount` tokens. The withdraw action can be expensive,
         //       so it if there is a denial of service issue in withdrawing, the downstream usage
-        //       of this wrapper contract must give an alternative method of withdrawing using
+        //       of this router contract must give an alternative method of withdrawing using
         //       this function so that `amount` is less than the full amount requested to withdraw
         //       (e.g. "piece-wise withdrawals"), leading to less loop iterations such that the
         //       DoS issue is mitigated (at a tradeoff of requiring more txns from the end user).
@@ -265,21 +263,26 @@ abstract contract BaseWrapper {
         if (receiver != address(this)) SafeERC20.safeTransfer(token, receiver, withdrawn);
     }
 
-    function _migrate(address account) internal returns (uint256) {
-        return _migrate(account, MIGRATE_EVERYTHING);
-    }
-
-    function _migrate(address account, uint256 amount) internal returns (uint256) {
-        // NOTE: In practice, it was discovered that <50 was the maximum we've see for this variance
-        return _migrate(account, amount, 0);
+    function _migrate(IERC20 token, address account) internal returns (uint256) {
+        return _migrate(token, account, MIGRATE_EVERYTHING);
     }
 
     function _migrate(
+        IERC20 token,
+        address account,
+        uint256 amount
+    ) internal returns (uint256) {
+        // NOTE: In practice, it was discovered that <50 was the maximum we've see for this variance
+        return _migrate(token, account, amount, 0);
+    }
+
+    function _migrate(
+        IERC20 token,
         address account,
         uint256 amount,
         uint256 maxMigrationLoss
     ) internal returns (uint256 migrated) {
-        VaultAPI _bestVault = bestVault();
+        VaultAPI _bestVault = bestVault(address(token));
 
         // NOTE: Only override if we aren't migrating everything
         uint256 _depositLimit = _bestVault.depositLimit();
@@ -295,11 +298,11 @@ abstract contract BaseWrapper {
 
         if (_amount > 0) {
             // NOTE: `false` = don't withdraw from `_bestVault`
-            uint256 withdrawn = _withdraw(account, address(this), _amount, false);
+            uint256 withdrawn = _withdraw(token, account, address(this), _amount, false);
             if (withdrawn == 0) return 0; // Nothing to migrate (not a failure)
 
             // NOTE: `false` = don't do `transferFrom` because it's already local
-            migrated = _deposit(address(this), account, withdrawn, false);
+            migrated = _deposit(token, address(this), account, withdrawn, false);
             // NOTE: Due to the precision loss of certain calculations, there is a small inefficency
             //       on how migrations are calculated, and this could lead to a DoS issue. Hence, this
             //       value is made to be configurable to allow the user to specify how much is acceptable
