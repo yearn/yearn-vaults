@@ -3,10 +3,10 @@
     "devDependencies": {
         "@commitlint/cli": "^12.1.4",
         "@commitlint/config-conventional": "^12.1.4",
-        "husky": "^6.0.0",
-        "prettier": "^2.3.0",
-        "prettier-plugin-solidity": "^1.0.0-beta.11",
-        "pretty-quick": "^3.1.0",
+        "husky": "^7.0.0",
+        "prettier": "^2.3.2",
+        "prettier-plugin-solidity": "^1.0.0-beta.13",
+        "pretty-quick": "^3.1.1",
         "solhint": "^3.3.6",
         "solhint-plugin-prettier": "^0.0.5"
     },
