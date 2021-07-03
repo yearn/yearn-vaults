@@ -6,3 +6,6 @@ reports/
 node_modules/
 .test_durations
 yarn-error.log 
+
+# pulled from an other repo
+contracts/test/AffiliateToken.sol
