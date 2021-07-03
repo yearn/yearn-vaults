@@ -85,6 +85,9 @@ jobs:
 
     - name: Compile Code
       run: brownie compile --size
+    
+    - name: Get test file
+      run: python scripts/get_affiliate_token.py
 
     - name: Run Splitted Tests
       if: steps.check_test_durations.outputs.files_exists == 'true' 
@@ -140,6 +143,9 @@ jobs:
 
     - name: Install python dependencies
       run: pip install -r requirements-dev.txt
+
+    - name: Get test file
+      run: python scripts/get_affiliate_token.py
 
     - name: Run Tests
       run: brownie test tests/integration/ -s --revert-tb

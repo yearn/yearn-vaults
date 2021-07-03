@@ -32,6 +32,7 @@ It is recommended to use a Python virtual environment.
 git clone https://github.com/yearn/yearn-vaults
 cd yearn-vaults
 yarn install --lock-file
+python scripts/get_affiliate_token.py
 ```
 
 Compile the Smart Contracts:
