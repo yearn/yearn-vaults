@@ -289,11 +289,11 @@ def initialize(
     assert self.activation == 0  # dev: no devops199
     self.token = ERC20(token)
     if nameOverride == "":
-        self.name = concat(DetailedERC20(token).symbol(), " yVault")
+        self.name = concat("Badger Sett ", DetailedERC20(token).symbol())
     else:
         self.name = nameOverride
     if symbolOverride == "":
-        self.symbol = concat("yv", DetailedERC20(token).symbol())
+        self.symbol = concat("b", DetailedERC20(token).symbol())
     else:
         self.symbol = symbolOverride
     decimals: uint256 = DetailedERC20(token).decimals()
