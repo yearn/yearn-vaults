@@ -325,7 +325,7 @@ def initialize(
             convert(self, bytes32)
         )
     )
-    self.paused = True ## Paused on Launch
+    self.paused = False ## Unpaused on Launch
 
 
 
