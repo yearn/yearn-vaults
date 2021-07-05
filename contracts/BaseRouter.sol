@@ -44,9 +44,6 @@ abstract contract BaseRouter {
     // NOTE: DEPOSIT_EVERYTHING == WITHDRAW_EVERYTHING == MIGRATE_EVERYTHING
     uint256 constant DEPOSIT_EVERYTHING = type(uint256).max;
     uint256 constant WITHDRAW_EVERYTHING = type(uint256).max;
-    uint256 constant MIGRATE_EVERYTHING = type(uint256).max;
-    // VaultsAPI.depositLimit is unlimited
-    uint256 constant UNCAPPED_DEPOSITS = type(uint256).max;
 
     constructor(address _registry) public {
         // Recommended to use `v2.registry.ychad.eth`
@@ -261,52 +258,5 @@ abstract contract BaseRouter {
 
         // `receiver` now has `withdrawn` tokens as balance
         if (receiver != address(this)) SafeERC20.safeTransfer(token, receiver, withdrawn);
-    }
-
-    function _migrate(IERC20 token, address account) internal returns (uint256) {
-        return _migrate(token, account, MIGRATE_EVERYTHING);
-    }
-
-    function _migrate(
-        IERC20 token,
-        address account,
-        uint256 amount
-    ) internal returns (uint256) {
-        // NOTE: In practice, it was discovered that <50 was the maximum we've see for this variance
-        return _migrate(token, account, amount, 0);
-    }
-
-    function _migrate(
-        IERC20 token,
-        address account,
-        uint256 amount,
-        uint256 maxMigrationLoss
-    ) internal returns (uint256 migrated) {
-        VaultAPI _bestVault = bestVault(address(token));
-
-        // NOTE: Only override if we aren't migrating everything
-        uint256 _depositLimit = _bestVault.depositLimit();
-        uint256 _totalAssets = _bestVault.totalAssets();
-        if (_depositLimit <= _totalAssets) return 0; // Nothing to migrate (not a failure)
-
-        uint256 _amount = amount;
-        if (_depositLimit < UNCAPPED_DEPOSITS && _amount < WITHDRAW_EVERYTHING) {
-            // Can only deposit up to this amount
-            uint256 _depositLeft = _depositLimit.sub(_totalAssets);
-            if (_amount > _depositLeft) _amount = _depositLeft;
-        }
-
-        if (_amount > 0) {
-            // NOTE: `false` = don't withdraw from `_bestVault`
-            uint256 withdrawn = _withdraw(token, account, address(this), _amount, false);
-            if (withdrawn == 0) return 0; // Nothing to migrate (not a failure)
-
-            // NOTE: `false` = don't do `transferFrom` because it's already local
-            migrated = _deposit(token, address(this), account, withdrawn, false);
-            // NOTE: Due to the precision loss of certain calculations, there is a small inefficency
-            //       on how migrations are calculated, and this could lead to a DoS issue. Hence, this
-            //       value is made to be configurable to allow the user to specify how much is acceptable
-            require(withdrawn.sub(migrated) <= maxMigrationLoss);
-        } // else: nothing to migrate! (not a failure)
     }
 }
