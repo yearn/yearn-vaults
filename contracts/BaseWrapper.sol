@@ -32,6 +32,7 @@ interface RegistryAPI {
 abstract contract BaseWrapper {
     using Math for uint256;
     using SafeMath for uint256;
+    using SafeERC20 for IERC20;
 
     IERC20 public token;
 
@@ -156,12 +157,12 @@ abstract contract BaseWrapper {
             if (amount == DEPOSIT_EVERYTHING) {
                 amount = token.balanceOf(depositor);
             }
-            SafeERC20.safeTransferFrom(token, depositor, address(this), amount);
+            token.safeTransferFrom(depositor, address(this), amount);
         }
 
         if (token.allowance(address(this), address(_bestVault)) < amount) {
-            SafeERC20.safeApprove(token, address(_bestVault), 0); // Avoid issues with some tokens requiring 0
-            SafeERC20.safeApprove(token, address(_bestVault), UNLIMITED_APPROVAL); // Vaults are trusted
+            token.safeApprove(address(_bestVault), 0); // Avoid issues with some tokens requiring 0
+            token.safeApprove(address(_bestVault), UNLIMITED_APPROVAL); // Vaults are trusted
         }
 
         // Depositing returns number of shares deposited
@@ -181,7 +182,7 @@ abstract contract BaseWrapper {
         deposited = beforeBal.sub(afterBal);
         // `receiver` now has shares of `_bestVault` as balance, converted to `token` here
         // Issue a refund if not everything was deposited
-        if (depositor != address(this) && afterBal > 0) SafeERC20.safeTransfer(token, depositor, afterBal);
+        if (depositor != address(this) && afterBal > 0) token.safeTransfer(depositor, afterBal);
     }
 
     function _withdraw(
@@ -254,7 +255,7 @@ abstract contract BaseWrapper {
         if (withdrawn > amount && withdrawn.sub(amount) > _bestVault.pricePerShare().div(10**_bestVault.decimals())) {
             // Don't forget to approve the deposit
             if (token.allowance(address(this), address(_bestVault)) < withdrawn.sub(amount)) {
-                SafeERC20.safeApprove(token, address(_bestVault), UNLIMITED_APPROVAL); // Vaults are trusted
+                token.safeApprove(address(_bestVault), UNLIMITED_APPROVAL); // Vaults are trusted
             }
 
             _bestVault.deposit(withdrawn.sub(amount), sender);
@@ -262,7 +263,7 @@ abstract contract BaseWrapper {
         }
 
         // `receiver` now has `withdrawn` tokens as balance
-        if (receiver != address(this)) SafeERC20.safeTransfer(token, receiver, withdrawn);
+        if (receiver != address(this)) token.safeTransfer(receiver, withdrawn);
     }
 
     function _migrate(address account) internal returns (uint256) {

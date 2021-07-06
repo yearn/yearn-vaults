@@ -4,7 +4,6 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {BaseStrategyInitializable, StrategyParams, VaultAPI} from "../BaseStrategy.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 /*
  * This Strategy serves as both a mock Strategy for testing, and an example
@@ -41,7 +40,7 @@ contract TestStrategy is BaseStrategyInitializable {
 
     // NOTE: This is a test-only function to simulate losses
     function _takeFunds(uint256 amount) public {
-        SafeERC20.safeTransfer(want, msg.sender, amount);
+        want.safeTransfer(msg.sender, amount);
     }
 
     // NOTE: This is a test-only function to enable reentrancy on withdraw
