@@ -134,9 +134,9 @@ def test_set_emergency_exit_authority(
     strategy, gov, strategist, keeper, rando, management, guardian
 ):
     # Can only setEmergencyExit as governance, strategist, vault management and guardian
-    with brownie.reverts():
+    with brownie.reverts("!authorized"):
         strategy.setEmergencyExit({"from": keeper})
-    with brownie.reverts():
+    with brownie.reverts("!authorized"):
         strategy.setEmergencyExit({"from": rando})
     strategy.setEmergencyExit({"from": gov})
     brownie.chain.undo()
