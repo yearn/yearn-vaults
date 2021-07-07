@@ -46,7 +46,7 @@ def test_startup(token, gov, vault, strategy, keeper, chain):
     chain.mine(timestamp=chain.time() + DAY)
     assert expectedReturn() == 0
 
-    profit = token.balanceOf(strategy) // 50
+    profit = token.balanceOf(strategy) // 101
     assert profit > 0
     token.transfer(strategy, profit, {"from": gov})
     chain.sleep(1)
