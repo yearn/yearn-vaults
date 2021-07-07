@@ -1165,8 +1165,8 @@ def addStrategy(
     minDebtPerHarvest: uint256,
     maxDebtPerHarvest: uint256,
     performanceFee: uint256,
-    profitLimitRatio: uint256 = 300, # 3%
-    lossLimitRatio: uint256 = 300 # 3%
+    profitLimitRatio: uint256 = 100, # 1%
+    lossLimitRatio: uint256 = 1 # 0.01%
 ):
     """
     @notice
