@@ -4,11 +4,11 @@ If you are new to [Yearn Finance](https://yearn.finance/), you might want to fam
 
 ## Setting up your environment
 
-Before proceeding, please set up your environment by following these installation, building and testing [instructions](https://github.com/iearn-finance/yearn-vaults/blob/master/README.md).
+Before proceeding, please set up your environment by following these installation, building and testing [instructions](https://github.com/iearn-finance/yearn-vaults/blob/main/README.md).
 
 ## Making your first contribution
 
-Each time you begin a set of changes, ensure that you are working on a new branch that you have created as opposed to the `master` of your local repository. By keeping your changes segregated in this branch, merging your changes into the main repository later will be much simpler for the team.
+Each time you begin a set of changes, ensure that you are working on a new branch that you have created as opposed to the `main` of your local repository. By keeping your changes segregated in this branch, merging your changes into the main repository later will be much simpler for the team.
 
 To create a local branch for `git` to checkout, issue the command:
 
@@ -30,10 +30,10 @@ The official yearn-vaults repository may have changed since the time you cloned 
 git fetch origin
 ```
 
-Then synchronize your master branch:
+Then synchronize your main branch:
 
 ```bash
-git pull origin master
+git pull origin main
 ```
 
 To stage the changed files that are be committed, issue the command:
@@ -80,7 +80,7 @@ git push git@github.com:<your_github_username>/yearn-vaults.git feature-in-progr
 
 Navigate to your fork of the repository on Github. In the upper left where the current branch is listed, change the branch to your newly created one (feature-in-progress-branch). Open the files that you have worked on and ensure they include your changes.
 
-Navigate to yearn-vault [repository](https://github.com/iearn-finance/yearn-vaults) and click on the new pull request button. In the “base” box on the left, leave the default selection “base master”, the branch that you want your changes to be applied to. In the “compare” box on the right, select the branch containing the changes you want to apply. You will then be asked to answer a few questions about your pull request. Pull requests should have enough context about what you are working on, how you are solving a problem, and reference all necessary information for your reviewers to help.
+Navigate to yearn-vault [repository](https://github.com/iearn-finance/yearn-vaults) and click on the new pull request button. In the “base” box on the left, leave the default selection “base main”, the branch that you want your changes to be applied to. In the “compare” box on the right, select the branch containing the changes you want to apply. You will then be asked to answer a few questions about your pull request. Pull requests should have enough context about what you are working on, how you are solving a problem, and reference all necessary information for your reviewers to help.
 
 After you complete the questionnaire, the pull request will appear in the [list](https://github.com/iearn-finance/yearn-vaults/pulls) of pull requests.
 
