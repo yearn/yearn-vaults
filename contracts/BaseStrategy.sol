@@ -691,7 +691,7 @@ abstract contract BaseStrategy {
      *
      *  It is expected that an external system will check `harvestTrigger()`.
      *  This could be a script run off a desktop or cloud bot (e.g.
-     *  https://github.com/iearn-finance/yearn-vaults/blob/master/scripts/keep.py),
+     *  https://github.com/iearn-finance/yearn-vaults/blob/main/scripts/keep.py),
      *  or via an integration with the Keep3r network (e.g.
      *  https://github.com/Macarse/GenericKeep3rV2/blob/master/contracts/keep3r/GenericKeep3rV2.sol).
      * @param callCostInWei The keeper's estimated gas cost to call `harvest()` (in wei).

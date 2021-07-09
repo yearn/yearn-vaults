@@ -32,7 +32,7 @@
     expected under Normal Operation.
 
     For further details, please refer to the specification:
-    https://github.com/iearn-finance/yearn-vaults/blob/master/SPECIFICATION.md
+    https://github.com/iearn-finance/yearn-vaults/blob/main/SPECIFICATION.md
 """
 
 API_VERSION: constant(String[28]) = "0.4.3"
