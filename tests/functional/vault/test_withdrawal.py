@@ -3,7 +3,7 @@ import brownie
 MAX_UINT256 = 2 ** 256 - 1
 
 
-def test_multiple_withdrawals(token, gov, Vault, TestStrategy, chain):
+def test_multiple_withdrawals(token, gov, Vault, TestStrategy, commonHealthCheck):
     # Need a fresh vault to do this math right
     vault = Vault.deploy({"from": gov})
     vault.initialize(
@@ -13,6 +13,8 @@ def test_multiple_withdrawals(token, gov, Vault, TestStrategy, chain):
         token.symbol() + " yVault",
         "yv" + token.symbol(),
         gov,
+        gov,
+        commonHealthCheck,
         {"from": gov},
     )
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
@@ -53,7 +55,9 @@ def test_multiple_withdrawals(token, gov, Vault, TestStrategy, chain):
         assert token.balanceOf(s) == 0
 
 
-def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
+def test_forced_withdrawal(
+    token, gov, vault, TestStrategy, rando, commonHealthCheck, chain
+):
     vault.setManagementFee(0, {"from": gov})  # Just makes it easier later
     # Add strategies
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(5)]
@@ -90,7 +94,7 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
     # One of our strategies suffers a loss
     total_assets = vault.totalAssets()
     loss = token.balanceOf(strategies[0]) // 2  # 10% of total
-    vault.setStrategySetLimitRatio(strategies[0], 5000, 5000, {"from": gov})
+    commonHealthCheck.setStrategyLimits(strategies[0], 5000, 5000, {"from": gov})
     strategies[0]._takeFunds(loss, {"from": gov})
     # Harvest the loss
     assert vault.strategies(strategies[0]).dict()["totalLoss"] == 0
@@ -130,7 +134,7 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
 
 
 def test_progressive_withdrawal(
-    chain, token, gov, Vault, guardian, rewards, TestStrategy
+    chain, token, gov, Vault, guardian, rewards, TestStrategy, commonHealthCheck
 ):
     vault = guardian.deploy(Vault)
     vault.initialize(
@@ -140,6 +144,9 @@ def test_progressive_withdrawal(
         token.symbol() + " yVault",
         "yv" + token.symbol(),
         guardian,
+        gov,
+        commonHealthCheck,
+        {"from": gov},
     )
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
 

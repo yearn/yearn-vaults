@@ -24,6 +24,11 @@ def management(accounts):
 
 
 @pytest.fixture
+def commonHealthCheck(gov, CommonHealthCheck):
+    yield gov.deploy(CommonHealthCheck)
+
+
+@pytest.fixture
 def create_token(gov):
     def create_token(decimal=18, behaviour="Normal"):
         assert behaviour in ("Normal", "NoReturn")
@@ -40,12 +45,16 @@ def token(create_token, request):
 
 
 @pytest.fixture
-def create_vault(gov, guardian, rewards, create_token, patch_vault_version):
+def create_vault(
+    gov, guardian, rewards, create_token, patch_vault_version, commonHealthCheck
+):
     def create_vault(token=None, version=None, governance=gov):
         if token is None:
             token = create_token()
         vault = patch_vault_version(version).deploy({"from": guardian})
-        vault.initialize(token, governance, rewards, "", "", guardian, governance)
+        vault.initialize(
+            token, governance, rewards, "", "", guardian, governance, commonHealthCheck
+        )
         vault.setDepositLimit(2 ** 256 - 1, {"from": governance})
         return vault
 
