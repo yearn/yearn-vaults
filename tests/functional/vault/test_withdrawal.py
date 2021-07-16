@@ -3,7 +3,7 @@ import brownie
 MAX_UINT256 = 2 ** 256 - 1
 
 
-def test_multiple_withdrawals(token, gov, Vault, TestStrategy, commonHealthCheck):
+def test_multiple_withdrawals(token, gov, Vault, TestStrategy, common_health_check):
     # Need a fresh vault to do this math right
     vault = Vault.deploy({"from": gov})
     vault.initialize(
@@ -14,7 +14,7 @@ def test_multiple_withdrawals(token, gov, Vault, TestStrategy, commonHealthCheck
         "yv" + token.symbol(),
         gov,
         gov,
-        commonHealthCheck,
+        common_health_check,
         {"from": gov},
     )
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
@@ -56,7 +56,7 @@ def test_multiple_withdrawals(token, gov, Vault, TestStrategy, commonHealthCheck
 
 
 def test_forced_withdrawal(
-    token, gov, vault, TestStrategy, rando, commonHealthCheck, chain
+    token, gov, vault, TestStrategy, rando, common_health_check, chain
 ):
     vault.setManagementFee(0, {"from": gov})  # Just makes it easier later
     # Add strategies
@@ -94,7 +94,7 @@ def test_forced_withdrawal(
     # One of our strategies suffers a loss
     total_assets = vault.totalAssets()
     loss = token.balanceOf(strategies[0]) // 2  # 10% of total
-    commonHealthCheck.setStrategyLimits(strategies[0], 5000, 5000, {"from": gov})
+    common_health_check.setStrategyLimits(strategies[0], 5000, 5000, {"from": gov})
     strategies[0]._takeFunds(loss, {"from": gov})
     # Harvest the loss
     assert vault.strategies(strategies[0]).dict()["totalLoss"] == 0
@@ -134,7 +134,7 @@ def test_forced_withdrawal(
 
 
 def test_progressive_withdrawal(
-    chain, token, gov, Vault, guardian, rewards, TestStrategy, commonHealthCheck
+    chain, token, gov, Vault, guardian, rewards, TestStrategy, common_health_check
 ):
     vault = guardian.deploy(Vault)
     vault.initialize(
@@ -145,7 +145,7 @@ def test_progressive_withdrawal(
         "yv" + token.symbol(),
         guardian,
         gov,
-        commonHealthCheck,
+        common_health_check,
         {"from": gov},
     )
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
@@ -203,7 +203,7 @@ def test_progressive_withdrawal(
 
 
 def test_withdrawal_with_empty_queue(
-    chain, token, gov, Vault, guardian, rewards, TestStrategy
+    chain, token, gov, Vault, guardian, rewards, common_health_check, TestStrategy
 ):
     vault = guardian.deploy(Vault)
     vault.initialize(
@@ -213,6 +213,7 @@ def test_withdrawal_with_empty_queue(
         token.symbol() + " yVault",
         "yv" + token.symbol(),
         guardian,
+        common_health_check,
     )
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
 
@@ -227,7 +228,7 @@ def test_withdrawal_with_empty_queue(
     token.transferFrom(gov, guardian, token.balanceOf(gov), {"from": gov})
 
     chain.sleep(8640)
-    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
+    common_health_check.setDisabledCheck(strategy, True, {"from": gov})
     strategy.harvest({"from": gov})
     assert token.balanceOf(vault) < vault.totalAssets()
 
@@ -264,7 +265,7 @@ def test_withdrawal_with_empty_queue(
 
 
 def test_withdrawal_with_reentrancy(
-    chain, token, gov, Vault, guardian, rewards, TestStrategy
+    chain, token, gov, Vault, guardian, rewards, common_health_check, TestStrategy
 ):
     vault = guardian.deploy(Vault)
     vault.initialize(
@@ -274,6 +275,7 @@ def test_withdrawal_with_reentrancy(
         token.symbol() + " yVault",
         "yv" + token.symbol(),
         guardian,
+        common_health_check,
     )
 
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
@@ -289,7 +291,7 @@ def test_withdrawal_with_reentrancy(
     # move funds into strategy
     chain.sleep(1)  # Needs to be a second ahead, at least
     chain.sleep(1)
-    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
+    common_health_check.setDisabledCheck(strategy, True, {"from": gov})
     strategy.harvest({"from": gov})
 
     # To simulate reentrancy we need strategy to have some balance
@@ -302,7 +304,7 @@ def test_withdrawal_with_reentrancy(
         vault.withdraw(vault.balanceOf(gov), {"from": gov})
 
 
-def test_user_withdraw(chain, gov, token, vault, strategy, rando):
+def test_user_withdraw(chain, gov, token, vault, strategy, common_health_check):
     # set fees to 0
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
@@ -314,7 +316,7 @@ def test_user_withdraw(chain, gov, token, vault, strategy, rando):
     deposit = vault.totalAssets()
     pricePerShareBefore = vault.pricePerShare()
     token.transfer(strategy, vault.totalAssets(), {"from": gov})  # seed some profit
-    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
+    common_health_check.setDisabledCheck(strategy, True, {"from": gov})
     strategy.harvest({"from": gov})
 
     chain.sleep(1)
@@ -329,7 +331,7 @@ def test_user_withdraw(chain, gov, token, vault, strategy, rando):
     assert token.balanceOf(vault) == 0  # everything is withdrawn
 
 
-def test_profit_degradation(chain, gov, token, vault, strategy, rando):
+def test_profit_degradation(chain, gov, token, vault, strategy, common_health_check):
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
     vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
@@ -338,7 +340,7 @@ def test_profit_degradation(chain, gov, token, vault, strategy, rando):
     deposit = vault.totalAssets()
     token.transfer(strategy, deposit, {"from": gov})  # seed some profit
     chain.sleep(1)
-    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
+    common_health_check.setDisabledCheck(strategy, True, {"from": gov})
     strategy.harvest({"from": gov})
 
     vault.withdraw({"from": gov})
@@ -363,7 +365,9 @@ def test_profit_degradation(chain, gov, token, vault, strategy, rando):
     assert vault.pricePerShare() >= pricePerShareBefore * 2 * 0.99
 
 
-def test_withdraw_partial_delegate_assets(chain, gov, token, vault, strategy, rando):
+def test_withdraw_partial_delegate_assets(
+    chain, gov, token, vault, strategy, common_health_check
+):
     # set fees to 0
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
@@ -376,7 +380,7 @@ def test_withdraw_partial_delegate_assets(chain, gov, token, vault, strategy, ra
     pricePerShareBefore = vault.pricePerShare()
     token.transfer(strategy, vault.totalAssets(), {"from": gov})  # seed some profit
     chain.sleep(1)
-    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
+    common_health_check.setDisabledCheck(strategy, True, {"from": gov})
     strategy.harvest({"from": gov})
 
     chain.sleep(1)

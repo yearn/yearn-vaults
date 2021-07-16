@@ -4,7 +4,9 @@ import brownie
 FEE_MAX = 10_000
 
 
-def test_performance_fees(gov, vault, token, TestStrategy, rewards, strategist, chain):
+def test_performance_fees(
+    gov, vault, token, TestStrategy, rewards, strategist, chain, common_health_check
+):
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(450, {"from": gov})
 
@@ -16,14 +18,16 @@ def test_performance_fees(gov, vault, token, TestStrategy, rewards, strategist, 
 
     token.transfer(strategy, 10 ** token.decimals(), {"from": gov})
     chain.sleep(1)
-    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
+    common_health_check.setDisabledCheck(strategy, True, {"from": gov})
     strategy.harvest({"from": strategist})
 
     assert vault.balanceOf(rewards) == 0.045 * 10 ** token.decimals()
     assert vault.balanceOf(strategy) == 0.005 * 10 ** token.decimals()
 
 
-def test_zero_fees(gov, vault, token, TestStrategy, rewards, strategist, chain):
+def test_zero_fees(
+    gov, vault, token, TestStrategy, rewards, strategist, chain, common_health_check
+):
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
 
@@ -35,7 +39,7 @@ def test_zero_fees(gov, vault, token, TestStrategy, rewards, strategist, chain):
 
     token.transfer(strategy, 10 ** token.decimals(), {"from": gov})
     chain.sleep(1)
-    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
+    common_health_check.setDisabledCheck(strategy, True, {"from": gov})
     strategy.harvest({"from": strategist})
 
     assert vault.managementFee() == 0

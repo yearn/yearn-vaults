@@ -2,6 +2,7 @@
 pragma solidity >=0.6.0 <0.7.0;
 
 import {ICustomHealthCheck} from "./interfaces/ICustomHealthCheck.sol";
+import {StrategyAPI} from "./BaseStrategy.sol";
 
 struct Limits {
     uint256 profitLimitRatio;
@@ -20,6 +21,7 @@ contract CommonHealthCheck {
     address public management;
 
     mapping(address => address) public checks;
+    mapping(address => bool) public disabledCheck;
 
     modifier onlyGovernance() {
         require(msg.sender == governance, "!authorized");
@@ -28,6 +30,11 @@ contract CommonHealthCheck {
 
     modifier onlyAuthorized() {
         require(msg.sender == governance || msg.sender == management, "!authorized");
+        _;
+    }
+
+    modifier onlyVault(address strategy) {
+        require(msg.sender == StrategyAPI(strategy).vault(), "!authorized");
         _;
     }
 
@@ -70,6 +77,30 @@ contract CommonHealthCheck {
 
     function setCheck(address _strategy, address _check) external onlyAuthorized {
         checks[_strategy] = _check;
+    }
+
+    function enableCheck(address _strategy) external onlyVault(_strategy) {
+        disabledCheck[_strategy] = false;
+    }
+
+    function setDisabledCheck(address _strategy, bool disabled) external onlyAuthorized {
+        disabledCheck[_strategy] = disabled;
+    }
+
+    function doHealthCheck(address _strategy) external view returns (bool) {
+        return !disabledCheck[_strategy];
+    }
+
+    function check(
+        uint256 profit,
+        uint256 loss,
+        uint256 debtPayment,
+        uint256 debtOutstanding,
+        uint256 totalDebt
+    ) external view returns (bool) {
+        address strategy = msg.sender;
+
+        return _runChecks(strategy, profit, loss, debtPayment, debtOutstanding, totalDebt);
     }
 
     function check(

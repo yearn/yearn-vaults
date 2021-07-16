@@ -17,7 +17,7 @@ def token_false_return(gov, TokenFalseReturn):
 
 
 @pytest.fixture
-def vault(gov, management, token, Vault, commonHealthCheck):
+def vault(gov, management, token, Vault, common_health_check):
     # NOTE: Because the fixture has tokens in it already
     vault = gov.deploy(Vault)
     vault.initialize(
@@ -28,7 +28,7 @@ def vault(gov, management, token, Vault, commonHealthCheck):
         "yv" + token.symbol(),
         gov,
         gov,
-        commonHealthCheck,
+        common_health_check,
     )
     vault.setDepositLimit(MAX_UINT256, {"from": gov})
     vault.setManagement(management, {"from": gov})

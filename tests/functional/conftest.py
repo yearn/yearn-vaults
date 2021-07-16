@@ -24,7 +24,7 @@ def management(accounts):
 
 
 @pytest.fixture
-def commonHealthCheck(gov, CommonHealthCheck):
+def common_health_check(gov, CommonHealthCheck):
     yield gov.deploy(CommonHealthCheck)
 
 
@@ -46,14 +46,21 @@ def token(create_token, request):
 
 @pytest.fixture
 def create_vault(
-    gov, guardian, rewards, create_token, patch_vault_version, commonHealthCheck
+    gov, guardian, rewards, create_token, patch_vault_version, common_health_check
 ):
     def create_vault(token=None, version=None, governance=gov):
         if token is None:
             token = create_token()
         vault = patch_vault_version(version).deploy({"from": guardian})
         vault.initialize(
-            token, governance, rewards, "", "", guardian, governance, commonHealthCheck
+            token,
+            governance,
+            rewards,
+            "",
+            "",
+            guardian,
+            governance,
+            common_health_check,
         )
         vault.setDepositLimit(2 ** 256 - 1, {"from": governance})
         return vault

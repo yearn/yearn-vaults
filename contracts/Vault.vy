@@ -58,9 +58,10 @@ interface Strategy:
     def migrate(_newStrategy: address): nonpayable
 
 
-interface CommonHealthCheck:
+interface HealthCheck:
     def check(strategy: address, profit: uint256, loss: uint256, debtPayment: uint256, debtOutstanding: uint256, totalDebt: uint256) -> bool: view
-
+    def doHealthCheck(strategy: address) -> bool: view
+    def enableCheck(strategy: address): nonpayable
 
 event Transfer:
     sender: indexed(address)
@@ -88,7 +89,7 @@ management: public(address)
 guardian: public(address)
 pendingGovernance: address
 
-commonHealthCheck: public(address)
+healthCheck: public(address)
 
 struct StrategyParams:
     performanceFee: uint256  # Strategist's fee (basis points)
@@ -100,7 +101,6 @@ struct StrategyParams:
     totalDebt: uint256  # Total outstanding debt that Strategy has
     totalGain: uint256  # Total returns that Strategy has realized for Vault
     totalLoss: uint256  # Total losses that Strategy has realized for Vault
-    enforceChangeLimit: bool # Allow bypassing the lossRatioLimit checks
 
 event StrategyAdded:
     strategy: indexed(address)
@@ -253,7 +253,7 @@ def initialize(
     symbolOverride: String[32],
     guardian: address = msg.sender,
     management: address =  msg.sender,
-    commonHealthCheck: address = ZERO_ADDRESS
+    healthCheck: address = ZERO_ADDRESS
 ):
     """
     @notice
@@ -306,7 +306,7 @@ def initialize(
     log UpdatePerformanceFee(convert(1000, uint256))
     self.managementFee = 200  # 2% per year
     log UpdateManagementFee(convert(200, uint256))
-    self.commonHealthCheck = commonHealthCheck
+    self.healthCheck = healthCheck
     self.lastReport = block.timestamp
     self.activation = block.timestamp
     self.lockedProfitDegradation = convert(DEGRADATION_COEFFICIENT * 46 / 10 ** 6 , uint256) # 6 hours in blocks
@@ -1216,7 +1216,6 @@ def addStrategy(
         totalDebt: 0,
         totalGain: 0,
         totalLoss: 0,
-        enforceChangeLimit: True,
     })
     log StrategyAdded(strategy, debtRatio, minDebtPerHarvest, maxDebtPerHarvest, performanceFee)
 
@@ -1316,15 +1315,9 @@ def updateStrategyPerformanceFee(
 
 
 @external
-def setStrategyEnforceChangeLimit(strategy: address, enabled: bool):
+def setHealthCheck(_healthCheck: address):
     assert msg.sender in [self.management, self.governance]
-    assert self.strategies[strategy].activation > 0
-    self.strategies[strategy].enforceChangeLimit = enabled
-
-@external
-def setCommonHealthCheck(_commonHealthCheck: address):
-    assert msg.sender in [self.management, self.governance]
-    self.commonHealthCheck = _commonHealthCheck
+    self.healthCheck = _healthCheck
 
 @internal
 def _revokeStrategy(strategy: address):
@@ -1374,7 +1367,6 @@ def migrateStrategy(oldVersion: address, newVersion: address):
         totalDebt: strategy.totalDebt,
         totalGain: 0,
         totalLoss: 0,
-        enforceChangeLimit: True,
     })
 
     Strategy(oldVersion).migrate(newVersion)
@@ -1711,15 +1703,16 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     assert self.token.balanceOf(msg.sender) >= gain + _debtPayment
 
     # Check report is within healty ranges
+    if self.healthCheck != ZERO_ADDRESS:
+        if HealthCheck(self.healthCheck).doHealthCheck(msg.sender):
+            strategy: address  = msg.sender
+            _debtOutstanding: uint256 = self._debtOutstanding(msg.sender)
+            totalDebt: uint256 = self.strategies[msg.sender].totalDebt
 
-    if self.strategies[msg.sender].enforceChangeLimit:
-        strategy: address  = msg.sender
-        _debtOutstanding: uint256 = self._debtOutstanding(msg.sender)
-        totalDebt: uint256 = self.strategies[msg.sender].totalDebt
-
-        assert(CommonHealthCheck(self.commonHealthCheck).check(strategy, gain, loss, _debtPayment, _debtOutstanding, totalDebt)) #dev: fail healthcheck
-    else:
-        self.strategies[msg.sender].enforceChangeLimit = True # The check is turned off only once and turned back on.
+            assert(HealthCheck(self.healthCheck).check(strategy, gain, loss, _debtPayment, _debtOutstanding, totalDebt)) #dev: fail healthcheck
+        else:
+            strategy: address  = msg.sender
+            HealthCheck(self.healthCheck).enableCheck(strategy)
 
     # We have a loss to report, do it before the rest of the calculations
     if loss > 0:
