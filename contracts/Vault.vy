@@ -196,6 +196,8 @@ event StrategyRemovedFromQueue:
 event StrategyAddedToQueue:
     strategy: indexed(address) # Address of the strategy that is added to the withdrawal queue
 
+event UpdateHealthCheck:
+    healthCheck: indexed(address)
 
 # NOTE: Track the total for overhead targeting purposes
 strategies: public(HashMap[address, StrategyParams])
@@ -307,6 +309,8 @@ def initialize(
     self.managementFee = 200  # 2% per year
     log UpdateManagementFee(convert(200, uint256))
     self.healthCheck = healthCheck
+    log UpdateHealthCheck(healthCheck)
+
     self.lastReport = block.timestamp
     self.activation = block.timestamp
     self.lockedProfitDegradation = convert(DEGRADATION_COEFFICIENT * 46 / 10 ** 6 , uint256) # 6 hours in blocks
@@ -1317,6 +1321,7 @@ def updateStrategyPerformanceFee(
 @external
 def setHealthCheck(_healthCheck: address):
     assert msg.sender in [self.management, self.governance]
+    log UpdateHealthCheck(_healthCheck)
     self.healthCheck = _healthCheck
 
 @internal
