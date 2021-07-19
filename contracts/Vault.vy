@@ -1704,8 +1704,6 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
 
     # Only approved strategies can call this function
     assert self.strategies[msg.sender].activation > 0
-    # No lying about total available to withdraw!
-    assert self.token.balanceOf(msg.sender) >= gain + _debtPayment
 
     # Check report is within healthy ranges
     if self.healthCheck != ZERO_ADDRESS:
@@ -1718,6 +1716,9 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
         else:
             strategy: address  = msg.sender
             HealthCheck(self.healthCheck).enableCheck(strategy)
+
+    # No lying about total available to withdraw!
+    assert self.token.balanceOf(msg.sender) >= gain + _debtPayment
 
     # We have a loss to report, do it before the rest of the calculations
     if loss > 0:

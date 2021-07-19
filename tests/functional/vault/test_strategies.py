@@ -493,7 +493,9 @@ def test_reporting(vault, token, strategy, gov, rando):
         vault.report(0, loss, 0, {"from": strategy})
 
 
-def test_reporting_gains_without_fee(chain, vault, token, strategy, gov, rando):
+def test_reporting_gains_without_fee(
+    chain, vault, token, strategy, gov, common_health_check
+):
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
     vault.addStrategy(strategy, 100, 10, 20, 1000, {"from": gov})
