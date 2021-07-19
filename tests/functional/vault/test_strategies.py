@@ -130,7 +130,6 @@ def test_addStrategy(
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
-        "enforceChangeLimit": False,
     }
 
     vault.addStrategy(strategy, 100, 10, 20, 1000, {"from": gov})
@@ -145,7 +144,6 @@ def test_addStrategy(
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
-        "enforceChangeLimit": True,
     }
     assert vault.withdrawalQueue(0) == strategy
 
@@ -213,7 +211,6 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
-        "enforceChangeLimit": True,
     }
 
     vault.updateStrategyMinDebtPerHarvest(strategy, 15, {"from": gov})
@@ -227,7 +224,6 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
-        "enforceChangeLimit": True,
     }
 
     vault.updateStrategyMaxDebtPerHarvest(strategy, 15, {"from": gov})
@@ -241,7 +237,6 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
-        "enforceChangeLimit": True,
     }
 
     vault.updateStrategyPerformanceFee(strategy, 75, {"from": gov})
@@ -255,7 +250,6 @@ def test_updateStrategy(chain, gov, vault, strategy, rando):
         "totalGain": 0,
         "totalLoss": 0,
         "totalDebt": 0,
-        "enforceChangeLimit": True,
     }
 
 
@@ -306,7 +300,6 @@ def test_revokeStrategy(chain, gov, vault, strategy, rando):
 
     assert vault.strategies(strategy).dict() == {
         "performanceFee": 1000,
-        "enforceChangeLimit": True,
         "activation": activation_timestamp,
         "debtRatio": 0,  # This changed
         "minDebtPerHarvest": 10,
@@ -582,11 +575,18 @@ def test_health_report_check(gov, token, vault, strategy, chain, common_health_c
     strategy.harvest()
 
     # Small price change won't trigger the emergency
-    price = vault.pricePerShare()
     strategy._takeFunds(1, {"from": gov})
     chain.sleep(1)
-    strategy.harvest()
-    
+    harvest = strategy.harvest()
+
+    # Make sure call is a staiccall
+    check = [
+        call
+        for call in harvest.subcalls
+        if call["function"] == "check(address,uint256,uint256,uint256,uint256,uint256)"
+    ][0]
+    assert check["op"] == "STATICCALL"
+
     assert vault.pricePerShare() == 0.99995 * 10 ** vault.decimals()
 
     # Big price change isn't allowed

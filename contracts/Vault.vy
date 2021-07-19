@@ -1707,7 +1707,7 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     # No lying about total available to withdraw!
     assert self.token.balanceOf(msg.sender) >= gain + _debtPayment
 
-    # Check report is within healty ranges
+    # Check report is within healthy ranges
     if self.healthCheck != ZERO_ADDRESS:
         if HealthCheck(self.healthCheck).doHealthCheck(msg.sender):
             strategy: address  = msg.sender
