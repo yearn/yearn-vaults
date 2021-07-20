@@ -64,7 +64,7 @@ def test_bad_migration(
 
 
 def test_migrated_strategy_can_call_harvest(
-    token, strategy, vault, gov, TestStrategy, chain
+    token, strategy, vault, gov, TestStrategy, common_health_check
 ):
 
     new_strategy = gov.deploy(TestStrategy, vault)
@@ -74,7 +74,7 @@ def test_migrated_strategy_can_call_harvest(
     token.transfer(strategy, 10 ** token.decimals(), {"from": gov})
 
     assert vault.strategies(strategy).dict()["totalGain"] == 0
-    vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
+    common_health_check.setDisabledCheck(strategy, True, {"from": gov})
     strategy.harvest({"from": gov})
     assert vault.strategies(strategy).dict()["totalGain"] == 10 ** token.decimals()
 

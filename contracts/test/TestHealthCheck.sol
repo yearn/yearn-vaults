@@ -17,9 +17,11 @@ contract TestHealthCheck is ICustomHealthCheck {
     }
 
     function check(
+        address callerStrategy,
         uint256 profit,
         uint256 loss,
-        address callerStrategy
+        uint256 debtPayment,
+        uint256 debtOutstanding
     ) external view override returns (bool) {
         return pass;
     }

@@ -1,28 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity >=0.6.0 <0.7.0;
-pragma experimental ABIEncoderV2;
 
-interface CustomHealthCheck {
-    function check(
-        uint256 profit,
-        uint256 loss,
-        uint256 debtPayment,
-        uint256 debtOutstanding,
-        address callerStrategy
-    ) external view returns (bool);
-}
-
-// LEGACY INTERFACES PRE 0.3.2
-struct LegacyStrategyParams {
-    uint256 performanceFee;
-    uint256 activation;
-    uint256 debtRatio;
-    uint256 rateLimit;
-    uint256 lastReport;
-    uint256 totalDebt;
-    uint256 totalGain;
-    uint256 totalLoss;
-}
+import {ICustomHealthCheck} from "./interfaces/ICustomHealthCheck.sol";
+import {StrategyAPI} from "./BaseStrategy.sol";
 
 struct Limits {
     uint256 profitLimitRatio;
@@ -41,6 +21,7 @@ contract CommonHealthCheck {
     address public management;
 
     mapping(address => address) public checks;
+    mapping(address => bool) public disabledCheck;
 
     modifier onlyGovernance() {
         require(msg.sender == governance, "!authorized");
@@ -52,11 +33,16 @@ contract CommonHealthCheck {
         _;
     }
 
+    modifier onlyVault(address strategy) {
+        require(msg.sender == StrategyAPI(strategy).vault(), "!authorized");
+        _;
+    }
+
     constructor() public {
         governance = msg.sender;
         management = msg.sender;
-        profitLimitRatio = 300;
-        lossLimitRatio = 100;
+        profitLimitRatio = 100;
+        lossLimitRatio = 1;
     }
 
     function setGovernance(address _governance) external onlyGovernance {
@@ -93,6 +79,18 @@ contract CommonHealthCheck {
         checks[_strategy] = _check;
     }
 
+    function enableCheck(address _strategy) external onlyVault(_strategy) {
+        disabledCheck[_strategy] = false;
+    }
+
+    function setDisabledCheck(address _strategy, bool disabled) external onlyAuthorized {
+        disabledCheck[_strategy] = disabled;
+    }
+
+    function doHealthCheck(address _strategy) external view returns (bool) {
+        return !disabledCheck[_strategy];
+    }
+
     function check(
         uint256 profit,
         uint256 loss,
@@ -100,31 +98,48 @@ contract CommonHealthCheck {
         uint256 debtOutstanding,
         uint256 totalDebt
     ) external view returns (bool) {
-        return _runChecks(profit, loss, debtPayment, debtOutstanding, totalDebt);
+        address strategy = msg.sender;
+
+        return _runChecks(strategy, profit, loss, debtPayment, debtOutstanding, totalDebt);
+    }
+
+    function check(
+        address strategy,
+        uint256 profit,
+        uint256 loss,
+        uint256 debtPayment,
+        uint256 debtOutstanding,
+        uint256 totalDebt
+    ) external view returns (bool) {
+        require(strategy != address(0));
+
+        return _runChecks(strategy, profit, loss, debtPayment, debtOutstanding, totalDebt);
     }
 
     function _runChecks(
+        address strategy,
         uint256 profit,
         uint256 loss,
         uint256 debtPayment,
         uint256 debtOutstanding,
         uint256 totalDebt
     ) internal view returns (bool) {
-        address customCheck = checks[msg.sender];
+        address customCheck = checks[strategy];
 
         if (customCheck == address(0)) {
-            return _executeDefaultCheck(profit, loss, totalDebt);
+            return _executeDefaultCheck(strategy, profit, loss, totalDebt);
         }
 
-        return CustomHealthCheck(customCheck).check(profit, loss, debtPayment, debtOutstanding, msg.sender);
+        return ICustomHealthCheck(customCheck).check(strategy, profit, loss, debtPayment, debtOutstanding);
     }
 
     function _executeDefaultCheck(
+        address strategy,
         uint256 _profit,
         uint256 _loss,
         uint256 _totalDebt
     ) internal view returns (bool) {
-        Limits memory limits = strategiesLimits[msg.sender];
+        Limits memory limits = strategiesLimits[strategy];
         uint256 _profitLimitRatio;
         uint256 _lossLimitRatio;
         if (limits.exists) {

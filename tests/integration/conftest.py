@@ -29,6 +29,11 @@ def registry(gov, Registry):
 
 
 @pytest.fixture
+def common_health_check(gov, CommonHealthCheck):
+    yield gov.deploy(CommonHealthCheck)
+
+
+@pytest.fixture
 def rewards(gov):
     yield gov  # TODO: Add rewards contract
 
@@ -40,7 +45,9 @@ def guardian(accounts):
 
 
 @pytest.fixture
-def create_vault(gov, rewards, guardian, create_token, patch_vault_version):
+def create_vault(
+    gov, rewards, guardian, create_token, patch_vault_version, common_health_check
+):
     def create_vault(token=None, version=None):
         if token is None:
             token = create_token()
@@ -52,6 +59,8 @@ def create_vault(gov, rewards, guardian, create_token, patch_vault_version):
             token.symbol() + " yVault",
             "yv" + token.symbol(),
             guardian,
+            guardian,
+            common_health_check,
         )
         vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
         assert vault.depositLimit() == 2 ** 256 - 1
