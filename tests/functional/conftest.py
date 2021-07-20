@@ -1,6 +1,7 @@
 import pytest
 
-from brownie import Token, TokenNoReturn
+from brownie import Token, TokenNoReturn, web3
+from eth_abi import encode_abi
 
 
 @pytest.fixture
@@ -90,12 +91,26 @@ def keeper(accounts):
 
 
 @pytest.fixture(params=["RegularStrategy", "ClonedStrategy"])
-def strategy(gov, strategist, keeper, rewards, vault, TestStrategy, request):
+def strategy(
+    gov,
+    strategist,
+    keeper,
+    rewards,
+    vault,
+    TestStrategy,
+    request,
+    strategyVersionRegistry,
+):
     strategy = strategist.deploy(TestStrategy, vault)
 
     if request.param == "ClonedStrategy":
         # deploy the proxy using as logic the original strategy
-        tx = strategy.clone(vault, strategist, rewards, keeper, {"from": strategist})
+        params = encode_abi(
+            ["address", "address", "address", "address"],
+            [vault.address, strategist.address, rewards.address, keeper.address],
+        )
+        tx = strategyVersionRegistry.clone(strategy, params)
+
         # strategy proxy address is returned in the event `Cloned`
         strategyAddress = tx.events["Cloned"]["clone"]
         # redefine strategy as the new proxy deployed
@@ -121,3 +136,8 @@ def rando(accounts):
 @pytest.fixture
 def registry(gov, Registry):
     yield gov.deploy(Registry)
+
+
+@pytest.fixture
+def strategyVersionRegistry(gov, StrategyVersionRegistry):
+    yield gov.deploy(StrategyVersionRegistry)

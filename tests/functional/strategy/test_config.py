@@ -5,6 +5,7 @@ import pytest
 import brownie
 
 from brownie import ZERO_ADDRESS
+from eth_abi import encode_abi
 
 PACKAGE_VERSION = yaml.safe_load(
     (Path(__file__).parent.parent.parent.parent / "ethpm-config.yaml").read_text()
@@ -33,11 +34,16 @@ def test_strategy_deployment(strategist, vault, TestStrategy):
     assert not strategy.tendTrigger(0)
 
 
-def test_strategy_no_reinit(strategist, vault, TestStrategy):
+def test_strategy_no_reinit(strategist, vault, TestStrategy, gov):
     strategy = strategist.deploy(TestStrategy, vault)
 
+    # Sholdn't be able to initialize twice
+    params = encode_abi(
+        ["address", "address", "address", "address"],
+        [vault.address, gov.address, gov.address, gov.address],
+    )
     with brownie.reverts("Strategy already initialized"):
-        strategy.initialize(vault, strategist, strategist, strategist)
+        strategy.initialize(params)
 
 
 def test_strategy_setEmergencyExit(strategy, gov, strategist, rando, chain):

@@ -1,6 +1,7 @@
 import pytest
 import brownie
 from brownie import ZERO_ADDRESS
+from eth_abi import encode_abi
 
 
 @pytest.fixture
@@ -43,25 +44,19 @@ def test_clone(
     guardian,
     TestStrategy,
     rando,
+    strategyVersionRegistry,
 ):
-
-    tx = strategy.clone(other_vault, {"from": rando})
-    address = tx.events["Cloned"]["clone"]
-    new_strategy = TestStrategy.at(address)
-
-    assert new_strategy.strategist() == rando
-    assert new_strategy.rewards() == rando
-    assert new_strategy.keeper() == rando
-    assert Token.at(new_strategy.want()).name() == "yearn.finance test token"
-
-    # Test the other clone method with all params
-    tx = strategy.clone(other_vault, gov, guardian, strategist, {"from": rando})
+    params = encode_abi(
+        ["address", "address", "address", "address"],
+        [other_vault.address, gov.address, guardian.address, strategist.address],
+    )
+    tx = strategyVersionRegistry.clone(strategy, params, {"from": rando})
     address = tx.events["Cloned"]["clone"]
     new_strategy = TestStrategy.at(address)
 
     assert new_strategy.isOriginal() == False
     with brownie.reverts():
-        new_strategy.clone(other_vault, {"from": rando})
+        strategyVersionRegistry.clone(new_strategy, params, {"from": rando})
 
     assert new_strategy.strategist() == gov
     assert new_strategy.rewards() == guardian
@@ -72,11 +67,3 @@ def test_clone(
     assert new_strategy.maxReportDelay() == 86400
     assert new_strategy.profitFactor() == 100
     assert new_strategy.debtThreshold() == 0
-
-
-def test_double_initialize(TestStrategy, vault, other_vault, gov):
-    strategy = gov.deploy(TestStrategy, vault)
-
-    # Sholdn't be able to initialize twice
-    with brownie.reverts():
-        strategy.initialize(other_vault, gov, gov, gov)
