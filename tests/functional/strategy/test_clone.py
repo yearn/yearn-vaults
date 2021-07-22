@@ -50,6 +50,7 @@ def test_clone(
         ["address", "address", "address", "address"],
         [other_vault.address, gov.address, guardian.address, strategist.address],
     )
+    strategyVersionRegistry.addNewRelease(strategy, {"from": gov})
     tx = strategyVersionRegistry.clone(strategy, params, {"from": rando})
     address = tx.events["Cloned"]["clone"]
     new_strategy = TestStrategy.at(address)

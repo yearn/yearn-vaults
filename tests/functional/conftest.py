@@ -109,6 +109,8 @@ def strategy(
             ["address", "address", "address", "address"],
             [vault.address, strategist.address, rewards.address, keeper.address],
         )
+
+        strategyVersionRegistry.addNewRelease(strategy, {"from": gov})
         tx = strategyVersionRegistry.clone(strategy, params)
 
         # strategy proxy address is returned in the event `Cloned`

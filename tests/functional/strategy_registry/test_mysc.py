@@ -36,6 +36,11 @@ def test_add_new_release(gov, strategy, rando, strategyVersionRegistry):
 
 
 def test_clone(gov, strategy, vault, strategyVersionRegistry):
+    with brownie.reverts():
+        strategyVersionRegistry.clone(strategy, params)
+
+    strategyVersionRegistry.addNewRelease(strategy, {"from": gov})
+
     params = encode_abi(
         ["address", "address", "address", "address"],
         [vault.address, gov.address, gov.address, gov.address],

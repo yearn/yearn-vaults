@@ -9,9 +9,8 @@ event NewPendingGovernance:
     governance: address
 
 event StrategyRegistered:
+    key: String[73]
     strategy: address
-    name: String[64]
-    apiVersion: String[8]
 
 event Cloned:
     clone: address
@@ -32,6 +31,17 @@ def __init__():
 @internal
 def _computeKey(name: String[64], version: String[8]) -> String[73]:
     return concat(name, "@", version)
+
+
+@internal
+def _key(strategy: address, name: String[64]) -> String[73]:
+    strategyName: String[64] = name
+    if name == "":
+        strategyName = Strategy(strategy).name()
+        assert strategyName != ""
+    apiVersion: String[8] = Strategy(strategy).apiVersion()
+    key: String[73] = self._computeKey(strategyName, apiVersion)
+    return key
 
 @external
 def setGovernance(governance: address):
@@ -64,14 +74,10 @@ def addNewRelease(strategy :address, name: String[64] = ""):
     """
     assert msg.sender == self.governance  # dev: unauthorized
     assert Strategy(strategy).isOriginal() # dev: not original 
-    strategyName: String[64] = name
-    if name == "":
-        strategyName = Strategy(strategy).name()
-        assert strategyName != ""
-    apiVersion: String[8] = Strategy(strategy).apiVersion()
-    key: String[73] = self._computeKey(strategyName, apiVersion)
+
+    key: String[73] = self._key(strategy, name)
     self.strategyVersions[key] = strategy
-    log StrategyRegistered(strategy, strategyName, apiVersion)
+    log StrategyRegistered(key, strategy)
 
 @view 
 @external
@@ -80,9 +86,11 @@ def latestRelease(name: String[64], apiVersion: String[8]) -> address:
     return self.strategyVersions[key]
 
 @external
-def clone(strategy: address, params: Bytes[256]):
+def clone(strategy: address,  params: Bytes[256], name: String[64] = ""):
     assert Strategy(strategy).isOriginal()  # dev: not original
+    key: String[73] = self._key(strategy, name)
 
+    assert(self.strategyVersions[key] == strategy)
     newStrategy: address = create_forwarder_to(strategy)
  
     Strategy(newStrategy).initialize(params)
