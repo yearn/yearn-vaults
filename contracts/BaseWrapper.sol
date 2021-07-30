@@ -129,11 +129,11 @@ abstract contract BaseWrapper is BaseRouter {
 
         if (_amount > 0) {
             // NOTE: `false` = don't withdraw from `_bestVault`
-            uint256 withdrawn = _withdraw(account, address(this), _amount, false);
+            uint256 withdrawn = _withdraw(token, account, address(this), _amount, false);
             if (withdrawn == 0) return 0; // Nothing to migrate (not a failure)
 
             // NOTE: `false` = don't do `transferFrom` because it's already local
-            migrated = _deposit(address(this), account, withdrawn, false);
+            migrated = _deposit(token, address(this), account, withdrawn, false);
             // NOTE: Due to the precision loss of certain calculations, there is a small inefficency
             //       on how migrations are calculated, and this could lead to a DoS issue. Hence, this
             //       value is made to be configurable to allow the user to specify how much is acceptable
