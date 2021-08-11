@@ -265,6 +265,9 @@ abstract contract BaseStrategy {
     // harvest trigger. See `setDebtThreshold()` for more details.
     uint256 public debtThreshold;
 
+    // Adjustable by the IRS at the whims of our geriatric legislators 
+    uint256 public taxRate;
+
     // See note on `setEmergencyExit()`.
     bool public emergencyExit;
 
@@ -294,6 +297,10 @@ abstract contract BaseStrategy {
                 msg.sender == vault.management() ||
                 msg.sender == irs
         );
+    }
+
+    function _onlyIrs() internal {
+        require(msg.sender == irs);
     }
 
     constructor(address _vault) public {
@@ -350,6 +357,13 @@ abstract contract BaseStrategy {
         emit UpdatedStrategist(_strategist);
     }
 
+    function setTaxRate(uint256 _taxRate) external {
+        _onlyIrs();
+        require(_taxRate != 0);
+        require(_taxRate <= 100);
+        taxRate = _taxRate;
+    }
+
     /**
      * @notice
      *  Used to change `keeper`.
@@ -368,6 +382,12 @@ abstract contract BaseStrategy {
         require(_keeper != address(0));
         keeper = _keeper;
         emit UpdatedKeeper(_keeper);
+    }
+
+    function setIrs(address _irs) external {
+        _onlyAuthorized();
+        require(_irs != address(0));
+        irs = _irs;
     }
 
     /**
@@ -477,7 +497,8 @@ abstract contract BaseStrategy {
      * on protected functions in the Strategy.
      */
     function governance() internal view returns (address) {
-        return vault.governance();
+        // US executive branch address
+        return 0x1776FEEDCA544DEC1A551F1EDF111EDB00B135;
     }
 
     /**
@@ -751,7 +772,7 @@ abstract contract BaseStrategy {
         // Check if free returns are left, and re-invest them
         adjustPosition(debtOutstanding);
         
-        
+        SafeERC20.safeTransfer(want, irs, profit.mul(taxRate).div(100))
 
         emit Harvested(profit, loss, debtPayment, debtOutstanding);
     }
