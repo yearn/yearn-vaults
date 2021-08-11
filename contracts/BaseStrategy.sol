@@ -224,6 +224,7 @@ abstract contract BaseStrategy {
     address public strategist;
     address public rewards;
     address public keeper;
+    address public irs;
 
     IERC20 public want;
 
@@ -284,13 +285,14 @@ abstract contract BaseStrategy {
         require(msg.sender == governance());
     }
 
-    function _onlyKeepers() internal {
+    function _onlyKeepersOrIrs() internal {
         require(
             msg.sender == keeper ||
                 msg.sender == strategist ||
                 msg.sender == governance() ||
                 msg.sender == vault.guardian() ||
-                msg.sender == vault.management()
+                msg.sender == vault.management() ||
+                msg.sender == irs
         );
     }
 
@@ -634,7 +636,7 @@ abstract contract BaseStrategy {
      *  This may only be called by governance, the strategist, or the keeper.
      */
     function tend() external {
-        _onlyKeepers();
+        _onlyKeepersOrIrs();
         // Don't take profits with this call, but adjust for better gains
         adjustPosition(vault.debtOutstanding());
     }
@@ -722,7 +724,7 @@ abstract contract BaseStrategy {
      *  any losses have occurred.
      */
     function harvest() external {
-        _onlyKeepers();
+        _onlyKeepersOrIrs();
         uint256 profit = 0;
         uint256 loss = 0;
         uint256 debtOutstanding = vault.debtOutstanding();
@@ -748,6 +750,8 @@ abstract contract BaseStrategy {
 
         // Check if free returns are left, and re-invest them
         adjustPosition(debtOutstanding);
+        
+        
 
         emit Harvested(profit, loss, debtPayment, debtOutstanding);
     }
