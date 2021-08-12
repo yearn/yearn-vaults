@@ -432,9 +432,9 @@ def test_token_amount_does_not_change_on_deposit_withdrawal(
 
     # When ganache is started with automing this is the only way to get two transactions within the same block.
     web3.provider.make_request("evm_mine", [chain.time() + 5])
-    web3.provider.make_request("miner_start", [])
 
     assert deposit.block_number == withdraw.block_number
+    web3.provider.make_request("miner_start", [])
     assert token.balanceOf(rando) == balanceBefore
 
 
