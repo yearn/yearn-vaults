@@ -731,6 +731,8 @@ abstract contract BaseStrategy {
         // Liquidate as much as possible to `want`, up to `_amountNeeded`
         uint256 amountFreed;
         (amountFreed, _loss) = liquidatePosition(_amountNeeded);
+        // sanity check
+        require(_amountNeeded == amountFreed.add(_loss), "!withdraw");
         // Send it directly back (NOTE: Using `msg.sender` saves some gas here)
         want.safeTransfer(msg.sender, amountFreed);
         // NOTE: Reinvest anything leftover on next `tend`/`harvest`
