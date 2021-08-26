@@ -1100,7 +1100,7 @@ def withdraw(
             loss: uint256 = Strategy(strategy).withdraw(amountNeeded)
             withdrawn: uint256 = self.token.balanceOf(self) - vault_balance
 
-            vault_balance += withdrawn # = self.token.balanceOf(self)
+            vault_balance += withdrawn
 
             # NOTE: Withdrawer incurs any losses from liquidation
             if loss > 0:
