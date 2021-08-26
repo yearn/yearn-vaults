@@ -1067,8 +1067,9 @@ def withdraw(
 
     # See @dev note, above.
     value: uint256 = self._shareValue(shares)
+    vault_balance: uint256 = self.token.balanceOf(self)
 
-    if value > self.token.balanceOf(self):
+    if value > vault_balance:
         totalLoss: uint256 = 0
         # We need to go get some from our strategies in the withdrawal queue
         # NOTE: This performs forced withdrawals from each Strategy. During
@@ -1082,7 +1083,6 @@ def withdraw(
             if strategy == ZERO_ADDRESS:
                 break  # We've exhausted the queue
 
-            vault_balance: uint256 = self.token.balanceOf(self)
             if value <= vault_balance:
                 break  # We're done withdrawing
 
@@ -1100,6 +1100,8 @@ def withdraw(
             loss: uint256 = Strategy(strategy).withdraw(amountNeeded)
             withdrawn: uint256 = self.token.balanceOf(self) - vault_balance
 
+            vault_balance += withdrawn # = self.token.balanceOf(self)
+
             # NOTE: Withdrawer incurs any losses from liquidation
             if loss > 0:
                 value -= loss
@@ -1114,7 +1116,6 @@ def withdraw(
         # NOTE: We have withdrawn everything possible out of the withdrawal queue
         #       but we still don't have enough to fully pay them back, so adjust
         #       to the total amount we've freed up through forced withdrawals
-        vault_balance: uint256 = self.token.balanceOf(self)
         if value > vault_balance:
             value = vault_balance
             # NOTE: Burn # of shares that corresponds to what Vault has on-hand,
