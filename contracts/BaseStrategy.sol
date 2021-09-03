@@ -487,7 +487,7 @@ abstract contract BaseStrategy {
      *  is compatible. As an example:
      *
      *      given 1e17 wei (0.1 ETH) as input, and want is USDC (6 decimals),
-     *      with USDC/ETH = 1800, this should give back 1800000000 (180 USDC)
+     *      with USDC/ETH = 1800, this should give back 180000000 (180 USDC)
      *
      * @param _amtInWei The amount (in wei/1e-18 ETH) to convert to `want`
      * @return The amount in `want` of `_amtInEth` converted to `want`
