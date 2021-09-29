@@ -443,7 +443,7 @@ def test_withdraw_not_enough_funds_with_gains(
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
     vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
-    
+
     # sets previousHarvestTimeDelta big enough to not influence calcs
     chain.sleep(1000)
     strategy.harvest()
