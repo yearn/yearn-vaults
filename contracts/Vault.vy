@@ -225,7 +225,7 @@ totalDebt: public(uint256)  # Amount of tokens that all strategies have borrowed
 lastReport: public(uint256)  # block.timestamp of last report
 activation: public(uint256)  # block.timestamp of contract deployment
 lockedProfit: public(uint256) # how much profit is locked and cant be withdrawn
-lockedProfitDegradation: public(uint256) # rate per block of degradation. DEGRADATION_COEFFICIENT is 100% per block
+previousHarvestTimeDelta: public(uint256) # how much time elapsed between last and previous report
 rewards: public(address)  # Rewards contract where Governance fees are sent to
 # Governance Fee for management of Vault (given to `rewards`)
 managementFee: public(uint256)
@@ -313,7 +313,6 @@ def initialize(
 
     self.lastReport = block.timestamp
     self.activation = block.timestamp
-    self.lockedProfitDegradation = convert(DEGRADATION_COEFFICIENT * 46 / 10 ** 6 , uint256) # 6 hours in blocks
     # EIP-712
     self.DOMAIN_SEPARATOR = keccak256(
         concat(
@@ -438,19 +437,6 @@ def setRewards(rewards: address):
     assert not (rewards in [self, ZERO_ADDRESS])
     self.rewards = rewards
     log UpdateRewards(rewards)
-
-
-@external
-def setLockedProfitDegradation(degradation: uint256):
-    """
-    @notice
-        Changes the locked profit degradation.
-    @param degradation The rate of degradation in percent per second scaled to 1e18.
-    """
-    assert msg.sender == self.governance
-    # Since "degradation" is of type uint256 it can never be less than zero
-    assert degradation <= DEGRADATION_COEFFICIENT
-    self.lockedProfitDegradation = degradation
 
 
 @external
@@ -806,14 +792,15 @@ def totalAssets() -> uint256:
 @view
 @internal
 def _calculateLockedProfit() -> uint256:
-    lockedFundsRatio: uint256 = (block.timestamp - self.lastReport) * self.lockedProfitDegradation
+    currentTimeDelta: uint256 = block.timestamp - self.lastReport
+    previousHarvestTimeDelta: uint256 = self.previousHarvestTimeDelta
 
-    if(lockedFundsRatio < DEGRADATION_COEFFICIENT):
+    if(currentTimeDelta < previousHarvestTimeDelta):
         lockedProfit: uint256 = self.lockedProfit
         return lockedProfit - (
-                lockedFundsRatio
-                * lockedProfit
-                / DEGRADATION_COEFFICIENT
+                lockedProfit
+                * currentTimeDelta
+                / previousHarvestTimeDelta
             )
     else:
         return 0
@@ -1774,6 +1761,13 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
 
     # Update reporting time
     self.strategies[msg.sender].lastReport = block.timestamp
+    currentTimeDelta: uint256 = block.timestamp - self.lastReport
+    # maintains longer (fairer) harvest periods on close timed harvests
+    if self.previousHarvestTimeDelta > currentTimeDelta * 2:
+        self.previousHarvestTimeDelta = self.previousHarvestTimeDelta - currentTimeDelta
+    else:
+        self.previousHarvestTimeDelta = currentTimeDelta
+
     self.lastReport = block.timestamp
 
     log StrategyReported(

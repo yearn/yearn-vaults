@@ -97,7 +97,6 @@ def test_total_loss(chain, vault, strategy, gov, token, common_health_check):
 def test_loss_should_be_removed_from_locked_profit(
     chain, vault, strategy, gov, token, common_health_check
 ):
-    vault.setLockedProfitDegradation(1e10, {"from": gov})
 
     vault.addStrategy(strategy, 1000, 0, 1000, 0, {"from": gov})
     token.approve(vault, 2 ** 256 - 1, {"from": gov})
@@ -106,7 +105,8 @@ def test_loss_should_be_removed_from_locked_profit(
     strategy.harvest({"from": gov})
     assert token.balanceOf(strategy) == 500
     token.transfer(strategy, 100, {"from": gov})
-    chain.sleep(1)
+    # sets previousHarvestTimeDelta big enough to not influence calcs
+    chain.sleep(1000)
     common_health_check.setDisabledCheck(strategy, True, {"from": gov})
     strategy.harvest({"from": gov})
 
