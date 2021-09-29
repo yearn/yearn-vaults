@@ -301,16 +301,13 @@ def test_user_withdraw(chain, gov, token, vault, strategy, rando):
     vault.setPerformanceFee(0, {"from": gov})
     vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
 
-    vault.setLockedProfitDegradation(
-        1e18, {"from": gov}
-    )  # Set profit degradation to 1 sec.
     deposit = vault.totalAssets()
     pricePerShareBefore = vault.pricePerShare()
     token.transfer(strategy, vault.totalAssets(), {"from": gov})  # seed some profit
     vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
     strategy.harvest({"from": gov})
 
-    chain.sleep(1)
+    chain.sleep(vault.previousHarvestTimeDelta())
     chain.mine(1)  # cant withdraw on same block
 
     assert vault.pricePerShare() == pricePerShareBefore * 2  # profit
@@ -330,8 +327,9 @@ def test_profit_degradation(chain, gov, token, vault, strategy, rando):
 
     deposit = vault.totalAssets()
     token.transfer(strategy, deposit, {"from": gov})  # seed some profit
-    chain.sleep(1)
     vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
+    # sets previousHarvestTimeDelta big enough to not influence calcs
+    chain.sleep(1_000)
     strategy.harvest({"from": gov})
 
     vault.withdraw({"from": gov})
@@ -362,17 +360,15 @@ def test_withdraw_partial_delegate_assets(chain, gov, token, vault, strategy, ra
     vault.setPerformanceFee(0, {"from": gov})
     vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
 
-    vault.setLockedProfitDegradation(
-        1e18, {"from": gov}
-    )  # Set profit degradation to 1 sec.
     deposit = vault.totalAssets()
     pricePerShareBefore = vault.pricePerShare()
     token.transfer(strategy, vault.totalAssets(), {"from": gov})  # seed some profit
-    chain.sleep(1)
+    # sets previousHarvestTimeDelta big enough to not influence calcs
+    chain.sleep(1000)
     vault.setStrategyEnforceChangeLimit(strategy, False, {"from": gov})
     strategy.harvest({"from": gov})
 
-    chain.sleep(1)
+    chain.sleep(vault.previousHarvestTimeDelta())
     chain.mine(1)  # cant withdraw on same block
 
     assert vault.pricePerShare() == pricePerShareBefore * 2  # profit
@@ -403,11 +399,13 @@ def test_token_amount_does_not_change_on_deposit_withdrawal(
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
     vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
-    vault.setLockedProfitDegradation(1e10, {"from": gov})
+
+    # sets previousHarvestTimeDelta big enough to not influence calcs
+    chain.sleep(1000)
     # test is only valid if some profit are locked.
     strategy.harvest()
     token.transfer(strategy, 100, {"from": gov})
-    chain.sleep(1)
+    chain.sleep(vault.previousHarvestTimeDelta())
     strategy.harvest()
     assert vault.lockedProfit() == 100
 
@@ -436,7 +434,9 @@ def test_withdraw_not_enough_funds_with_gains(
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
     vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
-
+    
+    # sets previousHarvestTimeDelta big enough to not influence calcs
+    chain.sleep(1000)
     strategy.harvest()
 
     balance = token.balanceOf(strategy)
