@@ -1767,22 +1767,32 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
 
     # Update reporting time
     self.strategies[msg.sender].lastReport = block.timestamp
-    currentTimeDelta: uint256 = block.timestamp - self.lastReport
 
     # maintains longer (fairer) harvest periods on close timed harvests
     # NOTE: correctly adjust time delta to avoid reducing locked-until time
+    #       all following examples have previousHarvestTimeDelta = 10 set at h2 and used on h3
     #       if new time delta reduces previous locked-until, keep locked-until and adjust remaining time
-    #       h1 = t0, h2 = t10 and h3 = t13, previousHarvestTimeDelta = 7 , locked until t20
-    #       h1 = t0, h2 = t10 and h3 = t14, previousHarvestTimeDelta = 6 , locked until t20
+    #       h1 = t0, h2 = t10 and h3 = t13 =>
+    #           currentTimeDelta = 3, (new)previousHarvestTimeDelta = 7 (10-3), locked until t20
+    #       h1 = t0, h2 = t10 and h3 = t14 =>
+    #           currentTimeDelta = 4, (new)previousHarvestTimeDelta = 6 (10-4), locked until t20
     #       on 2nd example: h2 is getting carried into h3 (minus time delta 4) since it was previously trying to reach t20.
     #       so it continues to spread the lock up to that point, and thus avoids reducing the previous distribution time.
     #
-    #       if locked-until is unchanged, to avoid extra storage read and subtraction cost
-    #       h1 = t0, h2 = t10 and h3 = t15, previousHarvestTimeDelta = 5, locked until t20
+    #       if locked-until is unchanged, to avoid extra storage read and subtraction cost [behaves as examples below]
+    #       h1 = t0, h2 = t10 and h3 = t15 =>
+    #           currentTimeDelta = 5, (new)previousHarvestTimeDelta = 5 locked until t20
     #
     #       if next total time delta is higher than previous period remaining, locked-until will increase
-    #       h1 = t0, h2 = t10 and h3 = t16, previousHarvestTimeDelta = 6, locked until t22
-    #       h1 = t0, h2 = t10 and h3 = t17, previousHarvestTimeDelta = 7, locked until t24
+    #       h1 = t0, h2 = t10 and h3 = t16 =>
+    #           currentTimeDelta = 6, (new)previousHarvestTimeDelta = 6 locked until t22
+    #       h1 = t0, h2 = t10 and h3 = t17 =>
+    #           currentTimeDelta = 7, (new)previousHarvestTimeDelta = 7 locked until t24
+    #       
+    #       currentTimeDelta is the time delta between now and lastReport.
+    #       previousHarvestTimeDelta is the time delta between lastReport and the previous lastReport
+    #       previousHarvestTimeDelta is assigned the higher value between currentTimeDelta and (previousHarvestTimeDelta - currentTimeDelta)
+    currentTimeDelta: uint256 = block.timestamp - self.lastReport
     if self.previousHarvestTimeDelta > currentTimeDelta * 2:
         self.previousHarvestTimeDelta = self.previousHarvestTimeDelta - currentTimeDelta
     else:
