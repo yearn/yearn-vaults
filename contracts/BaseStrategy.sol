@@ -514,7 +514,7 @@ abstract contract BaseStrategy {
      *  It is up to governance to use this function to correctly order this
      *  Strategy relative to its peers in the withdrawal queue to minimize
      *  losses for the Vault based on sudden withdrawals. This value should be
-     *  higher than the total debt of the Strategy and higher than its expected
+     *  higher than the total debt of the Strategy and lower than its expected
      *  value to be "safe".
      * @return The estimated total assets in this Strategy.
      */
