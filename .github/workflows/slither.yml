@@ -21,7 +21,7 @@ jobs:
           check-latest: true
 
       - name: Install Hardhat
-        id: compile:contracts
+        id: compile-contracts
         run: |
           npm ci
           npx hardhat compile
@@ -36,7 +36,7 @@ jobs:
         run: |
           mkdir -p .github/slither-output
       - name: Run analysis
-        id: slither:analysis
+        id: slither-analysis
         shell: bash
         run: |
           slither . --json-types compilations,console,detectors,printers,list-detectors,list-printers --exclude-dependencies --compile-force-framework hardhat >>.github/slither-output/slither_report.txt 2>&1 || true
@@ -48,7 +48,7 @@ jobs:
           name: slither-report
           path: .github/slither-output/slither_report.txt
       - name: Check status
-        id: coverage:status 
+        id: coverage-status 
         shell: bash
         run: |
           FALSE_POSITIVE_WARNINGS=7
