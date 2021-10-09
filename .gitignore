@@ -5,4 +5,12 @@ build/
 reports/
 node_modules/
 .test_durations
-yarn-error.log 
+*.log 
+cache/
+artifacts/
+dist/
+typechain/
+coverage/
+.cache/
+*.tar.gz
+*.zip

@@ -1,6 +1,12 @@
 {
-    "extends": "solhint:default",
-    "rules": {
-        "max-line-length": ["error", 145]
-    }
+  "extends": [
+    "solhint:default",
+    "prettier"
+  ],
+  "rules": {
+    "max-line-length": [
+      "error",
+      145
+    ]
+  }
 }

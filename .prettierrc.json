@@ -1,23 +1,23 @@
 {
-    "tabWidth": 4,
-    "printWidth": 88,
-    "overrides": [
-        {
-            "files": "*.sol",
-            "options": {
-                "printWidth": 145,
-                "tabWidth": 4,
-                "useTabs": false,
-                "singleQuote": false,
-                "bracketSpacing": false,
-                "explicitTypes": "always"
-            }
-        },
-        {
-            "files": "*.md",
-            "options": {
-                "tabWidth": 2
-            }
-        }
-    ]
+  "tabWidth": 4,
+  "printWidth": 88,
+  "overrides": [
+    {
+      "files": "*.sol",
+      "options": {
+        "printWidth": 145,
+        "tabWidth": 4,
+        "useTabs": false,
+        "singleQuote": false,
+        "bracketSpacing": false,
+        "explicitTypes": "always"
+      }
+    },
+    {
+      "files": "*.md",
+      "options": {
+        "tabWidth": 2
+      }
+    }
+  ]
 }

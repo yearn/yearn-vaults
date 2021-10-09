@@ -40,7 +40,7 @@ abstract contract BaseRouter {
 
     // ERC20 Unlimited Approvals (short-circuits VaultAPI.transferFrom)
     uint256 constant UNLIMITED_APPROVAL = type(uint256).max;
-    // Sentinal values used to save gas on deposit/withdraw/migrate
+    // Sentinel values used to save gas on deposit/withdraw/migrate
     // NOTE: DEPOSIT_EVERYTHING == WITHDRAW_EVERYTHING == MIGRATE_EVERYTHING
     uint256 constant DEPOSIT_EVERYTHING = type(uint256).max;
     uint256 constant WITHDRAW_EVERYTHING = type(uint256).max;
@@ -66,7 +66,7 @@ abstract contract BaseRouter {
 
     /**
      * @notice
-     *  Used to get the most revent vault for the token using the registry.
+     *  Used to get the most recent vault for the token using the registry.
      * @return An instance of a VaultAPI
      */
     function bestVault(address token) public view virtual returns (VaultAPI) {
@@ -75,7 +75,7 @@ abstract contract BaseRouter {
 
     /**
      * @notice
-     *  Used to get all vaults from the registery for the token
+     *  Used to get all vaults from the registry for the token
      * @return An array containing instances of VaultAPI
      */
     function allVaults(address token) public view virtual returns (VaultAPI[] memory) {
@@ -111,10 +111,10 @@ abstract contract BaseRouter {
 
     /**
      * @notice
-     *  Used to get the balance of an account accross all the vaults for a token.
+     *  Used to get the balance of an account across all the vaults for a token.
      *  @dev will be used to get the router balance using totalVaultBalance(address(this)).
      *  @param account The address of the account.
-     *  @return balance of token for the account accross all the vaults.
+     *  @return balance of token for the account across all the vaults.
      */
     function totalVaultBalance(address token, address account) public view returns (uint256 balance) {
         VaultAPI[] memory vaults = allVaults(token);
@@ -221,10 +221,7 @@ abstract contract BaseRouter {
 
                 if (amount != WITHDRAW_EVERYTHING) {
                     // Compute amount to withdraw fully to satisfy the request
-                    uint256 estimatedShares = amount
-                    .sub(withdrawn) // NOTE: Changes every iteration
-                    .mul(10**uint256(vaults[id].decimals()))
-                    .div(vaults[id].pricePerShare()); // NOTE: Every Vault is different
+                    uint256 estimatedShares = amount.sub(withdrawn).mul(10**uint256(vaults[id].decimals())).div(vaults[id].pricePerShare()); // NOTE: Changes every iteration // NOTE: Every Vault is different
 
                     // Limit amount to withdraw to the maximum made available to this contract
                     // NOTE: Avoid corner case where `estimatedShares` isn't precise enough
