@@ -285,6 +285,10 @@ abstract contract BaseStrategy {
         require(msg.sender == governance());
     }
 
+    function _onlyRewarder() internal {
+        require(msg.sender == governance() || msg.sender == strategist);
+    }
+
     function _onlyKeepers() internal {
         require(
             msg.sender == keeper ||
@@ -378,7 +382,7 @@ abstract contract BaseStrategy {
      * @param _rewards The address to use for pulling rewards.
      */
     function setRewards(address _rewards) external {
-        _onlyStrategist();
+        _onlyRewarder();
         address oldRewards = rewards;
         rewards = _rewards;
         StrategyLib.internalSetRewards(oldRewards, _rewards, address(vault));
