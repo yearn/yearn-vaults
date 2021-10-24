@@ -17,6 +17,9 @@ from vyper.ast.folding import BUILTIN_CONSTANTS
 from vyper.ast.pre_parser import pre_parse
 from vyper.old_codegen.expr import ENVIRONMENT_VARIABLES
 
+# Below is orginal author
+# This code forked by @0xBeeDao (DevBruce)
+# for Yearn, because linting is important.
 __author__ = 'Mike Shultz'
 __email__ = 'mike@mikeshultz.com'
 __version__ = '0.1.10'
@@ -101,7 +104,6 @@ def main(argv=None):
     :param list argv:
         The arguments to be passed to the application for parsing.
     """
-    print('done')
     patch_processor(FileProcessor)
     app = application.Application()
     patch_app_option_manager(app)

@@ -6,3 +6,6 @@ reports/
 node_modules/
 .test_durations
 yarn-error.log 
+flake8.log
+*egg-info/
+dist/*egg
