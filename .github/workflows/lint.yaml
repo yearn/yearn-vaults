@@ -47,6 +47,15 @@ jobs:
       - name: run linter check on *.sol file
         run: yarn hint
   
+      - name: setup Vyper linter
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - run: python scripts/flake8-vyper-2/setup.py install
+
+      - name: run Vyper linter on Contracts
+        run: python scripts/flake8-vyper-2/flake8_vyper.py --filename='*vy' --tee
+
     commits:
       runs-on: ubuntu-latest
 
