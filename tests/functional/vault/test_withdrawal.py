@@ -390,18 +390,14 @@ def test_locked_profit_over_big_period(
     vault.deposit(deposit, {"from": gov})
 
     pricePerShareBefore = vault.pricePerShare()
-    print(f"pricePerShareBefore = {pricePerShareBefore}")
 
     timeElapsedPercentage = 10
     # wait some time. there should be some profit now, but lockedUntil should not change
     sleepFor = vault.previousHarvestTimeDelta() * timeElapsedPercentage // 100
-    print(f"vault.previousHarvestTimeDelta() = {vault.previousHarvestTimeDelta()}")
-    print(f"sleepFor = {sleepFor}")
 
     chain.sleep(sleepFor + 1)
     chain.mine(1)
 
-    print(f"vault.pricePerShare() = {vault.pricePerShare()}")
 
     assert lockedUntil == vault.lastReport() + vault.previousHarvestTimeDelta()
     assert (
