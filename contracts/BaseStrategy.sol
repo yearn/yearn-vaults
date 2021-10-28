@@ -764,7 +764,7 @@ abstract contract BaseStrategy {
      * @param _amountNeeded How much `want` to withdraw.
      * @return _loss Any realized losses
      */
-    function withdraw(uint256 _amountNeeded) external returns (uint256 _loss) {
+    function withdraw(uint256 _amountNeeded) external returns (uint256 _loss, uint256 _withdrawn) {
         require(msg.sender == address(vault), "!vault");
         // Liquidate as much as possible to `want`, up to `_amountNeeded`
         uint256 amountFreed;
