@@ -336,7 +336,7 @@ def test_locked_profit(chain, gov, token, vault, strategy, common_health_check):
 
     deposit = vault.totalAssets()
     token.transfer(strategy, deposit, {"from": gov})  # seed some profit
-    chain.sleep(10_000) # sets previousHarvestTimeDelta >= 10_000
+    chain.sleep(10_000)  # sets previousHarvestTimeDelta >= 10_000
     common_health_check.setDisabledCheck(strategy, True, {"from": gov})
     strategy.harvest({"from": gov})
 
@@ -363,7 +363,9 @@ def test_locked_profit(chain, gov, token, vault, strategy, common_health_check):
     assert vault.pricePerShare() >= pricePerShareBefore * 2 * 0.99
 
 
-def test_locked_profit_over_big_period(chain, gov, token, vault, strategy, common_health_check):
+def test_locked_profit_over_big_period(
+    chain, gov, token, vault, strategy, common_health_check
+):
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
     vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
@@ -402,8 +404,14 @@ def test_locked_profit_over_big_period(chain, gov, token, vault, strategy, commo
     print(f"vault.pricePerShare() = {vault.pricePerShare()}")
 
     assert lockedUntil == vault.lastReport() + vault.previousHarvestTimeDelta()
-    assert vault.pricePerShare() >= pricePerShareBefore * (100+timeElapsedPercentage) / 100
-    assert vault.pricePerShare() <= pricePerShareBefore * (100+(timeElapsedPercentage*2)) / 100
+    assert (
+        vault.pricePerShare()
+        >= pricePerShareBefore * (100 + timeElapsedPercentage) / 100
+    )
+    assert (
+        vault.pricePerShare()
+        <= pricePerShareBefore * (100 + (timeElapsedPercentage * 2)) / 100
+    )
 
     strategy.harvest({"from": gov})
     assert vault.previousHarvestTimeDelta() <= cachedPreviousHarvestTimeDelta - sleepFor
@@ -413,6 +421,7 @@ def test_locked_profit_over_big_period(chain, gov, token, vault, strategy, commo
     chain.sleep(cachedPreviousHarvestTimeDelta)
     chain.mine(1)
     assert vault.pricePerShare() >= pricePerShareBefore * 2 * 0.99
+
 
 def test_withdraw_partial_delegate_assets(
     chain, gov, token, vault, strategy, common_health_check
