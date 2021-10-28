@@ -328,7 +328,7 @@ def test_user_withdraw(chain, gov, token, vault, strategy, common_health_check):
     assert token.balanceOf(vault) == 0  # everything is withdrawn
 
 
-def test_profit_degradation(chain, gov, token, vault, strategy, common_health_check):
+def test_locked_profit(chain, gov, token, vault, strategy, common_health_check):
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
     vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
@@ -336,7 +336,7 @@ def test_profit_degradation(chain, gov, token, vault, strategy, common_health_ch
 
     deposit = vault.totalAssets()
     token.transfer(strategy, deposit, {"from": gov})  # seed some profit
-    chain.sleep(100)
+    chain.sleep(10_000) # sets previousHarvestTimeDelta >= 10_000
     common_health_check.setDisabledCheck(strategy, True, {"from": gov})
     strategy.harvest({"from": gov})
 
@@ -345,22 +345,74 @@ def test_profit_degradation(chain, gov, token, vault, strategy, common_health_ch
     assert vault.totalSupply() == 0
     assert (
         token.balanceOf(vault) > 0
-    )  # all money withdrawn but some profit left locked for 6 hours
+    )  # all money withdrawn but some profit left locked for previousHarvestTimeDelta
 
     vault.deposit(deposit, {"from": gov})
 
     pricePerShareBefore = vault.pricePerShare()
 
-    chain.sleep(1_000)
+    # wait previousHarvestTimeDelta /2. there should be some profit now
+    chain.sleep(vault.previousHarvestTimeDelta() // 2)
     chain.mine(1)
 
     assert vault.pricePerShare() > pricePerShareBefore
 
-    # wait 6 hours. should be all profit now
-    chain.sleep(21600)
+    # wait previousHarvestTimeDelta / 2. should be all profit now
+    chain.sleep(vault.previousHarvestTimeDelta() // 2)
     chain.mine(1)
     assert vault.pricePerShare() >= pricePerShareBefore * 2 * 0.99
 
+
+def test_locked_profit_over_big_period(chain, gov, token, vault, strategy, common_health_check):
+    vault.setManagementFee(0, {"from": gov})
+    vault.setPerformanceFee(0, {"from": gov})
+    vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
+    token.approve(vault, 2 ** 256 - 1, {"from": gov})
+
+    deposit = vault.totalAssets()
+    token.transfer(strategy, deposit, {"from": gov})  # seed some profit
+    chain.sleep(10_000)  # sets previousHarvestTimeDelta >= 10_000
+    common_health_check.setDisabledCheck(strategy, True, {"from": gov})
+    strategy.harvest({"from": gov})
+    # calculates when profit gets fully unlocked
+    cachedPreviousHarvestTimeDelta = vault.previousHarvestTimeDelta()
+    lockedUntil = vault.lastReport() + vault.previousHarvestTimeDelta()
+
+    vault.withdraw({"from": gov})
+
+    assert vault.totalSupply() == 0
+    assert (
+        token.balanceOf(vault) > 0
+    )  # all money withdrawn but some profit left locked for previousHarvestTimeDelta
+
+    vault.deposit(deposit, {"from": gov})
+
+    pricePerShareBefore = vault.pricePerShare()
+    print(f"pricePerShareBefore = {pricePerShareBefore}")
+
+    timeElapsedPercentage = 10
+    # wait some time. there should be some profit now, but lockedUntil should not change
+    sleepFor = vault.previousHarvestTimeDelta() * timeElapsedPercentage // 100
+    print(f"vault.previousHarvestTimeDelta() = {vault.previousHarvestTimeDelta()}")
+    print(f"sleepFor = {sleepFor}")
+
+    chain.sleep(sleepFor + 1)
+    chain.mine(1)
+
+    print(f"vault.pricePerShare() = {vault.pricePerShare()}")
+
+    assert lockedUntil == vault.lastReport() + vault.previousHarvestTimeDelta()
+    assert vault.pricePerShare() >= pricePerShareBefore * (100+timeElapsedPercentage) / 100
+    assert vault.pricePerShare() <= pricePerShareBefore * (100+(timeElapsedPercentage*2)) / 100
+
+    strategy.harvest({"from": gov})
+    assert vault.previousHarvestTimeDelta() <= cachedPreviousHarvestTimeDelta - sleepFor
+    assert lockedUntil == vault.lastReport() + vault.previousHarvestTimeDelta()
+
+    # wait cachedPreviousHarvestTimeDelta. should be all profit now
+    chain.sleep(cachedPreviousHarvestTimeDelta)
+    chain.mine(1)
+    assert vault.pricePerShare() >= pricePerShareBefore * 2 * 0.99
 
 def test_withdraw_partial_delegate_assets(
     chain, gov, token, vault, strategy, common_health_check
@@ -373,7 +425,7 @@ def test_withdraw_partial_delegate_assets(
     deposit = vault.totalAssets()
     pricePerShareBefore = vault.pricePerShare()
     token.transfer(strategy, vault.totalAssets(), {"from": gov})  # seed some profit
-    chain.sleep(1000)
+    chain.sleep(10_000)
     common_health_check.setDisabledCheck(strategy, True, {"from": gov})
     strategy.harvest({"from": gov})
 
@@ -410,7 +462,7 @@ def test_token_amount_does_not_change_on_deposit_withdrawal(
     vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
 
     # sets previousHarvestTimeDelta big enough to not influence calcs
-    chain.sleep(1000)
+    chain.sleep(10_000)
     # test is only valid if some profit are locked.
     strategy.harvest()
     token.transfer(strategy, 100, {"from": gov})
@@ -445,7 +497,7 @@ def test_withdraw_not_enough_funds_with_gains(
     vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
 
     # sets previousHarvestTimeDelta big enough to not influence calcs
-    chain.sleep(1000)
+    chain.sleep(10_000)
     strategy.harvest()
 
     balance = token.balanceOf(strategy)

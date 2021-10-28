@@ -106,7 +106,7 @@ def test_loss_should_be_removed_from_locked_profit(
     assert token.balanceOf(strategy) == 500
     token.transfer(strategy, 100, {"from": gov})
     # sets previousHarvestTimeDelta big enough to not influence calcs
-    chain.sleep(1000)
+    chain.sleep(10_000)
     common_health_check.setDisabledCheck(strategy, True, {"from": gov})
     strategy.harvest({"from": gov})
 
