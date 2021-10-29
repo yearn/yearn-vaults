@@ -910,7 +910,7 @@ def deposit(_amount: uint256 = MAX_UINT256, recipient: address = msg.sender) -> 
 
     # Tokens are transferred from msg.sender (may be different from _recipient)
     self.erc20_safe_transferFrom(self.token.address, msg.sender, self, amount)
-    totalIdle += amount
+    self.totalIdle += amount
 
     return shares  # Just in case someone wants them
 
@@ -1100,8 +1100,9 @@ def withdraw(
                 continue  # Nothing to withdraw from this Strategy, try the next one
 
             # Force withdraw amount from each Strategy in the order set by governance
-            # can use preBalance: uint256 = token.balanceOf(self) => ... vault_balance += token.balanceOf(self) - preBalance
-            (loss: uint256, withdrawn: uint256) = Strategy(strategy).withdraw(amountNeeded)
+            preBalance: uint256 = self.token.balanceOf(self)
+            loss: uint256 = Strategy(strategy).withdraw(amountNeeded)
+            withdrawn: uint256 = self.token.balanceOf(self) - preBalance
             vault_balance += withdrawn
 
             # NOTE: Withdrawer incurs any losses from liquidation
@@ -1767,8 +1768,10 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     #       the Vault based on the Strategy's debt limit (as well as the Vault's).
     totalAvail: uint256 = gain + debtPayment
     if totalAvail < credit:  # credit surplus, give to Strategy
+        self.totalIdle -= credit - totalAvail
         self.erc20_safe_transfer(self.token.address, msg.sender, credit - totalAvail)
     elif totalAvail > credit:  # credit deficit, take from Strategy
+        self.totalIdle += totalAvail - credit
         self.erc20_safe_transferFrom(self.token.address, msg.sender, self, totalAvail - credit)
     # else, don't do anything because it is balanced
 
@@ -1822,9 +1825,17 @@ def sweep(token: address, amount: uint256 = MAX_UINT256):
     @param amount The quantity or tokenId to transfer out.
     """
     assert msg.sender == self.governance
-    # Can't be used to steal what this Vault is protecting
-    assert token != self.token.address
     value: uint256 = amount
+
+    if token == self.token.address:
+        if amount == MAX_UINT256:
+            value = ERC20(token).balanceOf(self) - self.totalIdle
+            assert value > 0
+        else:
+            assert value <= ERC20(token).balanceOf(self) - self.totalIdle
+        self.erc20_safe_transfer(token, self.governance, value)
+        return
+
     if value == MAX_UINT256:
         value = ERC20(token).balanceOf(self)
     self.erc20_safe_transfer(token, self.governance, value)
