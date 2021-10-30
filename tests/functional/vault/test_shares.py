@@ -268,7 +268,6 @@ def test_transferFrom(accounts, token, vault):
     assert vault.balanceOf(a) == 0
     assert vault.balanceOf(b) == token.balanceOf(vault)
 
-
 def test_do_not_issue_zero_shares(gov, token, vault, increase_pps):
     token.approve(vault, 500, {"from": gov})
     vault.deposit(500, {"from": gov})

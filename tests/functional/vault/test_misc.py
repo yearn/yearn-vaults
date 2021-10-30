@@ -131,14 +131,38 @@ def test_negative_available_deposit_limit(Vault, token, gov):
 
 
 def test_sweep(gov, vault, rando, token, other_token):
-    token.transfer(vault, token.balanceOf(gov), {"from": gov})
-    other_token.transfer(vault, other_token.balanceOf(gov), {"from": gov})
-
-    # Vault wrapped token doesn't work
-    assert token.address == vault.token()
-    assert token.balanceOf(vault) > 0
+    # Vault wrapped token reverts on 0 sweep
     with brownie.reverts():
         vault.sweep(token, {"from": gov})
+
+    # Airdrop want token
+    airdropAmount = token.balanceOf(gov) // 2
+    token.transfer(vault, airdropAmount, {"from": gov})
+    
+    # Token and vault balance are correct
+    assert token.address == vault.token()
+    assert token.balanceOf(vault) > 0
+
+    # Vault wrapped token work for airdrops
+    vault.sweep(token, {"from": gov})
+    assert token.balanceOf(vault) == 0
+
+    # Vault wrapped token doesn't work for idle funds
+    depositAmount = token.balanceOf(gov) - airdropAmount
+    token.approve(vault, depositAmount, {"from": gov})
+    vault.deposit(depositAmount, {"from": gov})
+    assert token.balanceOf(vault) == depositAmount
+    with brownie.reverts():
+        vault.sweep(token, depositAmount, {"from": gov})
+
+    # Vault wrapped token works for specific exceeding idle balance
+    token.transfer(vault, airdropAmount, {"from": gov})
+    assert token.balanceOf(vault) == depositAmount + airdropAmount
+    vault.sweep(token, token.balanceOf(vault) - depositAmount, {"from": gov})
+    assert token.balanceOf(vault) == depositAmount
+
+    # Airdrop random token 
+    other_token.transfer(vault, other_token.balanceOf(gov), {"from": gov})
 
     # But any other random token works
     assert other_token.address != vault.token()
