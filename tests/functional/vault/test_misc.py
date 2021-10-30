@@ -138,7 +138,7 @@ def test_sweep(gov, vault, rando, token, other_token):
     # Airdrop want token
     airdropAmount = token.balanceOf(gov) // 2
     token.transfer(vault, airdropAmount, {"from": gov})
-    
+
     # Token and vault balance are correct
     assert token.address == vault.token()
     assert token.balanceOf(vault) > 0
@@ -161,7 +161,7 @@ def test_sweep(gov, vault, rando, token, other_token):
     vault.sweep(token, token.balanceOf(vault) - depositAmount, {"from": gov})
     assert token.balanceOf(vault) == depositAmount
 
-    # Airdrop random token 
+    # Airdrop random token
     other_token.transfer(vault, other_token.balanceOf(gov), {"from": gov})
 
     # But any other random token works
