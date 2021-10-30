@@ -66,6 +66,7 @@ class Migration:
             vault = vaults_in_use[index % len(vaults_in_use)]
             amount = int(1e17)
             print(f"  {vault}.harvest({amount})")
+            # TODO: fix with AirdropStrategy
             self.token.transfer(vault, amount, {"from": self.user})
             # NOTE: Wait enough time where "profit locking" isn't a problem (about a day)
             self.chain.mine(timedelta=24 * 60 * 60)
