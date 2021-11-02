@@ -317,6 +317,36 @@ def test_revokeStrategy(chain, gov, vault, strategy, rando):
     with brownie.reverts():
         vault.removeStrategyFromQueue(strategy, {"from": gov})
 
+def test_revokeStrategyByManagement(chain, gov, management, vault, strategy, rando):
+    vault.addStrategy(strategy, 100, 10, 20, 1000, {"from": gov})
+    activation_timestamp = chain[-1]["timestamp"]
+
+    # Not just anyone can revoke a strategy
+    with brownie.reverts():
+        vault.revokeStrategy(strategy, {"from": rando})
+
+    vault.revokeStrategy(strategy, {"from": management})
+
+    assert vault.strategies(strategy).dict() == {
+        "performanceFee": 1000,
+        "activation": activation_timestamp,
+        "debtRatio": 0,  # This changed
+        "minDebtPerHarvest": 10,
+        "maxDebtPerHarvest": 20,
+        "lastReport": activation_timestamp,
+        "totalGain": 0,
+        "totalLoss": 0,
+        "totalDebt": 0,
+    }
+
+    assert vault.withdrawalQueue(0) == strategy 
+    # can be done by management
+    vault.removeStrategyFromQueue(strategy, {"from": management})
+    assert vault.withdrawalQueue(0) == ZERO_ADDRESS
+    # Can only do it once
+    with brownie.reverts():
+        vault.removeStrategyFromQueue(strategy, {"from": management})   
+
 
 def test_ordering(gov, vault, TestStrategy, rando):
     # Show that a lot of strategies get properly ordered
