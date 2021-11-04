@@ -75,7 +75,7 @@ def test_strategy_harvest_permission(
 @pytest.mark.parametrize(
     "getter,setter,val,gov_allowed,strategist_allowed",
     [
-        ("rewards", "setRewards", None, False, True),
+        ("rewards", "setRewards", None, True, True),
         ("keeper", "setKeeper", None, True, True),
         ("minReportDelay", "setMinReportDelay", 1000, True, True),
         ("maxReportDelay", "setMaxReportDelay", 2000, True, True),
@@ -133,6 +133,12 @@ def test_set_strategist_authority(strategy, strategist, rando):
     # Now the original strategist shouldn't be able to set strategist again
     with brownie.reverts():
         strategy.setStrategist(rando, {"from": strategist})
+
+
+def test_set_rewards(strategy, rando):
+    # Only gov or strategist can setRewards
+    with brownie.reverts():
+        strategy.setRewards(rando, {"from": rando})
 
 
 def test_strategy_setParams_bad_vals(gov, strategist, strategy):
