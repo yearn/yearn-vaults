@@ -88,6 +88,9 @@ def strategist(accounts):
 def keeper(accounts):
     yield accounts[5]
 
+@pytest.fixture(autouse=True)
+def StrategyLib(strategist, StrategyLib):
+    yield strategist.deploy(StrategyLib)
 
 @pytest.fixture(params=["RegularStrategy", "ClonedStrategy"])
 def strategy(gov, strategist, keeper, rewards, vault, TestStrategy, request):

@@ -674,15 +674,16 @@ abstract contract BaseStrategy {
      * @return `true` if `harvest()` should be called, `false` otherwise.
      */
     function harvestTrigger(uint256 callCostInWei) public view virtual returns (bool) {
-        return StrategyLib.internalHarvestTrigger(
-            address(vault),
-            address(this),
-            ethToWant(callCostInWei),
-            minReportDelay,
-            maxReportDelay,
-            debtThreshold,
-            profitFactor
-        );
+        return
+            StrategyLib.internalHarvestTrigger(
+                address(vault),
+                address(this),
+                ethToWant(callCostInWei),
+                minReportDelay,
+                maxReportDelay,
+                debtThreshold,
+                profitFactor
+            );
     }
 
     /**
