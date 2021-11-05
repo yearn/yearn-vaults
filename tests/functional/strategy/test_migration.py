@@ -39,13 +39,30 @@ def test_good_migration(
 
 
 def test_bad_migration(
-    token, vault, strategy, gov, strategist, TestStrategy, Vault, rando
+    token,
+    vault,
+    strategy,
+    gov,
+    strategist,
+    TestStrategy,
+    Vault,
+    rando,
+    create_vault_token,
 ):
     different_vault = gov.deploy(Vault)
+    different_vault_token = create_vault_token(token.decimals())
     different_vault.initialize(
-        token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
+        token,
+        gov,
+        gov,
+        token.symbol() + " yVault",
+        "yv" + token.symbol(),
+        different_vault_token,
+        gov,
     )
     different_vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    different_vault_token.setVault(different_vault, {"from": gov})
+
     new_strategy = strategist.deploy(TestStrategy, different_vault)
 
     # Can't migrate to a strategy with a different vault

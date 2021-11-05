@@ -7,7 +7,7 @@ import yaml
 from eth_account import Account
 from eth_account.messages import encode_structured_data
 
-from brownie import compile_source, Token, Vault, web3, chain
+from brownie import compile_source, Token, Vault, VaultToken, web3, chain
 
 PACKAGE_VERSION = yaml.safe_load(
     (Path(__file__).parents[1] / "ethpm-config.yaml").read_text()
@@ -142,7 +142,7 @@ def sign_token_permit():
 @pytest.fixture
 def sign_vault_permit():
     def sign_vault_permit(
-        vault: Vault,
+        vault_token: VaultToken,
         owner: Account,  # NOTE: Must be a eth_key account, not Brownie
         spender: str,
         allowance: int = 2 ** 256 - 1,  # Allowance to set with `permit`
@@ -150,11 +150,11 @@ def sign_vault_permit():
         override_nonce: int = None,
     ):
         name = "Yearn Vault"
-        version = vault.apiVersion()
+        version = vault_token.apiVersion()
         if override_nonce:
             nonce = override_nonce
         else:
-            nonce = vault.nonces(owner.address)
+            nonce = vault_token.nonces(owner.address)
         data = {
             "types": {
                 "EIP712Domain": [
@@ -175,7 +175,7 @@ def sign_vault_permit():
                 "name": name,
                 "version": version,
                 "chainId": chain_id(),
-                "verifyingContract": str(vault),
+                "verifyingContract": str(vault_token),
             },
             "primaryType": "Permit",
             "message": {

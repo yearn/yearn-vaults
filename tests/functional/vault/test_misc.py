@@ -17,7 +17,12 @@ def token_false_return(gov, TokenFalseReturn):
 
 
 @pytest.fixture
-def vault(gov, management, token, Vault, common_health_check):
+def vault_token(token, create_vault_token):
+    yield create_vault_token(token.decimals())
+
+
+@pytest.fixture
+def vault(gov, management, token, Vault, common_health_check, vault_token):
     # NOTE: Because the fixture has tokens in it already
     vault = gov.deploy(Vault)
     vault.initialize(
@@ -26,37 +31,54 @@ def vault(gov, management, token, Vault, common_health_check):
         gov,
         token.symbol() + " yVault",
         "yv" + token.symbol(),
+        vault_token,
         gov,
         gov,
         common_health_check,
     )
+    vault_token.setVault(vault)
+
     vault.setDepositLimit(MAX_UINT256, {"from": gov})
     vault.setManagement(management, {"from": gov})
     yield vault
 
 
 @pytest.fixture
-def other_vault(gov, Vault, other_token):
+def other_vault(gov, Vault, other_token, create_vault_token):
     vault = gov.deploy(Vault)
-    vault.initialize(other_token, gov, gov, "", "", gov, gov)
+    vault_token = create_vault_token(other_token.decimals())
+    vault.initialize(other_token, gov, gov, "", "", vault_token, gov, gov)
     yield vault
 
 
 @pytest.fixture
-def vault_with_false_returning_token(gov, Vault, token_false_return):
+def vault_with_false_returning_token(
+    gov, Vault, token_false_return, create_vault_token
+):
     vault = gov.deploy(Vault)
-    vault.initialize(token_false_return, gov, gov, "", "", gov)
+    vault_token = create_vault_token(token_false_return.decimals())
+    vault.initialize(token_false_return, gov, gov, "", "", vault_token, gov)
     vault.setDepositLimit(MAX_UINT256, {"from": gov})
     yield vault
 
 
 def test_credit_available_minDebtPerHarvest_larger_than_available(
-    Vault, TestStrategy, token, gov
+    Vault, TestStrategy, token, gov, create_vault_token
 ):
     vault = gov.deploy(Vault)
+    vault_token = create_vault_token(token.decimals())
     vault.initialize(
-        token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov, gov
+        token,
+        gov,
+        gov,
+        token.symbol() + " yVault",
+        "yv" + token.symbol(),
+        vault_token,
+        gov,
+        gov,
     )
+    vault_token.setVault(vault)
+
     vault.setDepositLimit(MAX_UINT256, {"from": gov})
     strategy = gov.deploy(TestStrategy, vault)
     vault.addStrategy(
@@ -100,11 +122,21 @@ def test_credit_available_minDebtPerHarvest_larger_than_available(
     assert creditAvalable == 0
 
 
-def test_regular_available_deposit_limit(Vault, token, gov):
+def test_regular_available_deposit_limit(Vault, token, gov, create_vault_token):
     vault = gov.deploy(Vault)
+    vault_token = create_vault_token(token.decimals())
+
     vault.initialize(
-        token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
+        token,
+        gov,
+        gov,
+        token.symbol() + " yVault",
+        "yv" + token.symbol(),
+        vault_token,
+        gov,
     )
+    vault_token.setVault(vault)
+
     token.approve(vault, 100, {"from": gov})
     vault.setDepositLimit(100)
 
@@ -115,11 +147,21 @@ def test_regular_available_deposit_limit(Vault, token, gov):
     assert vault.availableDepositLimit() == 0
 
 
-def test_negative_available_deposit_limit(Vault, token, gov):
+def test_negative_available_deposit_limit(Vault, token, gov, create_vault_token):
     vault = gov.deploy(Vault)
+    vault_token = create_vault_token(token.decimals())
+
     vault.initialize(
-        token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
+        token,
+        gov,
+        gov,
+        token.symbol() + " yVault",
+        "yv" + token.symbol(),
+        vault_token,
+        gov,
     )
+    vault_token.setVault(vault)
+
     token.approve(vault, 100, {"from": gov})
     vault.setDepositLimit(100)
 

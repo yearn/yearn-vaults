@@ -38,15 +38,27 @@
 API_VERSION: constant(String[28]) = "0.4.3"
 
 from vyper.interfaces import ERC20
-
 implements: ERC20
-
 
 interface DetailedERC20:
     def name() -> String[42]: view
     def symbol() -> String[20]: view
     def decimals() -> uint256: view
 
+interface IVaultToken:
+    def approve(owner: address, spender: address, amount: uint256) -> bool: nonpayable
+    def decimals() -> uint256: view
+    def totalSupply() -> uint256: view
+    def mint(shares: uint256, account: address) -> bool: nonpayable
+    def burn(shared: uint256, account: address) -> bool: nonpayable
+    def transfer(sender: address, receiver: address, amount: uint256)-> bool: nonpayable
+    def transferFrom(owner: address, operator: address, receiver: address, amount: uint256)-> bool: nonpayable
+    def balanceOf(account: address) -> uint256: view
+    def setVault(vault: address): nonpayable
+    def allowance(owner: address, spender: address) -> uint256: view
+    def increaseAllowance(owner: address, spender: address, amount: uint256) -> bool: nonpayable
+    def decreaseAllowance(owner: address, spender: address, amount: uint256) -> bool: nonpayable
+    def permit(owner: address, spender: address, amount: uint256, expiry: uint256, signature: Bytes[65]) -> bool: nonpayable
 
 interface Strategy:
     def want() -> address: view
@@ -57,17 +69,21 @@ interface Strategy:
     def withdraw(_amount: uint256) -> uint256: nonpayable
     def migrate(_newStrategy: address): nonpayable
 
-
+interface VaultAPI:
+    def token() -> address: view
+    def vault_token() -> address: view
+    def decimals() -> uint256: view
+    
 interface HealthCheck:
     def check(strategy: address, profit: uint256, loss: uint256, debtPayment: uint256, debtOutstanding: uint256, totalDebt: uint256) -> bool: view
     def doHealthCheck(strategy: address) -> bool: view
     def enableCheck(strategy: address): nonpayable
 
+# Not used but required for ERC20 compliance
 event Transfer:
     sender: indexed(address)
     receiver: indexed(address)
     value: uint256
-
 
 event Approval:
     owner: indexed(address)
@@ -78,10 +94,6 @@ event Approval:
 name: public(String[64])
 symbol: public(String[32])
 decimals: public(uint256)
-
-balanceOf: public(HashMap[address, uint256])
-allowance: public(HashMap[address, HashMap[address, uint256]])
-totalSupply: public(uint256)
 
 token: public(ERC20)
 governance: public(address)
@@ -199,6 +211,9 @@ event StrategyAddedToQueue:
 event UpdateHealthCheck:
     healthCheck: indexed(address)
 
+# Token to track deposits to the vault
+vault_token: public(IVaultToken)
+
 # NOTE: Track the total for overhead targeting purposes
 strategies: public(HashMap[address, StrategyParams])
 MAXIMUM_STRATEGIES: constant(uint256) = 20
@@ -239,11 +254,6 @@ MAX_BPS: constant(uint256) = 10_000  # 100%, or 10k basis points
 #       A day = 24 * 60 * 60 sec = 86400 sec
 #       365.2425 * 86400 = 31556952.0
 SECS_PER_YEAR: constant(uint256) = 31_556_952  # 365.2425 days
-# `nonces` track `permit` approvals with signature.
-nonces: public(HashMap[address, uint256])
-DOMAIN_SEPARATOR: public(bytes32)
-DOMAIN_TYPE_HASH: constant(bytes32) = keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)')
-PERMIT_TYPE_HASH: constant(bytes32) = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
 
 
 @external
@@ -253,6 +263,7 @@ def initialize(
     rewards: address,
     nameOverride: String[64],
     symbolOverride: String[32],
+    vault_token: address,
     guardian: address = msg.sender,
     management: address =  msg.sender,
     healthCheck: address = ZERO_ADDRESS
@@ -310,21 +321,112 @@ def initialize(
     log UpdateManagementFee(convert(200, uint256))
     self.healthCheck = healthCheck
     log UpdateHealthCheck(healthCheck)
+    self.vault_token = IVaultToken(vault_token)
 
     self.lastReport = block.timestamp
     self.activation = block.timestamp
     self.lockedProfitDegradation = convert(DEGRADATION_COEFFICIENT * 46 / 10 ** 6 , uint256) # 6 hours in blocks
-    # EIP-712
-    self.DOMAIN_SEPARATOR = keccak256(
-        concat(
-            DOMAIN_TYPE_HASH,
-            keccak256(convert("Yearn Vault", Bytes[11])),
-            keccak256(convert(API_VERSION, Bytes[28])),
-            convert(chain.id, bytes32),
-            convert(self, bytes32)
-        )
-    )
 
+@view
+@external
+def allowance(owner: address, spender: address) -> uint256:
+    return self.vault_token.allowance(owner, spender)
+
+@external
+def increaseAllowance(spender: address, amount: uint256) -> bool:
+    """
+    @dev Increase the allowance of the passed address to spend the total amount of tokens
+         on behalf of msg.sender. This method mitigates the risk that someone may use both
+         the old and the new allowance by unfortunate transaction ordering.
+         See https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+    @param spender The address which will spend the funds.
+    @param amount The amount of tokens to increase the allowance by.
+    """
+    self.vault_token.increaseAllowance(msg.sender, spender, amount)
+    return True
+
+
+@external
+def decreaseAllowance(spender: address, amount: uint256) -> bool:
+    """
+    @dev Decrease the allowance of the passed address to spend the total amount of tokens
+         on behalf of msg.sender. This method mitigates the risk that someone may use both
+         the old and the new allowance by unfortunate transaction ordering.
+         See https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+    @param spender The address which will spend the funds.
+    @param amount The amount of tokens to decrease the allowance by.
+    """
+    self.vault_token.decreaseAllowance(msg.sender, spender, amount)
+    return True
+
+@external
+def approve(spender: address, amount: uint256) -> bool:
+    """
+    @dev Approve the passed address to spend the specified amount of tokens on behalf of
+         `msg.sender`. Beware that changing an allowance with this method brings the risk
+         that someone may use both the old and the new allowance by unfortunate transaction
+         ordering. See https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+    @param spender The address which will spend the funds.
+    @param amount The amount of tokens to be spent.
+    """
+    self.vault_token.approve(msg.sender, spender, amount)
+    return True
+
+@view
+@external
+def balanceOf(owner: address) -> uint256:
+    return self.vault_token.balanceOf(owner)
+
+@view
+@external
+def totalSupply() -> uint256:
+    return self.vault_token.totalSupply()
+
+@external
+def transfer(receiver: address, amount: uint256) -> bool:
+    """
+    @notice
+        Transfers shares from the caller's address to `receiver`. This function
+        will always return true, unless the user is attempting to transfer
+        shares to this contract's address, or to 0x0.
+    @param receiver
+        The address shares are being transferred to. Must not be this contract's
+        address, must not be 0x0.
+    @param amount The quantity of shares to transfer.
+    @return
+        True if transfer is sent to an address other than this contract's or
+        0x0, otherwise the transaction will fail.
+    """
+    self.vault_token.transfer(msg.sender, receiver, amount)
+    return True
+
+
+@external
+def transferFrom(sender: address, receiver: address, amount: uint256) -> bool:
+    """
+    @notice
+        Transfers `amount` shares from `sender` to `receiver`. This operation will
+        always return true, unless the user is attempting to transfer shares
+        to this contract's address, or to 0x0.
+
+        Unless the caller has given this contract unlimited approval,
+        transfering shares will decrement the caller's `allowance` by `amount`.
+    @param sender The address shares are being transferred from.
+    @param receiver
+        The address shares are being transferred to. Must not be this contract's
+        address, must not be 0x0.
+    @param amount The quantity of shares to transfer.
+    @return
+        True if transfer is sent to an address other than this contract's or
+        0x0, otherwise the transaction will fail.
+    """
+    self.vault_token.transferFrom(sender, msg.sender, receiver, amount)
+    return True
+
+@external
+def permit(owner: address, spender: address, amount: uint256, expiry: uint256, signature: Bytes[65]) -> bool:
+    self.vault_token.permit(owner, spender, amount, expiry, signature)
+    return True
 
 @pure
 @external
@@ -634,155 +736,6 @@ def erc20_safe_transferFrom(token: address, sender: address, receiver: address, 
     if len(response) > 0:
         assert convert(response, bool), "Transfer failed!"
 
-
-@internal
-def _transfer(sender: address, receiver: address, amount: uint256):
-    # See note on `transfer()`.
-
-    # Protect people from accidentally sending their shares to bad places
-    assert receiver not in [self, ZERO_ADDRESS]
-    self.balanceOf[sender] -= amount
-    self.balanceOf[receiver] += amount
-    log Transfer(sender, receiver, amount)
-
-
-@external
-def transfer(receiver: address, amount: uint256) -> bool:
-    """
-    @notice
-        Transfers shares from the caller's address to `receiver`. This function
-        will always return true, unless the user is attempting to transfer
-        shares to this contract's address, or to 0x0.
-    @param receiver
-        The address shares are being transferred to. Must not be this contract's
-        address, must not be 0x0.
-    @param amount The quantity of shares to transfer.
-    @return
-        True if transfer is sent to an address other than this contract's or
-        0x0, otherwise the transaction will fail.
-    """
-    self._transfer(msg.sender, receiver, amount)
-    return True
-
-
-@external
-def transferFrom(sender: address, receiver: address, amount: uint256) -> bool:
-    """
-    @notice
-        Transfers `amount` shares from `sender` to `receiver`. This operation will
-        always return true, unless the user is attempting to transfer shares
-        to this contract's address, or to 0x0.
-
-        Unless the caller has given this contract unlimited approval,
-        transfering shares will decrement the caller's `allowance` by `amount`.
-    @param sender The address shares are being transferred from.
-    @param receiver
-        The address shares are being transferred to. Must not be this contract's
-        address, must not be 0x0.
-    @param amount The quantity of shares to transfer.
-    @return
-        True if transfer is sent to an address other than this contract's or
-        0x0, otherwise the transaction will fail.
-    """
-    # Unlimited approval (saves an SSTORE)
-    if (self.allowance[sender][msg.sender] < MAX_UINT256):
-        allowance: uint256 = self.allowance[sender][msg.sender] - amount
-        self.allowance[sender][msg.sender] = allowance
-        # NOTE: Allows log filters to have a full accounting of allowance changes
-        log Approval(sender, msg.sender, allowance)
-    self._transfer(sender, receiver, amount)
-    return True
-
-
-@external
-def approve(spender: address, amount: uint256) -> bool:
-    """
-    @dev Approve the passed address to spend the specified amount of tokens on behalf of
-         `msg.sender`. Beware that changing an allowance with this method brings the risk
-         that someone may use both the old and the new allowance by unfortunate transaction
-         ordering. See https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
-    @param spender The address which will spend the funds.
-    @param amount The amount of tokens to be spent.
-    """
-    self.allowance[msg.sender][spender] = amount
-    log Approval(msg.sender, spender, amount)
-    return True
-
-
-@external
-def increaseAllowance(spender: address, amount: uint256) -> bool:
-    """
-    @dev Increase the allowance of the passed address to spend the total amount of tokens
-         on behalf of msg.sender. This method mitigates the risk that someone may use both
-         the old and the new allowance by unfortunate transaction ordering.
-         See https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
-    @param spender The address which will spend the funds.
-    @param amount The amount of tokens to increase the allowance by.
-    """
-    self.allowance[msg.sender][spender] += amount
-    log Approval(msg.sender, spender, self.allowance[msg.sender][spender])
-    return True
-
-
-@external
-def decreaseAllowance(spender: address, amount: uint256) -> bool:
-    """
-    @dev Decrease the allowance of the passed address to spend the total amount of tokens
-         on behalf of msg.sender. This method mitigates the risk that someone may use both
-         the old and the new allowance by unfortunate transaction ordering.
-         See https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
-    @param spender The address which will spend the funds.
-    @param amount The amount of tokens to decrease the allowance by.
-    """
-    self.allowance[msg.sender][spender] -= amount
-    log Approval(msg.sender, spender, self.allowance[msg.sender][spender])
-    return True
-
-
-@external
-def permit(owner: address, spender: address, amount: uint256, expiry: uint256, signature: Bytes[65]) -> bool:
-    """
-    @notice
-        Approves spender by owner's signature to expend owner's tokens.
-        See https://eips.ethereum.org/EIPS/eip-2612.
-
-    @param owner The address which is a source of funds and has signed the Permit.
-    @param spender The address which is allowed to spend the funds.
-    @param amount The amount of tokens to be spent.
-    @param expiry The timestamp after which the Permit is no longer valid.
-    @param signature A valid secp256k1 signature of Permit by owner encoded as r, s, v.
-    @return True, if transaction completes successfully
-    """
-    assert owner != ZERO_ADDRESS  # dev: invalid owner
-    assert expiry == 0 or expiry >= block.timestamp  # dev: permit expired
-    nonce: uint256 = self.nonces[owner]
-    digest: bytes32 = keccak256(
-        concat(
-            b'\x19\x01',
-            self.DOMAIN_SEPARATOR,
-            keccak256(
-                concat(
-                    PERMIT_TYPE_HASH,
-                    convert(owner, bytes32),
-                    convert(spender, bytes32),
-                    convert(amount, bytes32),
-                    convert(nonce, bytes32),
-                    convert(expiry, bytes32),
-                )
-            )
-        )
-    )
-    # NOTE: signature is packed as r, s, v
-    r: uint256 = convert(slice(signature, 0, 32), uint256)
-    s: uint256 = convert(slice(signature, 32, 32), uint256)
-    v: uint256 = convert(slice(signature, 64, 1), uint256)
-    assert ecrecover(digest, v, r, s) == owner  # dev: invalid signature
-    self.allowance[owner][spender] = amount
-    self.nonces[owner] = nonce + 1
-    log Approval(owner, spender, amount)
-    return True
-
-
 @view
 @internal
 def _totalAssets() -> uint256:
@@ -831,7 +784,7 @@ def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
     # (with no capability for exploitative behavior) can be used.
     shares: uint256 = 0
     # HACK: Saves 2 SLOADs (~200 gas, post-Berlin)
-    totalSupply: uint256 = self.totalSupply
+    totalSupply: uint256 = self.vault_token.totalSupply()
     if totalSupply > 0:
         # Mint amount of shares based on what the Vault is managing overall
         # NOTE: if sqrt(token.totalSupply()) > 1e39, this could potentially revert
@@ -842,9 +795,7 @@ def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
     assert shares != 0 # dev: division rounding resulted in zero
 
     # Mint new shares
-    self.totalSupply = totalSupply + shares
-    self.balanceOf[to] += shares
-    log Transfer(ZERO_ADDRESS, to, shares)
+    self.vault_token.mint(shares, to)
 
     return shares
 
@@ -917,7 +868,7 @@ def deposit(_amount: uint256 = MAX_UINT256, recipient: address = msg.sender) -> 
 @internal
 def _shareValue(shares: uint256) -> uint256:
     # Returns price = 1:1 if vault is empty
-    if self.totalSupply == 0:
+    if self.vault_token.totalSupply() == 0:
         return shares
 
     # Determines the current value of `shares`.
@@ -926,7 +877,7 @@ def _shareValue(shares: uint256) -> uint256:
     return (
         shares
         * self._freeFunds()
-        / self.totalSupply
+        / self.vault_token.totalSupply()
     )
 
 
@@ -940,7 +891,7 @@ def _sharesForAmount(amount: uint256) -> uint256:
         # NOTE: if sqrt(token.totalSupply()) > 1e37, this could potentially revert
         return  (
             amount
-            * self.totalSupply
+            * self.vault_token.totalSupply()
             / _freeFunds 
         )
     else:
@@ -1057,10 +1008,10 @@ def withdraw(
 
     # If _shares not specified, transfer full share balance
     if shares == MAX_UINT256:
-        shares = self.balanceOf[msg.sender]
+        shares = self.vault_token.balanceOf(msg.sender)
 
     # Limit to only the shares they own
-    assert shares <= self.balanceOf[msg.sender]
+    assert shares <= self.vault_token.balanceOf(msg.sender)
 
     # Ensure we are withdrawing something
     assert shares > 0
@@ -1126,9 +1077,7 @@ def withdraw(
         assert totalLoss <= maxLoss * (value + totalLoss) / MAX_BPS
 
     # Burn shares (full value of what is being withdrawn)
-    self.totalSupply -= shares
-    self.balanceOf[msg.sender] -= shares
-    log Transfer(msg.sender, ZERO_ADDRESS, shares)
+    self.vault_token.burn(shares, msg.sender)
 
     # Withdraw remaining balance to _recipient (may be different to msg.sender) (minus fee)
     self.erc20_safe_transfer(self.token.address, recipient, value)
@@ -1658,11 +1607,11 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
                 * reward
                 / total_fee
             )
-            self._transfer(self, strategy, strategist_reward)
+            self.vault_token.transfer(self, strategy, strategist_reward)
             # NOTE: Strategy distributes rewards at the end of harvest()
         # NOTE: Governance earns any dust leftover from flooring math above
-        if self.balanceOf[self] > 0:
-            self._transfer(self, self.rewards, self.balanceOf[self])
+        if self.vault_token.balanceOf(self) > 0:
+            self.vault_token.transfer(self, self.rewards, self.vault_token.balanceOf(self))
     return total_fee
 
 
@@ -1820,3 +1769,14 @@ def sweep(token: address, amount: uint256 = MAX_UINT256):
     if value == MAX_UINT256:
         value = ERC20(token).balanceOf(self)
     self.erc20_safe_transfer(token, self.governance, value)
+
+@external
+def upgrade(newVault: address):
+    assert(msg.sender == self.governance)
+    self.emergencyShutdown = True
+    assert self.totalDebt == 0
+    assert self.token.address == VaultAPI(newVault).token()
+    assert self.vault_token.address == VaultAPI(newVault).vault_token()
+    self.erc20_safe_transfer(self.token.address, newVault, self.token.balanceOf(self))
+
+    self.vault_token.setVault(newVault)

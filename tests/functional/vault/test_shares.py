@@ -3,12 +3,21 @@ import brownie
 
 
 @pytest.fixture
-def vault(gov, token, Vault):
+def vault(gov, token, Vault, create_vault_token):
     # NOTE: Overriding the one in conftest because it has values already
     vault = gov.deploy(Vault)
+    vault_token = create_vault_token(token.decimals())
     vault.initialize(
-        token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
+        token,
+        gov,
+        gov,
+        token.symbol() + " yVault",
+        "yv" + token.symbol(),
+        vault_token,
+        gov,
     )
+    vault_token.setVault(vault, {"from": gov})
+
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     yield vault
 

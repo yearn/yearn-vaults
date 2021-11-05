@@ -6,19 +6,22 @@ MAX_UINT256 = 2 ** 256 - 1
 
 
 @pytest.fixture
-def vault(gov, token, Vault, common_health_check):
+def vault(gov, token, Vault, common_health_check, create_vault_token):
     # NOTE: Because the fixture has tokens in it already
     vault = gov.deploy(Vault)
+    vault_token = create_vault_token(token.decimals())
     vault.initialize(
         token,
         gov,
         gov,
         token.symbol() + " yVault",
         "yv" + token.symbol(),
+        vault_token,
         gov,
         gov,
         common_health_check,
     )
+    vault_token.setVault(vault)
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     yield vault
 

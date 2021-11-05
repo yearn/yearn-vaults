@@ -3,22 +3,27 @@ import brownie
 MAX_UINT256 = 2 ** 256 - 1
 
 
-def test_multiple_withdrawals(token, gov, Vault, TestStrategy, common_health_check):
+def test_multiple_withdrawals(
+    token, gov, Vault, TestStrategy, common_health_check, create_vault_token
+):
     # Need a fresh vault to do this math right
     vault = Vault.deploy({"from": gov})
+    vault_token = create_vault_token(token.decimals())
+
     vault.initialize(
         token,
         gov,
         gov,
         token.symbol() + " yVault",
         "yv" + token.symbol(),
+        vault_token,
         gov,
         gov,
         common_health_check,
         {"from": gov},
     )
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
-
+    vault_token.setVault(vault)
     token.approve(vault, 2 ** 256 - 1, {"from": gov})
     vault.deposit(1_000_000, {"from": gov})
 
@@ -56,7 +61,7 @@ def test_multiple_withdrawals(token, gov, Vault, TestStrategy, common_health_che
 
 
 def test_forced_withdrawal(
-    token, gov, vault, TestStrategy, rando, common_health_check, chain
+    token, gov, vault, TestStrategy, rando, common_health_check, chain, vault_token
 ):
     vault.setManagementFee(0, {"from": gov})  # Just makes it easier later
     # Add strategies
@@ -134,20 +139,33 @@ def test_forced_withdrawal(
 
 
 def test_progressive_withdrawal(
-    chain, token, gov, Vault, guardian, rewards, TestStrategy, common_health_check
+    chain,
+    token,
+    gov,
+    Vault,
+    guardian,
+    rewards,
+    TestStrategy,
+    common_health_check,
+    create_vault_token,
+    vault_token,
 ):
     vault = guardian.deploy(Vault)
+    vault_token = create_vault_token(token.decimals())
+
     vault.initialize(
         token,
         gov,
         rewards,
         token.symbol() + " yVault",
         "yv" + token.symbol(),
+        vault_token,
         guardian,
         gov,
         common_health_check,
         {"from": gov},
     )
+    vault_token.setVault(vault)
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
 
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(2)]
@@ -203,19 +221,31 @@ def test_progressive_withdrawal(
 
 
 def test_withdrawal_with_empty_queue(
-    chain, token, gov, Vault, guardian, rewards, common_health_check, TestStrategy
+    chain,
+    token,
+    gov,
+    Vault,
+    guardian,
+    rewards,
+    common_health_check,
+    TestStrategy,
+    create_vault_token,
 ):
     vault = guardian.deploy(Vault)
+    vault_token = create_vault_token(token.decimals())
+
     vault.initialize(
         token,
         gov,
         rewards,
         token.symbol() + " yVault",
         "yv" + token.symbol(),
+        vault_token,
         guardian,
         common_health_check,
     )
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    vault_token.setVault(vault)
 
     strategy = gov.deploy(TestStrategy, vault)
     vault.addStrategy(strategy, 1000, 0, 10, 1000, {"from": gov})
@@ -265,19 +295,30 @@ def test_withdrawal_with_empty_queue(
 
 
 def test_withdrawal_with_reentrancy(
-    chain, token, gov, Vault, guardian, rewards, common_health_check, TestStrategy
+    chain,
+    token,
+    gov,
+    Vault,
+    guardian,
+    rewards,
+    common_health_check,
+    TestStrategy,
+    create_vault_token,
 ):
     vault = guardian.deploy(Vault)
+    vault_token = create_vault_token(token.decimals())
+
     vault.initialize(
         token,
         gov,
         rewards,
         token.symbol() + " yVault",
         "yv" + token.symbol(),
+        vault_token,
         guardian,
         common_health_check,
     )
-
+    vault_token.setVault(vault)
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
 
     strategy = gov.deploy(TestStrategy, vault)
@@ -304,7 +345,9 @@ def test_withdrawal_with_reentrancy(
         vault.withdraw(vault.balanceOf(gov), {"from": gov})
 
 
-def test_user_withdraw(chain, gov, token, vault, strategy, common_health_check):
+def test_user_withdraw(
+    chain, gov, token, vault, strategy, common_health_check, vault_token
+):
     # set fees to 0
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
@@ -327,11 +370,13 @@ def test_user_withdraw(chain, gov, token, vault, strategy, common_health_check):
 
     vault.withdraw({"from": gov})
 
-    assert vault.totalSupply() == 0
+    assert vault_token.totalSupply() == 0
     assert token.balanceOf(vault) == 0  # everything is withdrawn
 
 
-def test_profit_degradation(chain, gov, token, vault, strategy, common_health_check):
+def test_profit_degradation(
+    chain, gov, token, vault, strategy, common_health_check, vault_token
+):
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
     vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
@@ -345,7 +390,7 @@ def test_profit_degradation(chain, gov, token, vault, strategy, common_health_ch
 
     vault.withdraw({"from": gov})
 
-    assert vault.totalSupply() == 0
+    assert vault_token.totalSupply() == 0
     assert (
         token.balanceOf(vault) > 0
     )  # all money withdrawn but some profit left locked for 6 hours
@@ -366,7 +411,7 @@ def test_profit_degradation(chain, gov, token, vault, strategy, common_health_ch
 
 
 def test_withdraw_partial_delegate_assets(
-    chain, gov, token, vault, strategy, common_health_check
+    chain, gov, token, vault, strategy, common_health_check, vault_token
 ):
     # set fees to 0
     vault.setManagementFee(0, {"from": gov})
@@ -439,7 +484,7 @@ def test_token_amount_does_not_change_on_deposit_withdrawal(
 
 
 def test_withdraw_not_enough_funds_with_gains(
-    chain, gov, token, vault, strategy, rando
+    chain, gov, token, vault, strategy, rando, vault_token
 ):
     vault.transfer(rando, vault.balanceOf(gov) / 2, {"from": gov})
     vault.updateStrategyMaxDebtPerHarvest(strategy, MAX_UINT256, {"from": gov})

@@ -45,19 +45,37 @@ def guardian(accounts):
 
 
 @pytest.fixture
+def create_vault_token(gov, VaultToken):
+    def create_vault_token(decimals):
+        vault_token = gov.deploy(VaultToken, gov, decimals)
+        return vault_token
+
+    yield create_vault_token
+
+
+@pytest.fixture
 def create_vault(
-    gov, rewards, guardian, create_token, patch_vault_version, common_health_check
+    gov,
+    rewards,
+    guardian,
+    create_token,
+    patch_vault_version,
+    common_health_check,
+    create_vault_token,
 ):
     def create_vault(token=None, version=None):
         if token is None:
             token = create_token()
         vault = patch_vault_version(version).deploy({"from": guardian})
+        vault_token = create_vault_token(token.decimals())
+
         vault.initialize(
             token,
             gov,
             rewards,
             token.symbol() + " yVault",
             "yv" + token.symbol(),
+            vault_token,
             guardian,
             guardian,
             common_health_check,
@@ -65,6 +83,7 @@ def create_vault(
         vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
         assert vault.depositLimit() == 2 ** 256 - 1
         assert vault.token() == token
+        vault_token.setVault(vault, {"from": gov})
         return vault
 
     yield create_vault

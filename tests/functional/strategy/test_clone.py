@@ -9,9 +9,12 @@ def other_token(gov, Token):
 
 
 @pytest.fixture
-def other_vault(gov, Vault, other_token):
+def other_vault(gov, Vault, other_token, create_vault_token):
     vault = gov.deploy(Vault)
-    vault.initialize(other_token, gov, gov, "", "", gov, gov)
+    vault_token = create_vault_token(other_token.decimals())
+    vault.initialize(other_token, gov, gov, "", "", vault_token, gov, gov)
+    vault_token.setVault(vault, {"from": gov})
+
     yield vault
 
 

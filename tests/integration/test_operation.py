@@ -40,7 +40,16 @@ class NormalOperation:
 
 
 def test_normal_operation(
-    web3, chain, gov, strategy, vault, token, chad, andre, keeper, state_machine
+    web3,
+    chain,
+    gov,
+    strategy,
+    vault,
+    token,
+    chad,
+    andre,
+    keeper,
+    state_machine,
 ):
     vault.addStrategy(
         strategy,
@@ -53,5 +62,13 @@ def test_normal_operation(
     strategy.harvest({"from": keeper})
     assert token.balanceOf(vault) == 0
     state_machine(
-        NormalOperation, web3, token, vault, strategy, chad, andre, keeper, chain
+        NormalOperation,
+        web3,
+        token,
+        vault,
+        strategy,
+        chad,
+        andre,
+        keeper,
+        chain,
     )

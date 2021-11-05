@@ -6,19 +6,24 @@ MAX_UINT256 = 2 ** 256 - 1
 
 
 @pytest.fixture
-def vault(gov, management, token, Vault, common_health_check):
+def vault(gov, management, token, Vault, common_health_check, create_vault_token):
     # NOTE: Because the fixture has tokens in it already
     vault = gov.deploy(Vault)
+    vault_token = create_vault_token(token.decimals(), gov)
+
     vault.initialize(
         token,
         gov,
         gov,
         token.symbol() + " yVault",
         "yv" + token.symbol(),
+        vault_token,
         gov,
         gov,
         common_health_check,
     )
+    vault_token.setVault(vault)
+
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     vault.setManagement(management, {"from": gov})
     yield vault
@@ -72,20 +77,27 @@ def test_liquidation_after_hack(chain, gov, vault, token, TestStrategy):
 
 
 @pytest.fixture
-def strategy_with_wrong_vault(gov, token, vault, Vault, TestStrategy):
-    otherVault = gov.deploy(Vault)
-    otherVault.initialize(
+def strategy_with_wrong_vault(
+    gov, token, vault, Vault, TestStrategy, create_vault_token
+):
+    other_vault = gov.deploy(Vault)
+    other_vault_token = create_vault_token(token.decimals())
+
+    other_vault.initialize(
         token,
         gov,
         gov,
         token.symbol() + " yVault",
         "yv" + token.symbol(),
+        other_vault_token,
         gov,
     )
-    assert otherVault.token() == token
-    assert otherVault != vault
-    otherVault.setDepositLimit(2 ** 256 - 1, {"from": gov})
-    yield gov.deploy(TestStrategy, otherVault)
+    assert other_vault.token() == token
+    assert other_vault != vault
+    other_vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    other_vault_token.setVault(other_vault)
+
+    yield gov.deploy(TestStrategy, other_vault)
 
 
 @pytest.fixture

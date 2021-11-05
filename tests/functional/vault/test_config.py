@@ -18,15 +18,17 @@ def test_api_adherrance(check_api_adherrance, Vault, interface):
     check_api_adherrance(Vault, interface.VaultAPI)
 
 
-def test_vault_deployment(guardian, gov, rewards, token, Vault):
+def test_vault_deployment(guardian, gov, rewards, token, Vault, create_vault_token):
     # Deploy the Vault without any name/symbol overrides
     vault = guardian.deploy(Vault)
+    vault_token = create_vault_token(token.decimals())
     vault.initialize(
         token,
         gov,
         rewards,
         token.symbol() + " yVault",
         "yv" + token.symbol(),
+        vault_token,
         guardian,
     )
     # Addresses
@@ -50,21 +52,33 @@ def test_vault_deployment(guardian, gov, rewards, token, Vault):
     assert vault.pricePerShare() / (10 ** vault.decimals()) == 1.0
 
 
-def test_vault_name_symbol_override(guardian, gov, rewards, token, Vault):
+def test_vault_name_symbol_override(
+    guardian, gov, rewards, token, Vault, create_vault_token
+):
     # Deploy the Vault with name/symbol overrides
     vault = guardian.deploy(Vault)
-    vault.initialize(token, gov, rewards, "crvY yVault", "yvcrvY", guardian)
+    vault_token = create_vault_token(token.decimals())
+    vault.initialize(
+        token, gov, rewards, "crvY yVault", "yvcrvY", vault_token, guardian
+    )
     # Assert that the overrides worked
     assert vault.name() == "crvY yVault"
     assert vault.symbol() == "yvcrvY"
 
 
-def test_vault_reinitialization(guardian, gov, rewards, token, Vault):
+def test_vault_reinitialization(
+    guardian, gov, rewards, token, Vault, create_vault_token
+):
     vault = guardian.deploy(Vault)
-    vault.initialize(token, gov, rewards, "crvY yVault", "yvcrvY", guardian)
+    vault_token = create_vault_token(token.decimals())
+    vault.initialize(
+        token, gov, rewards, "crvY yVault", "yvcrvY", vault_token, guardian
+    )
     # Can't reinitialize a vault
     with brownie.reverts():
-        vault.initialize(token, gov, rewards, "crvY yVault", "yvcrvY", guardian)
+        vault.initialize(
+            token, gov, rewards, "crvY yVault", "yvcrvY", vault_token, guardian
+        )
 
 
 @pytest.mark.parametrize(

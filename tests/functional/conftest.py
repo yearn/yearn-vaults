@@ -1,6 +1,6 @@
 import pytest
 
-from brownie import Token, TokenNoReturn
+from brownie import ZERO_ADDRESS, Token, TokenNoReturn
 
 
 @pytest.fixture
@@ -45,12 +45,29 @@ def token(create_token, request):
 
 
 @pytest.fixture
+def create_vault_token(gov, VaultToken):
+    def create_vault_token(decimals, governance=gov):
+        vault_token = gov.deploy(VaultToken, governance, decimals)
+        return vault_token
+
+    yield create_vault_token
+
+
+@pytest.fixture
 def create_vault(
-    gov, guardian, rewards, create_token, patch_vault_version, common_health_check
+    gov,
+    guardian,
+    rewards,
+    create_token,
+    patch_vault_version,
+    common_health_check,
+    create_vault_token,
 ):
-    def create_vault(token=None, version=None, governance=gov):
+    def create_vault(token=None, vault_token=None, version=None, governance=gov):
         if token is None:
             token = create_token()
+        if vault_token is None:
+            vault_token = create_vault_token(token.decimals())
         vault = patch_vault_version(version).deploy({"from": guardian})
         vault.initialize(
             token,
@@ -58,25 +75,33 @@ def create_vault(
             rewards,
             "",
             "",
+            vault_token,
             guardian,
             governance,
             common_health_check,
         )
         vault.setDepositLimit(2 ** 256 - 1, {"from": governance})
+        if vault_token.vault() == ZERO_ADDRESS:
+            vault_token.setVault(vault, {"from": gov})
         return vault
 
     yield create_vault
 
 
 @pytest.fixture
-def vault(gov, management, token, create_vault):
-    vault = create_vault(token=token, governance=gov)
+def vault(gov, management, token, vault_token, create_vault):
+    vault = create_vault(token=token, governance=gov, vault_token=vault_token)
     vault.setManagement(management, {"from": gov})
 
     # Make it so vault has some AUM to start
     token.approve(vault, token.balanceOf(gov) // 2, {"from": gov})
     vault.deposit(token.balanceOf(gov) // 2, {"from": gov})
     yield vault
+
+
+@pytest.fixture
+def vault_token(token, create_vault_token):
+    yield create_vault_token(token.decimals())
 
 
 @pytest.fixture
