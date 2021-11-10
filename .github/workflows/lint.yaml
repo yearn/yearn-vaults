@@ -54,7 +54,7 @@ jobs:
         run: flake8-vyper-2-11 --tee contracts/Registry.vy
 
       - name: remove v2.11 Linter (conflicts with v.2.16)
-        run: pip uninstall flake8-vyper-2-11
+        run: pip uninstall flake8-vyper-2-11 vyper -y
 
       - name: setup Vyper linter for v2.16
         run: pip install git+https://github.com/0xbeedao/flake8-vyper-2-16
