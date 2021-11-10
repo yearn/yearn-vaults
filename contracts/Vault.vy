@@ -42,6 +42,12 @@ API_VERSION: constant(String[28]) = "0.4.3"
 
 implements: ERC20
 
+MAXIMUM_STRATEGIES: constant(uint256) = 20
+DEGRADATION_COEFFICIENT: constant(uint256) = 10 ** 18
+# SET_SIZE can be any number but having it in power of 2 will be more gas
+# friendly and collision free.
+# Note: Make sure SET_SIZE is greater than MAXIMUM_STRATEGIES
+SET_SIZE: constant(uint256) = 32
 
 interface DetailedERC20:
     def name() -> String[42]: view
@@ -111,6 +117,9 @@ struct StrategyParams:
     totalDebt: uint256  # Total outstanding debt that Strategy has
     totalGain: uint256  # Total returns that Strategy has realized for Vault
     totalLoss: uint256  # Total losses that Strategy has realized for Vault
+
+# NOTE: Track the total for overhead targeting purposes
+strategies: public(HashMap[address, StrategyParams])
 
 event StrategyAdded:
     strategy: indexed(address)
@@ -221,15 +230,6 @@ event StrategyAddedToQueue:
 event UpdateHealthCheck:
     healthCheck: indexed(address)
 
-# NOTE: Track the total for overhead targeting purposes
-strategies: public(HashMap[address, StrategyParams])
-MAXIMUM_STRATEGIES: constant(uint256) = 20
-DEGRADATION_COEFFICIENT: constant(uint256) = 10 ** 18
-# SET_SIZE can be any number but having it in power of 2 will be more gas
-# friendly and collision free.
-# Note: Make sure SET_SIZE is greater than MAXIMUM_STRATEGIES
-SET_SIZE: constant(uint256) = 32
-
 # Ordering that `withdraw` uses to determine which strategies to pull funds
 # from
 # NOTE: Does *NOT* have to match the ordering of all the current strategies
@@ -272,12 +272,17 @@ SECS_PER_YEAR: constant(uint256) = 31_556_952  # 365.2425 days
 nonces: public(HashMap[address, uint256])
 DOMAIN_SEPARATOR: public(bytes32)
 DOMAIN_TYPE_HASH: constant(bytes32) = keccak256(
-    'EIP712Domain(' +
-    'string name,string version,uint256 chainId,address verifyingContract)')
+    [
+        'EIP712Domain(',
+        'string name,string version,uint256 chainId,',
+        'address verifyingContract)'
+    ].join(''))
 PERMIT_TYPE_HASH: constant(bytes32) = keccak256(
-    'Permit(' +
-    'address owner,address spender,uint256 value,' +
-    'uint256 nonce,uint256 deadline)')
+    [
+        'Permit(',
+        'address owner,address spender,uint256 value,',
+        'uint256 nonce,uint256 deadline)'
+    ].join(''))
 
 
 @external
@@ -873,10 +878,8 @@ def _calculateLockedProfit() -> uint256:
     if(lockedFundsRatio < DEGRADATION_COEFFICIENT):
         lockedProfit: uint256 = self.lockedProfit
         return lockedProfit - (
-                lockedFundsRatio
-                * lockedProfit
-                / DEGRADATION_COEFFICIENT
-            )
+            lockedFundsRatio * lockedProfit / DEGRADATION_COEFFICIENT
+        )
     else:
         return 0
 
@@ -993,9 +996,7 @@ def _shareValue(shares: uint256) -> uint256:
     #       revert
 
     return (
-        shares
-        * self._freeFunds()
-        / self.totalSupply
+        shares * self._freeFunds() / self.totalSupply
     )
 
 
@@ -1009,9 +1010,7 @@ def _sharesForAmount(amount: uint256) -> uint256:
         # NOTE: if sqrt(token.totalSupply()) > 1e37, this could potentially
         #       revert
         return (
-            amount
-            * self.totalSupply
-            / _freeFunds
+            amount * self.totalSupply / _freeFunds
         )
     else:
         return 0
@@ -1562,9 +1561,7 @@ def _debtOutstanding(strategy: address) -> uint256:
         return self.strategies[strategy].totalDebt
 
     strategy_debtLimit: uint256 = (
-        self.strategies[strategy].debtRatio
-        * self._totalAssets()
-        / MAX_BPS
+        self.strategies[strategy].debtRatio * self._totalAssets() / MAX_BPS
     )
     strategy_totalDebt: uint256 = self.strategies[strategy].totalDebt
 
@@ -1607,8 +1604,8 @@ def _creditAvailable(strategy: address) -> uint256:
         self.strategies[strategy].maxDebtPerHarvest)
 
     # Exhausted credit line
-    if (strategy_debtLimit <= strategy_totalDebt
-            or vault_debtLimit <= vault_totalDebt):
+    if (strategy_debtLimit <= strategy_totalDebt or (
+            vault_debtLimit <= vault_totalDebt)):
         return 0
 
     # Start with debt limit left for the Strategy
@@ -1664,17 +1661,16 @@ def _expectedReturn(strategy: address) -> uint256:
 
     # NOTE: If either `timeSinceLastHarvest` or `totalHarvestTime` is 0, we can
     #       short-circuit to `0`
-    if (timeSinceLastHarvest > 0 and
-            totalHarvestTime > 0 and
-            Strategy(strategy).isActive()):
+    if (timeSinceLastHarvest > 0 and (
+            totalHarvestTime > 0) and (
+            Strategy(strategy).isActive())):
 
         # NOTE: Unlikely to throw unless strategy accumalates >1e68 returns
         # NOTE: Calculate average over period of time where harvests have
         #       occured in the past
         return (
-            self.strategies[strategy].totalGain
-            * timeSinceLastHarvest
-            / totalHarvestTime
+            self.strategies[strategy].totalGain * (
+                timeSinceLastHarvest / totalHarvestTime)
         )
     else:
         return 0  # Covers the scenario when block.timestamp == activation
@@ -1727,15 +1723,10 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
     management_fee: uint256 = (
         (
             (
-                self.strategies[strategy].totalDebt
-                -
-                Strategy(strategy).delegatedAssets()
-            )
-            * duration
-            * self.managementFee
-        )
-        / MAX_BPS
-        / SECS_PER_YEAR
+                self.strategies[strategy].totalDebt - (
+                    Strategy(strategy).delegatedAssets())
+            ) * duration * self.managementFee
+        ) / MAX_BPS / SECS_PER_YEAR
     )
 
     # NOTE: Applies if Strategy is not shutting down, or it is but all debt
@@ -1743,9 +1734,7 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
     # NOTE: No fee is taken when a Strategy is unwinding it's position, until
     #       all debt is paid
     strategist_fee: uint256 = (
-        gain
-        * self.strategies[strategy].performanceFee
-        / MAX_BPS
+        gain * self.strategies[strategy].performanceFee / MAX_BPS
     )
     # NOTE: Unlikely to throw unless strategy reports >1e72 harvest profit
     performance_fee: uint256 = gain * self.performanceFee / MAX_BPS
@@ -1766,9 +1755,7 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
         if strategist_fee > 0:  # NOTE: Guard against DIV/0 fault
             # NOTE: Unlikely to throw unless sqrt(reward) >>> 1e39
             strategist_reward: uint256 = (
-                strategist_fee
-                * reward
-                / total_fee
+                strategist_fee * reward / total_fee
             )
             self._transfer(self, strategy, strategist_reward)
             # NOTE: Strategy distributes rewards at the end of harvest()
