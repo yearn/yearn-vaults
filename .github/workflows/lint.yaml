@@ -60,7 +60,7 @@ jobs:
         run: pip install git+https://github.com/0xbeedao/flake8-vyper-2-16
 
       - name: run Vyper linter on v2.16 Contract
-        run: flake8-vyper-2-16 --tee contracts/Vault.vy
+        run: flake8-vyper-2-16 --tee --ignore=F821,E704 contracts/Vault.vy
 
     commits:
       runs-on: ubuntu-latest
