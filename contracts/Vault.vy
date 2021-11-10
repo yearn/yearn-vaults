@@ -271,18 +271,8 @@ SECS_PER_YEAR: constant(uint256) = 31_556_952  # 365.2425 days
 # `nonces` track `permit` approvals with signature.
 nonces: public(HashMap[address, uint256])
 DOMAIN_SEPARATOR: public(bytes32)
-DOMAIN_TYPE_HASH: constant(bytes32) = keccak256(
-    [
-        'EIP712Domain(',
-        'string name,string version,uint256 chainId,',
-        'address verifyingContract)'
-    ].join(''))
-PERMIT_TYPE_HASH: constant(bytes32) = keccak256(
-    [
-        'Permit(',
-        'address owner,address spender,uint256 value,',
-        'uint256 nonce,uint256 deadline)'
-    ].join(''))
+DOMAIN_TYPE_HASH: constant(bytes32) = keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)')  # noqa: E501
+PERMIT_TYPE_HASH: constant(bytes32) = keccak256('Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)')  # noqa: E501
 
 
 @external
