@@ -893,8 +893,7 @@ def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
         # Mint amount of shares based on what the Vault is managing overall
         # NOTE: if sqrt(token.totalSupply()) > 1e39, this could potentially
         #       revert
-        # dev: no free funds
-        shares = amount * totalSupply / self._freeFunds()
+        shares = amount * totalSupply / self._freeFunds()  # dev: no free funds
     else:
         # No existing shares, so mint 1:1
         shares = amount
@@ -1702,8 +1701,7 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
         return 0  # NOTE: Just added, no fees to assess
 
     duration: uint256 = block.timestamp - self.strategies[strategy].lastReport
-    # dev: can't call assessFees twice within the same block
-    assert duration != 0
+    assert duration != 0  # dev: can't call assessFees twice in the same block
 
     if gain == 0:
         # NOTE: The fees are not charged if there hasn't been any gains

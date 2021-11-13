@@ -101,8 +101,9 @@ def latestRelease() -> String[28]:
     @return The api version of the latest release.
     """
     # NOTE: Throws if there has not been a release yet
-    # dev: no release
-    return Vault(self.releases[self.numReleases - 1]).apiVersion()
+
+    return Vault(
+        self.releases[self.numReleases - 1]).apiVersion()  # dev: no release
 
 
 @view
@@ -115,8 +116,8 @@ def latestVault(token: address) -> address:
     @return The address of the latest vault for the given token.
     """
     # NOTE: Throws if there has not been a deployed vault yet for this token
-    # dev: no vault for token
-    return self.vaults[token][self.numVaults[token] - 1]
+
+    return self.vaults[token][self.numVaults[token] - 1]  # dev: no token vault
 
 
 @external
@@ -243,8 +244,8 @@ def newVault(
 
     # NOTE: Underflow if no releases created yet, or targeting prior to release
     # history
-    # dev: no releases
-    releaseTarget: uint256 = self.numReleases - 1 - releaseDelta
+    releaseTarget: uint256 = (
+        self.numReleases - 1 - releaseDelta)  # dev: no releases
     vault: address = self._newProxyVault(
         token, msg.sender, rewards, guardian, name, symbol, releaseTarget)
 
@@ -288,8 +289,9 @@ def newExperimentalVault(
     """
     # NOTE: Underflow if no releases created yet, or targeting prior to release
     # history
-    # dev: no releases
-    releaseTarget: uint256 = self.numReleases - 1 - releaseDelta
+
+    releaseTarget: uint256 = (
+        self.numReleases - 1 - releaseDelta)  # dev: no releases
     # NOTE: Anyone can call this method, as a convenience to Strategist'
     # experiments
     vault: address = self._newProxyVault(
@@ -326,8 +328,9 @@ def endorseVault(vault: address, releaseDelta: uint256 = 0):
 
     # NOTE: Underflow if no releases created yet, or targeting prior to
     # release history
-    # dev: no releases
-    releaseTarget: uint256 = self.numReleases - 1 - releaseDelta
+
+    releaseTarget: uint256 = (
+        self.numReleases - 1 - releaseDelta)  # dev: no releases
     api_version: String[28] = Vault(self.releases[releaseTarget]).apiVersion()
     assert Vault(vault).apiVersion() == api_version  # dev: not target release
 
