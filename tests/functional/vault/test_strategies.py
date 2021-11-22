@@ -317,6 +317,7 @@ def test_revokeStrategy(chain, gov, vault, strategy, rando):
     with brownie.reverts():
         vault.removeStrategyFromQueue(strategy, {"from": gov})
 
+
 def test_revokeStrategyByManagement(chain, gov, management, vault, strategy, rando):
     vault.addStrategy(strategy, 100, 10, 20, 1000, {"from": gov})
     activation_timestamp = chain[-1]["timestamp"]
@@ -339,13 +340,13 @@ def test_revokeStrategyByManagement(chain, gov, management, vault, strategy, ran
         "totalDebt": 0,
     }
 
-    assert vault.withdrawalQueue(0) == strategy 
+    assert vault.withdrawalQueue(0) == strategy
     # can be done by management
     vault.removeStrategyFromQueue(strategy, {"from": management})
     assert vault.withdrawalQueue(0) == ZERO_ADDRESS
     # Can only do it once
     with brownie.reverts():
-        vault.removeStrategyFromQueue(strategy, {"from": management})   
+        vault.removeStrategyFromQueue(strategy, {"from": management})
 
 
 def test_ordering(gov, vault, TestStrategy, rando):
