@@ -1404,7 +1404,7 @@ def revokeStrategy(strategy: address = msg.sender):
         shutdown.
     @param strategy The Strategy to revoke.
     """
-    assert msg.sender in [strategy, self.governance, self.guardian]
+    assert msg.sender in [strategy, self.governance, self.guardian, self.management]
     # NOTE: This function may be called via `BaseStrategy.setEmergencyExit` while the
     #       strategy might have already been revoked or had the debt limit set to zero
     if self.strategies[strategy].debtRatio == 0:
