@@ -1,6 +1,6 @@
 import pytest
 
-from brownie import Token, TokenNoReturn
+from brownie import ZERO_ADDRESS, Token, TokenNoReturn
 
 
 @pytest.fixture
@@ -116,6 +116,40 @@ def strategy(gov, strategist, keeper, rewards, vault, TestStrategy, request):
         {"from": gov},
     )
     yield strategy
+
+
+@pytest.fixture
+def increase_pps(TestStrategy, CommonHealthCheck, gov, chain):
+    def increase_pps(vault, token, amount, sender):
+        common_health_check = vault.healthCheck()
+        if common_health_check != ZERO_ADDRESS:
+            common_health_check = CommonHealthCheck.at(common_health_check)
+
+        strategy = gov.deploy(TestStrategy, vault)
+        lockedProfitDegradation = vault.lockedProfitDegradation()
+        vault.addStrategy(
+            strategy,
+            1,  # 0% of Vault
+            0,  # Minimum debt increase per harvest
+            2 ** 256 - 1,  # maximum debt increase per harvest
+            0,  # 0% performance fee for Strategist
+            {"from": gov},
+        )
+        if common_health_check != ZERO_ADDRESS:
+            common_health_check.setDisabledCheck(strategy, True)
+        token.transfer(strategy, amount, {"from": sender})
+        managementFee = vault.managementFee()
+        performanceFee = vault.performanceFee()
+        vault.setManagementFee(0)
+        vault.setPerformanceFee(0)
+        strategy.harvest()
+        vault.setManagementFee(managementFee)
+        vault.setPerformanceFee(performanceFee)
+        chain.sleep(7 * 3600)
+        chain.mine()
+        return strategy
+
+    yield increase_pps
 
 
 @pytest.fixture
