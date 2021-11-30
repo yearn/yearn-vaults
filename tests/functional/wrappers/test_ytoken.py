@@ -1,4 +1,4 @@
-import brownie
+import ape
 
 from eth_account import Account
 
@@ -24,17 +24,17 @@ def test_config(gov, token, vault, registry, ytoken):
 
 def test_setRegistry(rando, gov, ytoken, new_registry):
     # Only yGov can call this method
-    with brownie.reverts():
+    with ape.reverts():
         ytoken.setRegistry(new_registry, {"from": rando})
 
     # Cannot set to an invalid registry
-    with brownie.reverts():
+    with ape.reverts():
         ytoken.setRegistry(rando, {"from": gov})
 
     # yGov must be the gov on the new registry too
     new_registry.setGovernance(rando, {"from": gov})
     new_registry.acceptGovernance({"from": rando})
-    with brownie.reverts():
+    with ape.reverts():
         ytoken.setRegistry(new_registry, {"from": gov})
     new_registry.setGovernance(gov, {"from": rando})
     new_registry.acceptGovernance({"from": gov})

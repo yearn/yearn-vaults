@@ -1,7 +1,6 @@
-import brownie
+import ape
 
-from brownie import ZERO_ADDRESS
-
+ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 
 def test_good_migration(
     token, strategy, vault, gov, strategist, guardian, TestStrategy, rando, chain
@@ -17,11 +16,11 @@ def test_good_migration(
     assert token.balanceOf(new_strategy) == 0
 
     # Only Governance can migrate
-    with brownie.reverts():
+    with ape.reverts():
         vault.migrateStrategy(strategy, new_strategy, {"from": rando})
-    with brownie.reverts():
+    with ape.reverts():
         vault.migrateStrategy(strategy, new_strategy, {"from": strategist})
-    with brownie.reverts():
+    with ape.reverts():
         vault.migrateStrategy(strategy, new_strategy, {"from": guardian})
 
     vault.migrateStrategy(strategy, new_strategy, {"from": gov})
@@ -34,7 +33,7 @@ def test_good_migration(
         == strategy_debt
     )
 
-    with brownie.reverts():
+    with ape.reverts():
         new_strategy.migrate(strategy, {"from": gov})
 
 
@@ -49,17 +48,17 @@ def test_bad_migration(
     new_strategy = strategist.deploy(TestStrategy, different_vault)
 
     # Can't migrate to a strategy with a different vault
-    with brownie.reverts():
+    with ape.reverts():
         vault.migrateStrategy(strategy, new_strategy, {"from": gov})
 
     new_strategy = strategist.deploy(TestStrategy, vault)
 
     # Can't migrate if you're not the Vault  or governance
-    with brownie.reverts():
+    with ape.reverts():
         strategy.migrate(new_strategy, {"from": rando})
 
     # Can't migrate if new strategy is 0x0
-    with brownie.reverts():
+    with ape.reverts():
         vault.migrateStrategy(strategy, ZERO_ADDRESS, {"from": gov})
 
 
@@ -80,5 +79,5 @@ def test_migrated_strategy_can_call_harvest(
 
     # But after migrated it cannot be added back
     vault.updateStrategyDebtRatio(new_strategy, 5_000, {"from": gov})
-    with brownie.reverts():
+    with ape.reverts():
         vault.addStrategy(strategy, 5_000, 0, 1000, 0, {"from": gov})

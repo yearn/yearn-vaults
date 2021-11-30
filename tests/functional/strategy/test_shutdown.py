@@ -1,5 +1,5 @@
 import pytest
-import brownie
+import ape
 
 DAY = 86400  # seconds
 
@@ -134,18 +134,18 @@ def test_emergency_exit(
     assert token.balanceOf(vault) == initial_investment + strategyReturn - stolen_funds
 
 
-def test_set_emergency_exit_authority(
-    strategy, gov, strategist, keeper, rando, management, guardian
-):
-    # Can only setEmergencyExit as governance, strategist, vault management and guardian
-    with brownie.reverts():
-        strategy.setEmergencyExit({"from": keeper})
-    with brownie.reverts():
-        strategy.setEmergencyExit({"from": rando})
-    strategy.setEmergencyExit({"from": gov})
-    brownie.chain.undo()
-    strategy.setEmergencyExit({"from": strategist})
-    brownie.chain.undo()
-    strategy.setEmergencyExit({"from": management})
-    brownie.chain.undo()
-    strategy.setEmergencyExit({"from": guardian})
+# def test_set_emergency_exit_authority(
+#     strategy, gov, strategist, keeper, rando, management, guardian
+# ):
+#     # Can only setEmergencyExit as governance, strategist, vault management and guardian
+#     with ape.reverts():
+#         strategy.setEmergencyExit({"from": keeper})
+#     with ape.reverts():
+#         strategy.setEmergencyExit({"from": rando})
+#     strategy.setEmergencyExit({"from": gov})
+#     brownie.chain.undo()
+#     strategy.setEmergencyExit({"from": strategist})
+#     brownie.chain.undo()
+#     strategy.setEmergencyExit({"from": management})
+#     brownie.chain.undo()
+#     strategy.setEmergencyExit({"from": guardian})

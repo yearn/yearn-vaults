@@ -4,6 +4,7 @@
     "devDependencies": {
         "@commitlint/cli": "^12.1.4",
         "@commitlint/config-conventional": "^12.1.4",
+        "hardhat": "^2.8.0",
         "husky": "^7.0.0",
         "prettier": "^2.3.2",
         "prettier-plugin-solidity": "^1.0.0-beta.13",

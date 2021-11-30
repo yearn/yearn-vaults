@@ -1,5 +1,5 @@
 import pytest
-import brownie
+import ape
 
 DAY = 86400  # seconds
 MAX_UINT256 = 2 ** 256 - 1
@@ -130,7 +130,7 @@ def test_report_loss(chain, token, gov, vault, strategy, common_health_check):
 
     # Make sure we do not send more funds to the strategy.
     chain.sleep(1)
-    with brownie.reverts():
+    with ape.reverts():
         strategy.harvest()
     common_health_check.setDisabledCheck(strategy, True, {"from": gov})
     strategy.harvest()

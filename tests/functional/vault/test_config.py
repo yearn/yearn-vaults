@@ -2,9 +2,9 @@ from pathlib import Path
 import yaml
 
 import pytest
-import brownie
+import ape
 
-from brownie import ZERO_ADDRESS
+ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 
 PACKAGE_VERSION = yaml.safe_load(
     (Path(__file__).parent.parent.parent.parent / "ethpm-config.yaml").read_text()
@@ -63,7 +63,7 @@ def test_vault_reinitialization(guardian, gov, rewards, token, Vault):
     vault = guardian.deploy(Vault)
     vault.initialize(token, gov, rewards, "crvY yVault", "yvcrvY", guardian)
     # Can't reinitialize a vault
-    with brownie.reverts():
+    with ape.reverts():
         vault.initialize(token, gov, rewards, "crvY yVault", "yvcrvY", guardian)
 
 
@@ -100,7 +100,7 @@ def test_vault_setParams(
         val = rando
 
     # rando shouldn't be able to call these methods
-    with brownie.reverts():
+    with ape.reverts():
         getattr(vault, setter)(val, {"from": rando})
 
     if guard_allowed:
@@ -108,11 +108,11 @@ def test_vault_setParams(
         assert getattr(vault, getter)() == val
         chain.undo()
     else:
-        with brownie.reverts():
+        with ape.reverts():
             getattr(vault, setter)(val, {"from": guardian})
 
     # Management is never allowed
-    with brownie.reverts():
+    with ape.reverts():
         getattr(vault, setter)(val, {"from": management})
 
     # gov is always allowed
@@ -133,11 +133,11 @@ def test_vault_updateStrategy(
 ):
 
     # rando shouldn't be able to call these methods
-    with brownie.reverts():
+    with ape.reverts():
         getattr(vault, setter)(strategy, val, {"from": rando})
 
     # guardian is never allowed
-    with brownie.reverts():
+    with ape.reverts():
         getattr(vault, setter)(strategy, val, {"from": guardian})
 
     # management is always allowed
@@ -155,7 +155,7 @@ def test_vault_updateStrategy(
         # Can't set it more than max
         getattr(vault, setter)(strategy, max, {"from": gov})
         assert vault.strategies(strategy).dict()[key] == max
-        with brownie.reverts():
+        with ape.reverts():
             getattr(vault, setter)(strategy, max + 1, {"from": gov})
         assert vault.strategies(strategy).dict()[key] == max
 
@@ -163,19 +163,19 @@ def test_vault_updateStrategy(
 def test_min_max_debtIncrease(gov, vault, TestStrategy):
     strategy = gov.deploy(TestStrategy, vault)
     # Can't set min > max or max < min in adding a strategy
-    with brownie.reverts():
+    with ape.reverts():
         vault.addStrategy(strategy, 1_000, 20_000, 10_000, 1_000, {"from": gov})
 
     vault.addStrategy(strategy, 1_000, 10_000, 10_000, 1_000, {"from": gov})
     # Can't set min > max
-    with brownie.reverts():
+    with ape.reverts():
         vault.updateStrategyMaxDebtPerHarvest(
             strategy,
             vault.strategies(strategy).dict()["minDebtPerHarvest"] - 1,
             {"from": gov},
         )
     # Can't set max > min
-    with brownie.reverts():
+    with ape.reverts():
         vault.updateStrategyMinDebtPerHarvest(
             strategy,
             vault.strategies(strategy).dict()["maxDebtPerHarvest"] + 1,
@@ -186,22 +186,22 @@ def test_min_max_debtIncrease(gov, vault, TestStrategy):
 def test_vault_setGovernance(gov, vault, rando):
     newGov = rando
     # No one can set governance but governance
-    with brownie.reverts():
+    with ape.reverts():
         vault.setGovernance(newGov, {"from": newGov})
     # Governance doesn't change until it's accepted
     vault.setGovernance(newGov, {"from": gov})
     assert vault.governance() == gov
     # Only new governance can accept a change of governance
-    with brownie.reverts():
+    with ape.reverts():
         vault.acceptGovernance({"from": gov})
     # Governance doesn't change until it's accepted
     vault.acceptGovernance({"from": newGov})
     assert vault.governance() == newGov
     # No one can set governance but governance
-    with brownie.reverts():
+    with ape.reverts():
         vault.setGovernance(newGov, {"from": gov})
     # Only new governance can accept a change of governance
-    with brownie.reverts():
+    with ape.reverts():
         vault.acceptGovernance({"from": gov})
 
 
@@ -209,12 +209,12 @@ def test_vault_setLockedProfitDegradation_range(gov, vault):
     # value must be between 0 and DEGRADATION_COEFFICIENT (inclusive)
     vault.setLockedProfitDegradation(0, {"from": gov})
     vault.setLockedProfitDegradation(DEGRADATION_COEFFICIENT, {"from": gov})
-    with brownie.reverts():
+    with ape.reverts():
         vault.setLockedProfitDegradation(DEGRADATION_COEFFICIENT + 1, {"from": gov})
 
 
 def test_vault_setParams_bad_vals(gov, vault):
-    with brownie.reverts():
+    with ape.reverts():
         vault.setRewards(ZERO_ADDRESS, {"from": gov})
-    with brownie.reverts():
+    with ape.reverts():
         vault.setRewards(vault, {"from": gov})

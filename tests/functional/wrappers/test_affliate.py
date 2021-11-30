@@ -1,4 +1,4 @@
-import brownie
+import ape
 import pytest
 
 from eth_account import Account
@@ -15,7 +15,7 @@ def test_config(gov, token, vault, registry, affiliate_token):
     # No vault added to the registry yet, so these methods should fail
     assert registry.numVaults(token) == 0
 
-    with brownie.reverts():
+    with ape.reverts():
         affiliate_token.bestVault()
 
     # This won't revert though, there's no Vaults yet
@@ -31,41 +31,41 @@ def test_config(gov, token, vault, registry, affiliate_token):
 def test_setAffiliate(affiliate, affiliate_token, rando):
     new_affiliate = rando
     # No one can set affiliate but affiliate
-    with brownie.reverts():
+    with ape.reverts():
         affiliate_token.setAffiliate(new_affiliate, {"from": new_affiliate})
     # Affiliate doesn't change until it's accepted
     affiliate_token.setAffiliate(new_affiliate, {"from": affiliate})
     assert affiliate_token.affiliate() == affiliate
     # Only new affiliate can accept a change of affiliate
-    with brownie.reverts():
+    with ape.reverts():
         affiliate_token.acceptAffiliate({"from": affiliate})
     # Affiliate doesn't change until it's accepted
     affiliate_token.acceptAffiliate({"from": new_affiliate})
     assert affiliate_token.affiliate() == new_affiliate
     # No one can set affiliate but affiliate
-    with brownie.reverts():
+    with ape.reverts():
         affiliate_token.setAffiliate(new_affiliate, {"from": affiliate})
     # Only new affiliate can accept a change of affiliate
-    with brownie.reverts():
+    with ape.reverts():
         affiliate_token.acceptAffiliate({"from": affiliate})
 
 
 def test_setRegistry(rando, affiliate, gov, affiliate_token, new_registry):
     # Only yGov can call this method
-    with brownie.reverts():
+    with ape.reverts():
         affiliate_token.setRegistry(new_registry, {"from": rando})
 
-    with brownie.reverts():
+    with ape.reverts():
         affiliate_token.setRegistry(new_registry, {"from": affiliate})
 
     # Cannot set to an invalid registry
-    with brownie.reverts():
+    with ape.reverts():
         affiliate_token.setRegistry(rando, {"from": gov})
 
     # yGov must be the gov on the new registry too
     new_registry.setGovernance(rando, {"from": gov})
     new_registry.acceptGovernance({"from": rando})
-    with brownie.reverts():
+    with ape.reverts():
         affiliate_token.setRegistry(new_registry, {"from": gov})
     new_registry.setGovernance(gov, {"from": rando})
     new_registry.acceptGovernance({"from": gov})
@@ -114,7 +114,7 @@ def test_migrate(token, registry, create_vault, affiliate_token, gov, rando, aff
     registry.newRelease(vault2, {"from": gov})
     registry.endorseVault(vault2, {"from": gov})
 
-    with brownie.reverts():
+    with ape.reverts():
         affiliate_token.migrate({"from": rando})
 
     # Only affiliate can call this method

@@ -1,14 +1,14 @@
-import brownie
+import ape
 
 
 def test_release_management(gov, registry, create_vault, rando):
     # No releases yet
-    with brownie.reverts():
+    with ape.reverts():
         registry.latestRelease()
 
     # Not just anyone can create a new Release
     vault = create_vault()
-    with brownie.reverts():
+    with ape.reverts():
         registry.newRelease(vault, {"from": rando})
 
     # Creating the first release makes `latestRelease()` work
@@ -17,7 +17,7 @@ def test_release_management(gov, registry, create_vault, rando):
     assert registry.latestRelease() == v1_vault.apiVersion() == "1.0.0"
 
     # Can't release same vault twice (cannot have the same api version)
-    with brownie.reverts():
+    with ape.reverts():
         registry.newRelease(v1_vault, {"from": gov})
 
     # New release overrides previous release
@@ -26,7 +26,7 @@ def test_release_management(gov, registry, create_vault, rando):
     assert registry.latestRelease() == v2_vault.apiVersion() == "2.0.0"
 
     # Can only endorse the latest release.
-    with brownie.reverts():
+    with ape.reverts():
         registry.endorseVault(v1_vault)
 
     # Check that newRelease works even if vault governance is not gov

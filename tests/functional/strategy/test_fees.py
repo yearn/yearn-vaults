@@ -1,5 +1,5 @@
 import pytest
-import brownie
+import ape
 
 FEE_MAX = 10_000
 
@@ -52,30 +52,30 @@ def test_zero_fees(
 def test_max_fees(gov, vault, token, TestStrategy, rewards, strategist):
     # performance fee should not be higher than MAX
     vault.setPerformanceFee(FEE_MAX / 2, {"from": gov})
-    with brownie.reverts():
+    with ape.reverts():
         vault.setPerformanceFee(FEE_MAX / 2 + 1, {"from": gov})
 
     # management fee should not be higher than MAX
     vault.setManagementFee(FEE_MAX, {"from": gov})
 
-    with brownie.reverts():
+    with ape.reverts():
         vault.setManagementFee(FEE_MAX + 1, {"from": gov})
 
     # addStrategy should check for MAX FEE
     strategy = strategist.deploy(TestStrategy, vault)
-    with brownie.reverts():
+    with ape.reverts():
         vault.addStrategy(strategy, 2_000, 1000, 1000, FEE_MAX / 2 + 1, {"from": gov})
 
     # updateStrategyPerformanceFee should check for max to be MAX FEE / 2
     vault.addStrategy(strategy, 2_000, 1000, 1000, FEE_MAX / 2, {"from": gov})
     vault_performance_fee = vault.performanceFee()
-    with brownie.reverts():
+    with ape.reverts():
         vault.updateStrategyPerformanceFee(strategy, FEE_MAX / 2 + 1, {"from": gov})
 
     # updateStrategyPerformanceFee should check for max to be MAX FEE / 2
     vault.setPerformanceFee(0, {"from": gov})
     vault.updateStrategyPerformanceFee(strategy, FEE_MAX / 2, {"from": gov})
-    with brownie.reverts():
+    with ape.reverts():
         vault.updateStrategyPerformanceFee(strategy, FEE_MAX / 2 + 1, {"from": gov})
 
 

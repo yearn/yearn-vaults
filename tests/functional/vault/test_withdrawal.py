@@ -1,4 +1,4 @@
-import brownie
+import ape
 
 MAX_UINT256 = 2 ** 256 - 1
 
@@ -85,7 +85,7 @@ def test_forced_withdrawal(
         chain.sleep(1)
         for s in strategies:
             s.harvest({"from": gov})
-        with brownie.reverts():
+        with ape.reverts():
             vault.withdraw(5000, {"from": rando})
 
     # Everything is invested
@@ -101,9 +101,9 @@ def test_forced_withdrawal(
 
     # Throw if there is a loss on withdrawal, unless the user opts in
     assert token.balanceOf(vault) == 0
-    with brownie.reverts():
+    with ape.reverts():
         vault.withdraw({"from": rando})
-    with brownie.reverts():
+    with ape.reverts():
         vault.withdraw(1000, rando, 9999, {"from": rando})  # Opt-in to 99.99% loss
 
     chain.snapshot()  # For later
@@ -112,7 +112,7 @@ def test_forced_withdrawal(
     assert token.balanceOf(rando) == 0
 
     # User first try to withdraw with more than 100% losses, which is nonsensical
-    with brownie.reverts():
+    with ape.reverts():
         vault.withdraw(1000, rando, 10_001, {"from": rando})
 
     pricePerShareBefore = vault.pricePerShare()
@@ -170,7 +170,7 @@ def test_progressive_withdrawal(
     assert token.balanceOf(vault) < vault.totalAssets()  # Some debt is in strategies
 
     # Trying to withdraw 0 shares. It should revert
-    with brownie.reverts():
+    with ape.reverts():
         vault.withdraw(0, {"from": gov})
 
     # First withdraw everything possible without fees
@@ -300,7 +300,7 @@ def test_withdrawal_with_reentrancy(
     assert vault.balanceOf(strategy) > 0
 
     # given previous setup the withdraw should revert from reentrancy guard
-    with brownie.reverts():
+    with ape.reverts():
         vault.withdraw(vault.balanceOf(gov), {"from": gov})
 
 

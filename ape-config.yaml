@@ -1,0 +1,12 @@
+hardhat:
+  port: 8555
+  mainnet_fork:
+    upstream_provider: infura
+
+dependencies:
+  open_zeppelin: OpenZeppelin/openzeppelin-contracts@3.1.0
+
+solidity:
+  import_remapping:
+    - "@openzeppelin=open_zeppelin"
+  

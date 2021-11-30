@@ -1,5 +1,5 @@
 import pytest
-import brownie
+import ape
 
 
 @pytest.fixture
@@ -16,21 +16,21 @@ def vault(gov, token, Vault):
 def test_deposit_with_zero_funds(vault, token, rando):
     assert token.balanceOf(rando) == 0
     token.approve(vault, 2 ** 256 - 1, {"from": rando})
-    with brownie.reverts():
+    with ape.reverts():
         vault.deposit({"from": rando})
 
 
 def test_deposit_with_wrong_amount(vault, token, gov):
     balance = token.balanceOf(gov) + 1
     token.approve(vault, 2 ** 256 - 1, {"from": gov})
-    with brownie.reverts():
+    with ape.reverts():
         vault.deposit(balance, {"from": gov})
 
 
 def test_deposit_with_wrong_recipient(vault, token, gov):
     balance = token.balanceOf(gov)
     token.approve(vault, 2 ** 256 - 1, {"from": gov})
-    with brownie.reverts():
+    with ape.reverts():
         vault.deposit(
             balance, "0x0000000000000000000000000000000000000000", {"from": gov}
         )
@@ -88,7 +88,7 @@ def test_deposit_withdraw(gov, vault, token):
     assert vault.pricePerShare() == 10 ** token.decimals()  # 1:1 price
 
     # Can't withdraw more shares than we have
-    with brownie.reverts():
+    with ape.reverts():
         vault.withdraw(2 * vault.balanceOf(gov), {"from": gov})
 
     vault.withdraw({"from": gov})
@@ -103,7 +103,7 @@ def test_deposit_limit(gov, token, vault):
     vault.setDepositLimit(0, {"from": gov})
 
     # Deposits are locked out
-    with brownie.reverts():
+    with ape.reverts():
         vault.deposit({"from": gov})
 
     balance = token.balanceOf(gov)
@@ -114,7 +114,7 @@ def test_deposit_limit(gov, token, vault):
     assert vault.balanceOf(gov) == balance // 3
 
     # With the integer arg, it must be at or below the limit
-    with brownie.reverts():
+    with ape.reverts():
         vault.deposit(token.balanceOf(gov), {"from": gov})
 
     # Without the integer arg, it takes up to whatever's left
@@ -122,7 +122,7 @@ def test_deposit_limit(gov, token, vault):
     assert vault.balanceOf(gov) == balance // 2
 
     # Deposits are locked out
-    with brownie.reverts():
+    with ape.reverts():
         vault.deposit({"from": gov})
 
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
@@ -196,7 +196,7 @@ def test_emergencyShutdown(gov, vault, token):
     vault.setEmergencyShutdown(True, {"from": gov})
 
     # Deposits are locked out
-    with brownie.reverts():
+    with ape.reverts():
         vault.deposit({"from": gov})
 
     # But withdrawals are fine
@@ -214,11 +214,11 @@ def test_transfer(accounts, token, vault):
     assert vault.balanceOf(b) == 0
 
     # Can't send your balance to the Vault
-    with brownie.reverts():
+    with ape.reverts():
         vault.transfer(vault, vault.balanceOf(a), {"from": a})
 
     # Can't send your balance to the zero address
-    with brownie.reverts():
+    with ape.reverts():
         vault.transfer(
             "0x0000000000000000000000000000000000000000",
             vault.balanceOf(a),
@@ -237,7 +237,7 @@ def test_transferFrom(accounts, token, vault):
     vault.deposit({"from": a})
 
     # Unapproved can't send
-    with brownie.reverts():
+    with ape.reverts():
         vault.transferFrom(a, b, vault.balanceOf(a) // 2, {"from": c})
 
     vault.approve(c, vault.balanceOf(a) // 2, {"from": a})
@@ -250,7 +250,7 @@ def test_transferFrom(accounts, token, vault):
     assert vault.allowance(a, c) == vault.balanceOf(a) // 2
 
     # Can't send more than what is approved
-    with brownie.reverts():
+    with ape.reverts():
         vault.transferFrom(a, b, vault.balanceOf(a), {"from": c})
 
     assert vault.balanceOf(a) == token.balanceOf(vault)
@@ -274,5 +274,5 @@ def test_do_not_issue_zero_shares(gov, token, vault, increase_pps):
     vault.deposit(500, {"from": gov})
     strategy = increase_pps(vault, token, 500, gov)  # inflate price
     assert vault.pricePerShare() == 2 * 10 ** token.decimals()  # 2:1 price
-    with brownie.reverts():
+    with ape.reverts():
         vault.deposit(1, {"from": gov})

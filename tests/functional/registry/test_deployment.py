@@ -1,6 +1,5 @@
-import brownie
-from brownie import ZERO_ADDRESS
-
+import ape
+ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 
 def test_deployment_management(
     gov,
@@ -15,7 +14,7 @@ def test_deployment_management(
 ):
     v1_token = create_token()
     # No deployments yet for token
-    with brownie.reverts():
+    with ape.reverts():
         registry.latestVault(v1_token)
 
     # Token tracking state variables should start off uninitialized
@@ -41,7 +40,7 @@ def test_deployment_management(
     assert registry.numTokens() == 1
 
     # Can't deploy the same vault api version twice, proxy or not
-    with brownie.reverts():
+    with ape.reverts():
         registry.newVault(v1_token, guardian, rewards, "", "", {"from": gov})
 
     # New release overrides previous release
@@ -85,7 +84,7 @@ def test_deployment_management(
     assert registry.numTokens() == 2
 
     # Not just anyone can create a new endorsed Vault, only governance can!
-    with brownie.reverts():
+    with ape.reverts():
         registry.newVault(create_token(), guardian, rewards, "", "", {"from": rando})
 
 
@@ -107,11 +106,11 @@ def test_experimental_deployments(
     )
 
     # Experimental Vaults do not count towards deployments
-    with brownie.reverts():
+    with ape.reverts():
         registry.latestVault(token)
 
     # You can't endorse a vault if governance isn't set properly
-    with brownie.reverts():
+    with ape.reverts():
         registry.endorseVault(experimental_vault, {"from": gov})
 
     experimental_vault.setGovernance(gov, {"from": rando})
@@ -137,7 +136,7 @@ def test_experimental_deployments(
             token, gov, gov, gov, "", "", {"from": rando}
         ).return_value
     )
-    with brownie.reverts():
+    with ape.reverts():
         registry.endorseVault(experimental_vault, {"from": gov})
 
     # You can only endorse a vault if it creates a new deployment
@@ -164,5 +163,5 @@ def test_experimental_deployments(
 
     # Only governance can endorse a Vault
     vault = create_vault()
-    with brownie.reverts():
+    with ape.reverts():
         registry.endorseVault(vault, {"from": rando})

@@ -1,5 +1,5 @@
 import pytest
-import brownie
+import ape
 import pytest
 
 MAX_UINT256 = 2 ** 256 - 1
@@ -137,7 +137,7 @@ def test_sweep(gov, vault, rando, token, other_token):
     # Vault wrapped token doesn't work
     assert token.address == vault.token()
     assert token.balanceOf(vault) > 0
-    with brownie.reverts():
+    with ape.reverts():
         vault.sweep(token, {"from": gov})
 
     # But any other random token works
@@ -145,7 +145,7 @@ def test_sweep(gov, vault, rando, token, other_token):
     assert other_token.balanceOf(vault) > 0
     assert other_token.balanceOf(gov) == 0
     # Not any random person can do this
-    with brownie.reverts():
+    with ape.reverts():
         vault.sweep(other_token, {"from": rando})
 
     before = other_token.balanceOf(vault)
@@ -213,22 +213,22 @@ def test_reject_ether(gov, vault):
         ("sweep", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
         ("sweep", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 1]),
     ]:
-        with brownie.reverts():
+        with ape.reverts():
             # NOTE: gov can do anything
             getattr(vault, func)(*args, {"from": gov, "value": 1})
 
     # Fallback fails too
-    with brownie.reverts():
+    with ape.reverts():
         gov.transfer(vault, 1)
 
     # NOTE: Just for coverage
-    with brownie.reverts():
+    with ape.reverts():
         gov.transfer(vault, 0)
 
 
 def test_deposit_withdraw_faillure(token, gov, vault):
     token._setBlocked(vault.address, True, {"from": gov})
-    with brownie.reverts():
+    with ape.reverts():
         vault.deposit({"from": gov})
 
     token._setBlocked(vault.address, False, {"from": gov})
@@ -236,7 +236,7 @@ def test_deposit_withdraw_faillure(token, gov, vault):
     vault.deposit({"from": gov})
     token._setBlocked(gov, True, {"from": gov})
 
-    with brownie.reverts():
+    with ape.reverts():
         vault.withdraw(vault.balanceOf(gov), {"from": gov})
 
 
@@ -298,7 +298,7 @@ def test_erc20_safe_transfer(gov, other_vault, token, other_token, token_false_r
     other_vault.sweep(token, sweepAmount, {"from": gov})
 
     # Tokens that return false should revert (erc20_safe_transfer failed)
-    with brownie.reverts():
+    with ape.reverts():
         other_vault.sweep(token_false_return, 0, {"from": gov})
 
 
@@ -306,7 +306,7 @@ def test_erc20_safe_transferFrom(
     gov, token, vault, token_false_return, vault_with_false_returning_token
 ):
     # Vaults with false returning tokens
-    with brownie.reverts():
+    with ape.reverts():
         token_false_return.approve(
             vault_with_false_returning_token, MAX_UINT256, {"from": gov}
         )

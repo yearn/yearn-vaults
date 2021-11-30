@@ -1,2 +1,6 @@
 black==21.9b0
-eth-brownie>=1.17.1,<2.0.0
+eth-ape==0.1.0b2
+ape-solidity==0.1.0b1
+ape-hardhat==0.1.0b1
+ape-infura==0.1.0b1
+ape-vyper==0.1.0b1

@@ -7,7 +7,12 @@ import yaml
 from eth_account import Account
 from eth_account.messages import encode_structured_data
 
-from brownie import compile_source, Token, Vault, web3, chain
+from ape import project, Project, api, networks
+from ape.managers.project import ProjectManager
+from ape_hardhat import HardhatNetworkConfig, HardhatProvider
+Token = project.Token
+Vault = project.Vault
+web3 = api.Web3Provider
 
 PACKAGE_VERSION = yaml.safe_load(
     (Path(__file__).parents[1] / "ethpm-config.yaml").read_text()
@@ -82,10 +87,10 @@ def patch_vault_version():
     return patch_vault_version
 
 
-def chain_id():
+def chain_id(hardhat_provider):
     # BUG: ganache-cli provides mismatching chain.id and chainid()
     # https://github.com/trufflesuite/ganache/issues/1643
-    return 1 if web3.clientVersion.startswith("EthereumJS") else chain.id
+    return 1 if web3.clientVersion.startswith("EthereumJS") else hardhat_provider.chain_id
 
 
 @pytest.fixture
@@ -197,3 +202,36 @@ def sign_vault_permit():
 @pytest.fixture(scope="function", autouse=True)
 def shared_setup(fn_isolation):
     pass
+
+
+# Hardhat config
+def get_project() -> ProjectManager:
+    return Project(Path(__file__).parent)
+
+@pytest.fixture
+def project():
+    return get_project()
+
+@pytest.fixture
+def network_api():
+    return networks.ecosystems["ethereum"]["development"]
+
+def get_network_config() -> HardhatNetworkConfig:
+    config = HardhatNetworkConfig()
+
+    # bump up the timeouts to decrease chance of tests flaking due to race conditions
+    config.network_retries = [0.1, 0.2, 0.3, 0.5, 0.5, 1, 1, 1, 1, 1, 1, 5]
+    config.process_attempts = 10
+
+    return config
+
+@pytest.fixture
+def network_config(project):
+    return get_network_config()
+
+@pytest.fixture
+def hardhat_provider(network_api, network_config):
+    provider = HardhatProvider("hardhat", network_api, network_config, {}, Path("."), "")
+    provider.connect()
+    return provider
+

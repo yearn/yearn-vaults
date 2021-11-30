@@ -1,7 +1,8 @@
 import pytest
+from ape import project
 
-from brownie import ZERO_ADDRESS, Token, TokenNoReturn
-
+Token = project.Token
+Vault = project.Vault
 
 @pytest.fixture
 def gov(accounts):

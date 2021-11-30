@@ -2,9 +2,9 @@ from pathlib import Path
 import yaml
 
 import pytest
-import brownie
+import ape
 
-from brownie import ZERO_ADDRESS
+ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 
 PACKAGE_VERSION = yaml.safe_load(
     (Path(__file__).parent.parent.parent.parent / "ethpm-config.yaml").read_text()
@@ -36,13 +36,13 @@ def test_strategy_deployment(strategist, vault, TestStrategy):
 def test_strategy_no_reinit(strategist, vault, TestStrategy):
     strategy = strategist.deploy(TestStrategy, vault)
 
-    with brownie.reverts("Strategy already initialized"):
+    with ape.reverts("Strategy already initialized"):
         strategy.initialize(vault, strategist, strategist, strategist)
 
 
 def test_strategy_setEmergencyExit(strategy, gov, strategist, rando, chain):
     # Only governance or strategist can set this param
-    with brownie.reverts():
+    with ape.reverts():
         strategy.setEmergencyExit({"from": rando})
     assert not strategy.emergencyExit()
 
@@ -68,7 +68,7 @@ def test_strategy_harvest_permission(
     strategy.harvest({"from": guardian})
     chain.sleep(1)
     strategy.harvest({"from": keeper})
-    with brownie.reverts():
+    with ape.reverts():
         strategy.harvest({"from": rando})
 
 
@@ -101,7 +101,7 @@ def test_strategy_setParams(
     prev_val = getattr(strategy, getter)()
 
     # None of these params can be set by a rando
-    with brownie.reverts():
+    with ape.reverts():
         getattr(strategy, setter)(val, {"from": rando})
 
     def try_setParam(caller, allowed):
@@ -112,7 +112,7 @@ def test_strategy_setParams(
             getattr(strategy, setter)(prev_val, {"from": caller})
             assert getattr(strategy, getter)() == prev_val
         else:
-            with brownie.reverts():
+            with ape.reverts():
                 getattr(strategy, setter)(val, {"from": caller})
 
     try_setParam(strategist, strategist_allowed)
@@ -124,27 +124,27 @@ def test_set_strategist_authority(strategy, strategist, rando):
     # so this test handles it.
 
     # Only gov or strategist can setStrategist
-    with brownie.reverts():
+    with ape.reverts():
         strategy.setStrategist(rando, {"from": rando})
 
     # As strategist, set strategist to rando.
     strategy.setStrategist(rando, {"from": strategist})
 
     # Now the original strategist shouldn't be able to set strategist again
-    with brownie.reverts():
+    with ape.reverts():
         strategy.setStrategist(rando, {"from": strategist})
 
 
 def test_set_rewards(strategy, rando):
     # Only gov or strategist can setRewards
-    with brownie.reverts():
+    with ape.reverts():
         strategy.setRewards(rando, {"from": rando})
 
 
 def test_strategy_setParams_bad_vals(gov, strategist, strategy):
-    with brownie.reverts():
+    with ape.reverts():
         strategy.setKeeper(ZERO_ADDRESS, {"from": gov})
-    with brownie.reverts():
+    with ape.reverts():
         strategy.setRewards(ZERO_ADDRESS, {"from": strategist})
 
 
@@ -153,11 +153,11 @@ def test_strategist_update(gov, strategist, strategy, rando):
     strategy.setStrategist(rando, {"from": strategist})
     assert strategy.strategist() == rando
     # Strategist can't change themselves once they update
-    with brownie.reverts():
+    with ape.reverts():
         strategy.setStrategist(strategist, {"from": strategist})
     # But governance can
     strategy.setStrategist(strategist, {"from": gov})
     assert strategy.strategist() == strategist
     # cannot set strategist to zero address
-    with brownie.reverts():
+    with ape.reverts():
         strategy.setStrategist(ZERO_ADDRESS, {"from": gov})
