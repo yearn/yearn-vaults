@@ -3,7 +3,7 @@ import pytest
 from collections import namedtuple
 from semantic_version import Version
 
-from brownie import yToken, AffiliateToken, Vault
+from brownie import yToken, AffiliateToken, Vault, CommonHealthCheck, TestStrategy
 from brownie.test import strategy
 
 
@@ -59,20 +59,43 @@ class Migration:
         else:
             print("  Wrapper.deposit: Nothing to deposit...")
 
-    # def rule_harvest(self, index="st_index"):
-    #     # Give some profit to one of the Vaults we are invested in
-    #     vaults_in_use = [v for v in self.vaults if v.totalSupply() > 0]
-    #     if len(vaults_in_use) > 0:
-    #         vault = vaults_in_use[index % len(vaults_in_use)]
-    #         amount = int(1e17)
-    #         print(f"  {vault}.harvest({amount})")
-    #         # TODO: fix with AirdropStrategy
-    #         self.token.transfer(vault, amount, {"from": self.user})
-    #         # NOTE: Wait enough time where "profit locking" isn't a problem (about a day)
-    #         self.chain.mine(timedelta=24 * 60 * 60)
+    def rule_harvest(self, index="st_index"):
+        # Give some profit to one of the Vaults we are invested in
+        vaults_in_use = [v for v in self.vaults if v.totalSupply() > 0]
+        if len(vaults_in_use) > 0:
+            vault = vaults_in_use[index % len(vaults_in_use)]
+            strategy = self.gov.deploy(TestStrategy, vault)
 
-    #     else:
-    #         print("  vaults.harvest: No Vaults in use...")
+            vault.addStrategy(
+                strategy,
+                0,  # 0% of Vault
+                0,  # Minimum debt increase per harvest
+                2 ** 256 - 1,  # maximum debt increase per harvest
+                0,  # 10% performance fee for Strategist
+                {"from": self.gov},
+            )
+            amount = int(1e17)
+            print(f"  {vault}.harvest({amount})")
+            self.token.transfer(strategy, amount, {"from": self.user})
+            managementFee = vault.managementFee()
+            performanceFee = vault.performanceFee()
+            vault.setManagementFee(0, {"from": self.gov})
+            vault.setPerformanceFee(0, {"from": self.gov})
+            vault.updateStrategyPerformanceFee(strategy, 0, {"from": self.gov})
+            common_health_check = vault.healthCheck()
+            common_health_check = CommonHealthCheck.at(common_health_check)
+            common_health_check.setDisabledCheck(strategy, True, {"from": self.gov})
+            strategy.harvest()
+            assert self.token.balanceOf(strategy) == 0
+            vault.setManagementFee(managementFee, {"from": self.gov})
+            vault.setPerformanceFee(performanceFee, {"from": self.gov})
+            self.chain.sleep(7 * 3600)
+            self.chain.mine()
+            # NOTE: Wait enough time where "profit locking" isn't a problem (about a day)
+            self.chain.mine(timedelta=24 * 60 * 60)
+
+        else:
+            print("  vaults.harvest: No Vaults in use...")
 
     def rule_migrate(self):
         print("  Wrapper.migrate()")
@@ -106,6 +129,7 @@ def test_migration_wrapper(
 
     # NOTE: Must start with at least one vault in registry (for token)
     vault = create_vault(token=token, version="1.0.0")
+
     registry.newRelease(vault, {"from": gov})
     registry.endorseVault(vault, {"from": gov})
 
