@@ -71,9 +71,9 @@ Any command `in code blocks` is meant to be executed from a Mac/Linux terminal o
    - Linux or Mac: via your [package manager](https://nodejs.org/en/download/package-manager/)
    - Windows: [x64 installer](https://nodejs.org/dist/latest-v12.x/node-v12.13.0-x64.msi)
    - Other [10.x downloads](https://nodejs.org/dist/latest-v12.x)
-6. Install [Ganache](https://github.com/trufflesuite/ganache-cli)
+6. [Install Yarn](https://classic.yarnpkg.com/en/docs/install)
+7. Install [Ganache](https://github.com/trufflesuite/ganache-cli)
    - `yarn global add ganache-cli@6.12.1`
-7. [Install Yarn](https://classic.yarnpkg.com/en/docs/install)
 8. [Install Black](https://pypi.org/project/black/)
    - `python3 -m pip install black`
 9. Setup an account on [Etherscan](https://etherscan.io) and create an API key
