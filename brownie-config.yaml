@@ -1,6 +1,6 @@
 # use Ganache's forked mainnet mode as the default network
 networks:
-  default: development
+  default: hardhat
 
 autofetch_sources: true
 
