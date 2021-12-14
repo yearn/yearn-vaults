@@ -69,6 +69,16 @@ event Approval:
     spender: indexed(address)
     value: uint256
 
+event Deposit:
+    recipient: indexed(address)
+    shares: uint256
+    amount: uint256
+
+
+event Withdraw:
+    recipient: indexed(address)
+    shares: uint256
+    amount: uint256
 
 name: public(String[64])
 symbol: public(String[32])
@@ -895,6 +905,8 @@ def deposit(_amount: uint256 = MAX_UINT256, recipient: address = msg.sender) -> 
 
     # Tokens are transferred from msg.sender (may be different from _recipient)
     self.erc20_safe_transferFrom(self.token.address, msg.sender, self, amount)
+    
+    log Deposit(recipient, shares, amount)
 
     return shares  # Just in case someone wants them
 
@@ -1118,7 +1130,8 @@ def withdraw(
 
     # Withdraw remaining balance to _recipient (may be different to msg.sender) (minus fee)
     self.erc20_safe_transfer(self.token.address, recipient, value)
-
+    log Withdraw(recipient, shares, value)
+    
     return value
 
 
