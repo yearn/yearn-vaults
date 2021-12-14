@@ -1003,8 +1003,10 @@ def _reportLoss(strategy: address, loss: uint256):
             loss * self.debtRatio / self.totalDebt,
             self.strategies[strategy].debtRatio,
         )
-        self.strategies[strategy].debtRatio -= ratio_change
-        self.debtRatio -= ratio_change
+        # If the loss is too small, ratio_change will be 0
+        if ratio_change != 0:
+            self.strategies[strategy].debtRatio -= ratio_change
+            self.debtRatio -= ratio_change
     # Finally, adjust our strategy's parameters by the loss
     self.strategies[strategy].totalLoss += loss
     self.strategies[strategy].totalDebt = totalDebt - loss
