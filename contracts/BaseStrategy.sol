@@ -861,7 +861,6 @@ abstract contract BaseStrategyInitializable is BaseStrategy {
     }
 
     function clone(address _vault) external returns (address) {
-        require(isOriginal, "!clone");
         return this.clone(_vault, msg.sender, msg.sender, msg.sender);
     }
 
@@ -871,6 +870,7 @@ abstract contract BaseStrategyInitializable is BaseStrategy {
         address _rewards,
         address _keeper
     ) external returns (address newStrategy) {
+        require(isOriginal, "!clone");
         // Copied from https://github.com/optionality/clone-factory/blob/master/contracts/CloneFactory.sol
         bytes20 addressBytes = bytes20(address(this));
 
