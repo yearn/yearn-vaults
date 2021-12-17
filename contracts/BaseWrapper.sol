@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.6.12;
+pragma solidity ^0.8.10;
 pragma experimental ABIEncoderV2;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import {Math} from "@openzeppelin/contracts/math/Math.sol";
-import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {BaseRouter} from "./BaseRouter.sol";
 import {VaultAPI} from "./BaseStrategy.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
  * @title Yearn Base Wrapper
@@ -21,14 +20,13 @@ import {VaultAPI} from "./BaseStrategy.sol";
  */
 abstract contract BaseWrapper is BaseRouter {
     using Math for uint256;
-    using SafeMath for uint256;
 
     IERC20 public token;
     uint256 constant MIGRATE_EVERYTHING = type(uint256).max;
     // VaultsAPI.depositLimit is unlimited
     uint256 constant UNCAPPED_DEPOSITS = type(uint256).max;
 
-    constructor(address _token, address _registry) public BaseRouter(_registry) {
+    constructor(address _token, address _registry) BaseRouter(_registry) {
         // Recommended to use a token with a `Registry.latestVault(_token) != address(0)`
         token = IERC20(_token);
     }
@@ -113,7 +111,7 @@ abstract contract BaseWrapper is BaseRouter {
         uint256 _amount = amount;
         if (_depositLimit < UNCAPPED_DEPOSITS && _amount < WITHDRAW_EVERYTHING) {
             // Can only deposit up to this amount
-            uint256 _depositLeft = _depositLimit.sub(_totalAssets);
+            uint256 _depositLeft = _depositLimit - _totalAssets;
             if (_amount > _depositLeft) _amount = _depositLeft;
         }
 
@@ -127,7 +125,7 @@ abstract contract BaseWrapper is BaseRouter {
             // NOTE: Due to the precision loss of certain calculations, there is a small inefficency
             //       on how migrations are calculated, and this could lead to a DoS issue. Hence, this
             //       value is made to be configurable to allow the user to specify how much is acceptable
-            require(withdrawn.sub(migrated) <= maxMigrationLoss);
+            require((withdrawn - migrated) <= maxMigrationLoss);
         } // else: nothing to migrate! (not a failure)
     }
 }

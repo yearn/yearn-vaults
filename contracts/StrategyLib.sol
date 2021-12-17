@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.6.12;
+pragma solidity 0.8.10;
 pragma experimental ABIEncoderV2;
 
-import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 import {StrategyParams, VaultAPI, StrategyAPI} from "./BaseStrategy.sol";
 
 library StrategyLib {
-    using SafeMath for uint256;
-
     function internalHarvestTrigger(
         address vault,
         address strategy,
@@ -24,10 +21,10 @@ library StrategyLib {
         }
 
         // Should not trigger if we haven't waited long enough since previous harvest
-        if (block.timestamp.sub(params.lastReport) < minReportDelay) return false;
+        if ((block.timestamp - params.lastReport) < minReportDelay) return false;
 
         // Should trigger if hasn't been called in a while
-        if (block.timestamp.sub(params.lastReport) >= maxReportDelay) return true;
+        if ((block.timestamp - params.lastReport) >= maxReportDelay) return true;
 
         // If some amount is owed, pay it back
         // NOTE: Since debt is based on deposits, it makes sense to guard against large
@@ -40,15 +37,15 @@ library StrategyLib {
         // Check for profits and losses
         uint256 total = StrategyAPI(strategy).estimatedTotalAssets();
         // Trigger if we have a loss to report
-        if (total.add(debtThreshold) < params.totalDebt) return true;
+        if (total + debtThreshold < params.totalDebt) return true;
 
         uint256 profit = 0;
-        if (total > params.totalDebt) profit = total.sub(params.totalDebt); // We've earned a profit!
+        if (total > params.totalDebt) profit = total - params.totalDebt; // We've earned a profit!
 
         // Otherwise, only trigger if it "makes sense" economically (gas cost
         // is <N% of value moved)
         uint256 credit = VaultAPI(vault).creditAvailable();
-        return (profitFactor.mul(callCost) < credit.add(profit));
+        return ((profitFactor * callCost) < (credit + profit));
     }
 
     function internalSetRewards(

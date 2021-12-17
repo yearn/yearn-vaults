@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity >=0.6.0 <0.7.0;
+pragma solidity >=0.8.0 <0.9.0;
 
 import {ICustomHealthCheck} from "./interfaces/ICustomHealthCheck.sol";
 import {StrategyAPI} from "./BaseStrategy.sol";
@@ -39,7 +39,7 @@ contract CommonHealthCheck {
         _;
     }
 
-    constructor() public {
+    constructor() {
         governance = msg.sender;
         management = msg.sender;
         profitLimitRatio = 100;

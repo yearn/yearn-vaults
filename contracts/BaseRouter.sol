@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.6.12;
+pragma solidity ^0.8.10;
 pragma experimental ABIEncoderV2;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import {Math} from "@openzeppelin/contracts/math/Math.sol";
-import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
-
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {VaultAPI} from "./BaseStrategy.sol";
 
 interface RegistryAPI {
@@ -31,7 +29,6 @@ interface RegistryAPI {
  */
 abstract contract BaseRouter {
     using Math for uint256;
-    using SafeMath for uint256;
 
     // Reduce number of external calls (SLOADs stay the same)
     mapping(address => VaultAPI[]) private _cachedVaults;
@@ -45,7 +42,7 @@ abstract contract BaseRouter {
     uint256 constant DEPOSIT_EVERYTHING = type(uint256).max;
     uint256 constant WITHDRAW_EVERYTHING = type(uint256).max;
 
-    constructor(address _registry) public {
+    constructor(address _registry) {
         // Recommended to use `v2.registry.ychad.eth`
         registry = RegistryAPI(_registry);
     }
@@ -120,7 +117,7 @@ abstract contract BaseRouter {
         VaultAPI[] memory vaults = allVaults(token);
 
         for (uint256 id = 0; id < vaults.length; id++) {
-            balance = balance.add(vaults[id].balanceOf(account).mul(vaults[id].pricePerShare()).div(10**uint256(vaults[id].decimals())));
+            balance = balance + ((vaults[id].balanceOf(account) * vaults[id].pricePerShare()) / (10**uint256(vaults[id].decimals())));
         }
     }
 
@@ -133,7 +130,7 @@ abstract contract BaseRouter {
         VaultAPI[] memory vaults = allVaults(token);
 
         for (uint256 id = 0; id < vaults.length; id++) {
-            assets = assets.add(vaults[id].totalAssets());
+            assets = assets + vaults[id].totalAssets();
         }
     }
 
@@ -172,7 +169,7 @@ abstract contract BaseRouter {
         }
 
         uint256 afterBal = token.balanceOf(address(this));
-        deposited = beforeBal.sub(afterBal);
+        deposited = beforeBal - afterBal;
         // `receiver` now has shares of `_bestVault` as balance, converted to `token` here
         // Issue a refund if not everything was deposited
         if (depositor != address(this) && afterBal > 0) SafeERC20.safeTransfer(token, depositor, afterBal);
@@ -220,24 +217,22 @@ abstract contract BaseRouter {
 
                 if (amount != WITHDRAW_EVERYTHING) {
                     // Compute amount to withdraw fully to satisfy the request
-                    uint256 estimatedShares = amount
-                    .sub(withdrawn) // NOTE: Changes every iteration
-                    .mul(10**uint256(vaults[id].decimals()))
-                    .div(vaults[id].pricePerShare()); // NOTE: Every Vault is different
+                    uint256 estimatedShares = ((amount - withdrawn) * (10**uint256(vaults[id].decimals()))) / vaults[id].pricePerShare();
+                    // NOTE: Changes every iteration
 
                     // Limit amount to withdraw to the maximum made available to this contract
                     // NOTE: Avoid corner case where `estimatedShares` isn't precise enough
                     // NOTE: If `0 < estimatedShares < 1` but `availableShares > 1`, this will withdraw more than necessary
                     if (estimatedShares > 0 && estimatedShares < availableShares) {
                         if (sender != address(this)) vaults[id].transferFrom(sender, address(this), estimatedShares);
-                        withdrawn = withdrawn.add(vaults[id].withdraw(estimatedShares));
+                        withdrawn = withdrawn + vaults[id].withdraw(estimatedShares);
                     } else {
                         if (sender != address(this)) vaults[id].transferFrom(sender, address(this), availableShares);
-                        withdrawn = withdrawn.add(vaults[id].withdraw(availableShares));
+                        withdrawn = withdrawn + vaults[id].withdraw(availableShares);
                     }
                 } else {
                     if (sender != address(this)) vaults[id].transferFrom(sender, address(this), availableShares);
-                    withdrawn = withdrawn.add(vaults[id].withdraw());
+                    withdrawn = withdrawn + vaults[id].withdraw();
                 }
 
                 // Check if we have fully satisfied the request
@@ -248,13 +243,13 @@ abstract contract BaseRouter {
 
         // If we have extra, deposit back into `_bestVault` for `sender`
         // NOTE: Invariant is `withdrawn <= amount`
-        if (withdrawn > amount && withdrawn.sub(amount) > _bestVault.pricePerShare().div(10**_bestVault.decimals())) {
+        if (withdrawn > amount && ((withdrawn - amount) > _bestVault.pricePerShare() / 10**_bestVault.decimals())) {
             // Don't forget to approve the deposit
-            if (token.allowance(address(this), address(_bestVault)) < withdrawn.sub(amount)) {
+            if (token.allowance(address(this), address(_bestVault)) < withdrawn - amount) {
                 SafeERC20.safeApprove(token, address(_bestVault), UNLIMITED_APPROVAL); // Vaults are trusted
             }
 
-            _bestVault.deposit(withdrawn.sub(amount), sender);
+            _bestVault.deposit(withdrawn - amount, sender);
             withdrawn = amount;
         }
 

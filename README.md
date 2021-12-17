@@ -103,7 +103,7 @@ Any command `in code blocks` is meant to be executed from a Mac/Linux terminal o
       - Alternatively, go to File -> Preferences -> Settings
       - If you’re using WSL, go to the Remote [WSL] tab
       - Otherwise choose the Workspace tab
-        - Search for _Solidity_ and copy and paste _v0.6.12+commit.27d51765_ into the _Solidity: Compile Using Remote Version_ textbox
+    - Search for _Solidity_ and copy and paste _v0.8.10 into the _Solidity: Compile Using Remote Version_ textbox
     - Set solidity remapping
       - To resolve imports properly in vscode you will need to remap how `@openzeppelin` is resolved
       - Goto _File -> Preferences -> Settings_
