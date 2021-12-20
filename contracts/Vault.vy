@@ -57,29 +57,6 @@ interface Strategy:
     def withdraw(_amount: uint256) -> uint256: nonpayable
     def migrate(_newStrategy: address): nonpayable
 
-
-event Transfer:
-    sender: indexed(address)
-    receiver: indexed(address)
-    value: uint256
-
-
-event Approval:
-    owner: indexed(address)
-    spender: indexed(address)
-    value: uint256
-
-event Deposit:
-    recipient: indexed(address)
-    shares: uint256
-    amount: uint256
-
-
-event Withdraw:
-    recipient: indexed(address)
-    shares: uint256
-    amount: uint256
-
 name: public(String[64])
 symbol: public(String[32])
 decimals: public(uint256)
@@ -105,6 +82,30 @@ struct StrategyParams:
     totalGain: uint256  # Total returns that Strategy has realized for Vault
     totalLoss: uint256  # Total losses that Strategy has realized for Vault
 
+event Transfer:
+    sender: indexed(address)
+    receiver: indexed(address)
+    value: uint256
+
+
+event Approval:
+    owner: indexed(address)
+    spender: indexed(address)
+    value: uint256
+
+event Deposit:
+    recipient: indexed(address)
+    shares: uint256
+    amount: uint256
+
+
+event Withdraw:
+    recipient: indexed(address)
+    shares: uint256
+    amount: uint256
+
+event LockedProfitDegradationUpdated:
+    value: uint256
 
 event StrategyAdded:
     strategy: indexed(address)
@@ -442,6 +443,7 @@ def setLockedProfitDegradation(degradation: uint256):
     # Since "degradation" is of type uint256 it can never be less than zero
     assert degradation <= DEGRADATION_COEFFICIENT
     self.lockedProfitDegradation = degradation
+    log LockedProfitDegradationUpdated(degradation) 
 
 
 @external
