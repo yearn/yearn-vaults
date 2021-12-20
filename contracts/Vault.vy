@@ -57,28 +57,6 @@ interface Strategy:
     def withdraw(_amount: uint256) -> uint256: nonpayable
     def migrate(_newStrategy: address): nonpayable
 
-event Transfer:
-    sender: indexed(address)
-    receiver: indexed(address)
-    value: uint256
-
-
-event Approval:
-    owner: indexed(address)
-    spender: indexed(address)
-    value: uint256
-
-event Deposit:
-    recipient: indexed(address)
-    shares: uint256
-    amount: uint256
-
-
-event Withdraw:
-    recipient: indexed(address)
-    shares: uint256
-    amount: uint256
-
 name: public(String[64])
 symbol: public(String[32])
 decimals: public(uint256)
