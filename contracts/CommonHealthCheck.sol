@@ -22,6 +22,7 @@ contract CommonHealthCheck {
 
     mapping(address => address) public checks;
     mapping(address => bool) public disabledCheck;
+    event DisableHealthCheck(address strategy, bool disabled);
 
     modifier onlyGovernance() {
         require(msg.sender == governance, "!authorized");
@@ -80,10 +81,12 @@ contract CommonHealthCheck {
     }
 
     function enableCheck(address _strategy) external onlyVault(_strategy) {
+        emit DisableHealthCheck(_strategy, false);
         disabledCheck[_strategy] = false;
     }
 
     function setDisabledCheck(address _strategy, bool disabled) external onlyAuthorized {
+        emit DisableHealthCheck(_strategy, disabled);
         disabledCheck[_strategy] = disabled;
     }
 
