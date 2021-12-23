@@ -22,6 +22,10 @@ struct StrategyParams {
     address customCheck;
 }
 
+interface IBaseFee {
+    function isCurrentBaseFeeAcceptable() external view returns (bool);
+}
+
 interface VaultAPI is IERC20 {
     function name() external view returns (string calldata);
 
