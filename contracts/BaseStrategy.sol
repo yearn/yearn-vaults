@@ -245,10 +245,6 @@ abstract contract BaseStrategy {
 
     event UpdatedMaxReportDelay(uint256 delay);
 
-    event UpdatedProfitFactor(uint256 profitFactor);
-
-    event UpdatedDebtThreshold(uint256 debtThreshold);
-
     event EmergencyExitEnabled();
 
     event UpdatedMetadataURI(string metadataURI);
@@ -261,16 +257,11 @@ abstract contract BaseStrategy {
     // `setMaxReportDelay()` for more details.
     uint256 public maxReportDelay;
 
-    // The minimum multiple that `callCost` must be above the credit/profit to
-    // be "justifiable". See `setProfitFactor()` for more details.
-    uint256 public profitFactor;
-
-    // Use this to adjust the threshold at which running a debt causes a
-    // harvest trigger. See `setDebtThreshold()` for more details.
-    uint256 public debtThreshold;
-
     // See note on `setEmergencyExit()`.
     bool public emergencyExit;
+
+    // See note on `setforceHarvestTriggerOnce()` for more details.
+    bool internal forceHarvestTriggerOnce;
 
     // modifiers
     modifier onlyAuthorized() {
@@ -340,10 +331,8 @@ abstract contract BaseStrategy {
         keeper = _keeper;
 
         // initialize variables
-        minReportDelay = 0;
-        maxReportDelay = 86400;
-        profitFactor = 100;
-        debtThreshold = 0;
+        minReportDelay = 86400 * 3;
+        maxReportDelay = 86400 * 7;
 
         vault.approve(rewards, uint256(-1)); // Allow rewards to be pulled
     }
@@ -405,6 +394,9 @@ abstract contract BaseStrategy {
      *  time between jobs to wait. (see `harvestTrigger()`
      *  for more details.)
      *
+     *  Generally, once `minReportDelay` has elapsed, and gas price is favorable,
+     *  the strategy will be harvested.
+     *
      *  This may only be called by governance or the strategist.
      * @param _delay The minimum number of seconds to wait between harvests.
      */
@@ -430,38 +422,6 @@ abstract contract BaseStrategy {
         emit UpdatedMaxReportDelay(_delay);
     }
 
-    /**
-     * @notice
-     *  Used to change `profitFactor`. `profitFactor` is used to determine
-     *  if it's worthwhile to harvest, given gas costs. (See `harvestTrigger()`
-     *  for more details.)
-     *
-     *  This may only be called by governance or the strategist.
-     * @param _profitFactor A ratio to multiply anticipated
-     * `harvest()` gas cost against.
-     */
-    function setProfitFactor(uint256 _profitFactor) external onlyAuthorized {
-        profitFactor = _profitFactor;
-        emit UpdatedProfitFactor(_profitFactor);
-    }
-
-    /**
-     * @notice
-     *  Sets how far the Strategy can go into loss without a harvest and report
-     *  being required.
-     *
-     *  By default this is 0, meaning any losses would cause a harvest which
-     *  will subsequently report the loss to the Vault for tracking. (See
-     *  `harvestTrigger()` for more details.)
-     *
-     *  This may only be called by governance or the strategist.
-     * @param _debtThreshold How big of a loss this Strategy may carry without
-     * being required to report to the Vault.
-     */
-    function setDebtThreshold(uint256 _debtThreshold) external onlyAuthorized {
-        debtThreshold = _debtThreshold;
-        emit UpdatedDebtThreshold(_debtThreshold);
-    }
 
     /**
      * @notice
@@ -474,6 +434,24 @@ abstract contract BaseStrategy {
     function setMetadataURI(string calldata _metadataURI) external onlyAuthorized {
         metadataURI = _metadataURI;
         emit UpdatedMetadataURI(_metadataURI);
+    }
+
+
+    /**
+     * @notice
+     *  Used to change `forceHarvestTriggerOnce`. `forceHarvestTriggerOnce` is used
+     *  to tell our keeper to harvest, the next time that gas price is acceptable.
+     *
+     *  This may only be called by governance or the strategist.
+     * @param _forceHarvestTriggerOnce A boolean for yes/no if we should manually
+     * harvest a strategy.
+     */
+    // 
+    function setForceHarvestTriggerOnce(bool _forceHarvestTriggerOnce)
+        external
+        onlyAuthorized
+    {
+        forceHarvestTriggerOnce = _forceHarvestTriggerOnce;
     }
 
     /**
@@ -646,21 +624,34 @@ abstract contract BaseStrategy {
 
     /**
      * @notice
-     *  Provide a signal to the keeper that `harvest()` should be called. The
-     *  keeper will provide the estimated gas cost that they would pay to call
-     *  `harvest()`, and this function should use that estimate to make a
-     *  determination if calling it is "worth it" for the keeper. This is not
+     *  Check if the current network baseFee is below our external target. This
+     *  is used in our harvestTrigger to prevent costly harvests during times of
+     *  high network congestion.
+     *
+     *  This baseFee target is configurable via Yearn's yBrain multisig.
+     * @return `true` if baseFee is below our target, `false` otherwise.
+     */
+    // 
+    function isBaseFeeAcceptable() internal view returns (bool) {
+        return
+            IBaseFee(0xb5e1CAcB567d98faaDB60a1fD4820720141f064F)
+                .isCurrentBaseFeeAcceptable();
+    }
+
+    /**
+     * @notice
+     *  Provide a signal to the keeper that `harvest()` should be called. This is not
      *  the only consideration into issuing this trigger, for example if the
      *  position would be negatively affected if `harvest()` is not called
      *  shortly, then this can return `true` even if the keeper might be "at a
      *  loss" (keepers are always reimbursed by Yearn).
      * @dev
-     *  `callCostInWei` must be priced in terms of `wei` (1e-18 ETH).
      *
      *  This call and `tendTrigger` should never return `true` at the
      *  same time.
      *
-     *  See `min/maxReportDelay`, `profitFactor`, `debtThreshold` to adjust the
+     *  See `min/maxReportDelay`, `forceHarvestTriggerOnce`, `isBaseFeeAcceptable` 
+     *  to adjust the
      *  strategist-controlled parameters that will influence whether this call
      *  returns `true` or not. These parameters will be used in conjunction
      *  with the parameters reported to the Vault (see `params`) to determine
@@ -671,42 +662,34 @@ abstract contract BaseStrategy {
      *  https://github.com/iearn-finance/yearn-vaults/blob/master/scripts/keep.py),
      *  or via an integration with the Keep3r network (e.g.
      *  https://github.com/Macarse/GenericKeep3rV2/blob/master/contracts/keep3r/GenericKeep3rV2.sol).
-     * @param callCostInWei The keeper's estimated gas cost to call `harvest()` (in wei).
+     * @param callCostInWei The keeper's estimated gas cost to call `tend()` (in wei).
      * @return `true` if `harvest()` should be called, `false` otherwise.
      */
     function harvestTrigger(uint256 callCostInWei) public view virtual returns (bool) {
-        uint256 callCost = ethToWant(callCostInWei);
         StrategyParams memory params = vault.strategies(address(this));
 
-        // Should not trigger if Strategy is not activated
-        if (params.activation == 0) return false;
+        // harvest no matter what once we reach our maxDelay
+        if (block.timestamp.sub(params.lastReport) > maxReportDelay) {
+            return true;
+        }
 
-        // Should not trigger if we haven't waited long enough since previous harvest
-        if (block.timestamp.sub(params.lastReport) < minReportDelay) return false;
+        // check if the base fee gas price is higher than we allow. if it is, block harvests.
+        if (!isBaseFeeAcceptable()) {
+            return false;
+        }
 
-        // Should trigger if hasn't been called in a while
-        if (block.timestamp.sub(params.lastReport) >= maxReportDelay) return true;
+        // trigger if we want to manually harvest
+        if (forceHarvestTriggerOnce) {
+            return true;
+        }
 
-        // If some amount is owed, pay it back
-        // NOTE: Since debt is based on deposits, it makes sense to guard against large
-        //       changes to the value from triggering a harvest directly through user
-        //       behavior. This should ensure reasonable resistance to manipulation
-        //       from user-initiated withdrawals as the outstanding debt fluctuates.
-        uint256 outstanding = vault.debtOutstanding();
-        if (outstanding > debtThreshold) return true;
+        // harvest if we hit our minDelay, but only if our gas price is acceptable
+        if (block.timestamp.sub(params.lastReport) > minReportDelay) {
+            return true;
+        }
 
-        // Check for profits and losses
-        uint256 total = estimatedTotalAssets();
-        // Trigger if we have a loss to report
-        if (total.add(debtThreshold) < params.totalDebt) return true;
-
-        uint256 profit = 0;
-        if (total > params.totalDebt) profit = total.sub(params.totalDebt); // We've earned a profit!
-
-        // Otherwise, only trigger if it "makes sense" economically (gas cost
-        // is <N% of value moved)
-        uint256 credit = vault.creditAvailable();
-        return (profitFactor.mul(callCost) < credit.add(profit));
+        // Otherwise, return false
+        return false;
     }
 
     /**
@@ -744,6 +727,9 @@ abstract contract BaseStrategy {
             // Free up returns for Vault to pull
             (profit, loss, debtPayment) = prepareReturn(debtOutstanding);
         }
+        
+        // we're done harvesting, so reset our trigger if we used it
+        forceHarvestTriggerOnce = false;
 
         // Allow Vault to take up to the "harvested" balance of this contract,
         // which is the amount it has earned since the last time it reported to
