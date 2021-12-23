@@ -2,10 +2,9 @@
 pragma solidity >=0.6.0 <0.7.0;
 pragma experimental ABIEncoderV2;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
-import {StrategyLib} from "./StrategyLib.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 struct StrategyParams {
     uint256 performanceFee;
@@ -17,6 +16,10 @@ struct StrategyParams {
     uint256 totalDebt;
     uint256 totalGain;
     uint256 totalLoss;
+    bool enforceChangeLimit;
+    uint256 profitLimitRatio;
+    uint256 lossLimitRatio;
+    address customCheck;
 }
 
 interface VaultAPI is IERC20 {
@@ -179,6 +182,7 @@ interface StrategyAPI {
 
 abstract contract BaseStrategy {
     using SafeMath for uint256;
+    using SafeERC20 for IERC20;
     string public metadataURI;
 
     /**
@@ -241,10 +245,6 @@ abstract contract BaseStrategy {
 
     event UpdatedMaxReportDelay(uint256 delay);
 
-    event UpdatedProfitFactor(uint256 profitFactor);
-
-    event UpdatedDebtThreshold(uint256 debtThreshold);
-
     event EmergencyExitEnabled();
 
     event UpdatedMetadataURI(string metadataURI);
@@ -257,16 +257,11 @@ abstract contract BaseStrategy {
     // `setMaxReportDelay()` for more details.
     uint256 public maxReportDelay;
 
-    // The minimum multiple that `callCost` must be above the credit/profit to
-    // be "justifiable". See `setProfitFactor()` for more details.
-    uint256 public profitFactor;
-
-    // Use this to adjust the threshold at which running a debt causes a
-    // harvest trigger. See `setDebtThreshold()` for more details.
-    uint256 public debtThreshold;
-
     // See note on `setEmergencyExit()`.
     bool public emergencyExit;
+
+    // See note on `setforceHarvestTriggerOnce()` for more details.
+    bool internal forceHarvestTriggerOnce;
 
     // modifiers
     modifier onlyAuthorized() {
@@ -303,30 +298,40 @@ abstract contract BaseStrategy {
         require(msg.sender == strategist || msg.sender == governance());
     }
 
-    function _onlyEmergencyAuthorized() internal {
-        require(msg.sender == strategist || msg.sender == governance() || msg.sender == vault.guardian() || msg.sender == vault.management());
+    // modifiers
+    modifier onlyAuthorized() {
+        require(msg.sender == strategist || msg.sender == governance(), "!authorized");
+        _;
     }
 
-    function _onlyStrategist() internal {
-        require(msg.sender == strategist);
+    modifier onlyEmergencyAuthorized() {
+        require(
+            msg.sender == strategist || msg.sender == governance() || msg.sender == vault.guardian() || msg.sender == vault.management(),
+            "!authorized"
+        );
+        _;
     }
 
-    function _onlyGovernance() internal {
-        require(msg.sender == governance());
+    modifier onlyStrategist() {
+        require(msg.sender == strategist, "!strategist");
+        _;
     }
 
-    function _onlyRewarder() internal {
-        require(msg.sender == governance() || msg.sender == strategist);
+    modifier onlyGovernance() {
+        require(msg.sender == governance(), "!authorized");
+        _;
     }
 
-    function _onlyKeepers() internal {
+    modifier onlyKeepers() {
         require(
             msg.sender == keeper ||
                 msg.sender == strategist ||
                 msg.sender == governance() ||
                 msg.sender == vault.guardian() ||
-                msg.sender == vault.management()
+                msg.sender == vault.management(),
+            "!authorized"
         );
+        _;
     }
 
     constructor(address _vault) public {
@@ -355,18 +360,16 @@ abstract contract BaseStrategy {
 
         vault = VaultAPI(_vault);
         want = IERC20(vault.token());
-        SafeERC20.safeApprove(want, _vault, type(uint256).max); // Give Vault unlimited access (might save gas)
+        want.safeApprove(_vault, uint256(-1)); // Give Vault unlimited access (might save gas)
         strategist = _strategist;
         rewards = _rewards;
         keeper = _keeper;
 
         // initialize variables
-        minReportDelay = 0;
-        maxReportDelay = 86400;
-        profitFactor = 100;
-        debtThreshold = 0;
+        minReportDelay = 86400 * 3;
+        maxReportDelay = 86400 * 7;
 
-        vault.approve(rewards, type(uint256).max); // Allow rewards to be pulled
+        vault.approve(rewards, uint256(-1)); // Allow rewards to be pulled
     }
 
     /**
@@ -412,7 +415,7 @@ abstract contract BaseStrategy {
     function setRewards(address _rewards) external onlyRewarder {
         address oldRewards = rewards;
         rewards = _rewards;
-        StrategyLib.internalSetRewards(oldRewards, _rewards, address(vault));
+        vault.approve(rewards, uint256(-1));
         emit UpdatedRewards(_rewards);
     }
 
@@ -424,6 +427,9 @@ abstract contract BaseStrategy {
      *  For external keepers (such as the Keep3r network), this is the minimum
      *  time between jobs to wait. (see `harvestTrigger()`
      *  for more details.)
+     *
+     *  Generally, once `minReportDelay` has elapsed, and gas price is favorable,
+     *  the strategy will be harvested.
      *
      *  This may only be called by governance or the strategist.
      * @param _delay The minimum number of seconds to wait between harvests.
@@ -452,39 +458,6 @@ abstract contract BaseStrategy {
 
     /**
      * @notice
-     *  Used to change `profitFactor`. `profitFactor` is used to determine
-     *  if it's worthwhile to harvest, given gas costs. (See `harvestTrigger()`
-     *  for more details.)
-     *
-     *  This may only be called by governance or the strategist.
-     * @param _profitFactor A ratio to multiply anticipated
-     * `harvest()` gas cost against.
-     */
-    function setProfitFactor(uint256 _profitFactor) external onlyAuthorized {
-        profitFactor = _profitFactor;
-        emit UpdatedProfitFactor(_profitFactor);
-    }
-
-    /**
-     * @notice
-     *  Sets how far the Strategy can go into loss without a harvest and report
-     *  being required.
-     *
-     *  By default this is 0, meaning any losses would cause a harvest which
-     *  will subsequently report the loss to the Vault for tracking. (See
-     *  `harvestTrigger()` for more details.)
-     *
-     *  This may only be called by governance or the strategist.
-     * @param _debtThreshold How big of a loss this Strategy may carry without
-     * being required to report to the Vault.
-     */
-    function setDebtThreshold(uint256 _debtThreshold) external onlyAuthorized {
-        debtThreshold = _debtThreshold;
-        emit UpdatedDebtThreshold(_debtThreshold);
-    }
-
-    /**
-     * @notice
      *  Used to change `metadataURI`. `metadataURI` is used to store the URI
      * of the file describing the strategy.
      *
@@ -494,6 +467,21 @@ abstract contract BaseStrategy {
     function setMetadataURI(string calldata _metadataURI) external onlyAuthorized {
         metadataURI = _metadataURI;
         emit UpdatedMetadataURI(_metadataURI);
+
+    /**
+     * @notice
+     *  Used to change `forceHarvestTriggerOnce`. `forceHarvestTriggerOnce` is used
+     *  to tell our keeper to harvest, the next time that gas price is acceptable.
+     *
+     *  This may only be called by governance or the strategist.
+     * @param _forceHarvestTriggerOnce A boolean for yes/no if we should manually
+     * harvest a strategy.
+     */
+    function setForceHarvestTriggerOnce(bool _forceHarvestTriggerOnce)
+        external
+        onlyAuthorized
+    {
+        forceHarvestTriggerOnce = _forceHarvestTriggerOnce;
     }
 
     /**
@@ -513,7 +501,7 @@ abstract contract BaseStrategy {
      *  is compatible. As an example:
      *
      *      given 1e17 wei (0.1 ETH) as input, and want is USDC (6 decimals),
-     *      with USDC/ETH = 1800, this should give back 180000000 (180 USDC)
+     *      with USDC/ETH = 1800, this should give back 1800000000 (180 USDC)
      *
      * @param _amtInWei The amount (in wei/1e-18 ETH) to convert to `want`
      * @return The amount in `want` of `_amtInEth` converted to `want`
@@ -666,21 +654,34 @@ abstract contract BaseStrategy {
 
     /**
      * @notice
-     *  Provide a signal to the keeper that `harvest()` should be called. The
-     *  keeper will provide the estimated gas cost that they would pay to call
-     *  `harvest()`, and this function should use that estimate to make a
-     *  determination if calling it is "worth it" for the keeper. This is not
+     *  Check if the current network baseFee is below our external target. This
+     *  is used in our harvestTrigger to prevent costly harvests during times of
+     *  high network congestion.
+     *
+     *  This baseFee target is configurable via Yearn's yBrain multisig.
+     * @return `true` if baseFee is below our target, `false` otherwise.
+     */
+    // 
+    function isBaseFeeAcceptable() internal view returns (bool) {
+        return
+            IBaseFee(0xb5e1CAcB567d98faaDB60a1fD4820720141f064F)
+                .isCurrentBaseFeeAcceptable();
+    }
+
+    /**
+     * @notice
+     *  Provide a signal to the keeper that `harvest()` should be called. This is not
      *  the only consideration into issuing this trigger, for example if the
      *  position would be negatively affected if `harvest()` is not called
      *  shortly, then this can return `true` even if the keeper might be "at a
      *  loss" (keepers are always reimbursed by Yearn).
      * @dev
-     *  `callCostInWei` must be priced in terms of `wei` (1e-18 ETH).
      *
      *  This call and `tendTrigger` should never return `true` at the
      *  same time.
      *
-     *  See `min/maxReportDelay`, `profitFactor`, `debtThreshold` to adjust the
+     *  See `min/maxReportDelay`, `forceHarvestTriggerOnce`, `isBaseFeeAcceptable` 
+     *  to adjust the
      *  strategist-controlled parameters that will influence whether this call
      *  returns `true` or not. These parameters will be used in conjunction
      *  with the parameters reported to the Vault (see `params`) to determine
@@ -688,23 +689,37 @@ abstract contract BaseStrategy {
      *
      *  It is expected that an external system will check `harvestTrigger()`.
      *  This could be a script run off a desktop or cloud bot (e.g.
-     *  https://github.com/iearn-finance/yearn-vaults/blob/main/scripts/keep.py),
+     *  https://github.com/iearn-finance/yearn-vaults/blob/master/scripts/keep.py),
      *  or via an integration with the Keep3r network (e.g.
      *  https://github.com/Macarse/GenericKeep3rV2/blob/master/contracts/keep3r/GenericKeep3rV2.sol).
-     * @param callCostInWei The keeper's estimated gas cost to call `harvest()` (in wei).
+     * @param callCostInWei The keeper's estimated gas cost to call `tend()` (in wei).
      * @return `true` if `harvest()` should be called, `false` otherwise.
      */
     function harvestTrigger(uint256 callCostInWei) public view virtual returns (bool) {
-        return
-            StrategyLib.internalHarvestTrigger(
-                address(vault),
-                address(this),
-                ethToWant(callCostInWei),
-                minReportDelay,
-                maxReportDelay,
-                debtThreshold,
-                profitFactor
-            );
+        StrategyParams memory params = vault.strategies(address(this));
+
+        // harvest no matter what once we reach our maxDelay
+        if (block.timestamp.sub(params.lastReport) > maxReportDelay) {
+            return true;
+        }
+
+        // check if the base fee gas price is higher than we allow. if it is, block harvests.
+        if (!isBaseFeeAcceptable()) {
+            return false;
+        }
+
+        // trigger if we want to manually harvest
+        if (forceHarvestTriggerOnce) {
+            return true;
+        }
+
+        // harvest if we hit our minDelay, but only if our gas price is acceptable
+        if (block.timestamp.sub(params.lastReport) > minReportDelay) {
+            return true;
+        }
+
+        // Otherwise, return false
+        return false;
     }
 
     /**
@@ -742,6 +757,9 @@ abstract contract BaseStrategy {
             // Free up returns for Vault to pull
             (profit, loss, debtPayment) = prepareReturn(debtOutstanding);
         }
+        
+        // we're done harvesting, so reset our trigger if we used it
+        forceHarvestTriggerOnce = false;
 
         // Allow Vault to take up to the "harvested" balance of this contract,
         // which is the amount it has earned since the last time it reported to
@@ -768,7 +786,7 @@ abstract contract BaseStrategy {
         uint256 amountFreed;
         (amountFreed, _loss) = liquidatePosition(_amountNeeded);
         // Send it directly back (NOTE: Using `msg.sender` saves some gas here)
-        SafeERC20.safeTransfer(want, msg.sender, amountFreed);
+        want.safeTransfer(msg.sender, amountFreed);
         // NOTE: Reinvest anything leftover on next `tend`/`harvest`
     }
 
@@ -795,7 +813,7 @@ abstract contract BaseStrategy {
         require(msg.sender == address(vault));
         require(BaseStrategy(_newStrategy).vault() == vault);
         prepareMigration(_newStrategy);
-        SafeERC20.safeTransfer(want, _newStrategy, want.balanceOf(address(this)));
+        want.safeTransfer(_newStrategy, want.balanceOf(address(this)));
     }
 
     /**
@@ -859,7 +877,7 @@ abstract contract BaseStrategy {
         address[] memory _protectedTokens = protectedTokens();
         for (uint256 i; i < _protectedTokens.length; i++) require(_token != _protectedTokens[i], "!protected");
 
-        SafeERC20.safeTransfer(IERC20(_token), governance(), IERC20(_token).balanceOf(address(this)));
+        IERC20(_token).safeTransfer(governance(), IERC20(_token).balanceOf(address(this)));
     }
 }
 
@@ -879,6 +897,7 @@ abstract contract BaseStrategyInitializable is BaseStrategy {
     }
 
     function clone(address _vault) external returns (address) {
+        require(isOriginal, "!clone");
         return this.clone(_vault, msg.sender, msg.sender, msg.sender);
     }
 
@@ -888,7 +907,6 @@ abstract contract BaseStrategyInitializable is BaseStrategy {
         address _rewards,
         address _keeper
     ) external returns (address newStrategy) {
-        require(isOriginal, "!clone");
         // Copied from https://github.com/optionality/clone-factory/blob/master/contracts/CloneFactory.sol
         bytes20 addressBytes = bytes20(address(this));
 
