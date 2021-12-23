@@ -467,6 +467,7 @@ abstract contract BaseStrategy {
     function setMetadataURI(string calldata _metadataURI) external onlyAuthorized {
         metadataURI = _metadataURI;
         emit UpdatedMetadataURI(_metadataURI);
+    }
 
     /**
      * @notice
@@ -477,10 +478,7 @@ abstract contract BaseStrategy {
      * @param _forceHarvestTriggerOnce A boolean for yes/no if we should manually
      * harvest a strategy.
      */
-    function setForceHarvestTriggerOnce(bool _forceHarvestTriggerOnce)
-        external
-        onlyAuthorized
-    {
+    function setForceHarvestTriggerOnce(bool _forceHarvestTriggerOnce) external onlyAuthorized {
         forceHarvestTriggerOnce = _forceHarvestTriggerOnce;
     }
 
@@ -661,11 +659,9 @@ abstract contract BaseStrategy {
      *  This baseFee target is configurable via Yearn's yBrain multisig.
      * @return `true` if baseFee is below our target, `false` otherwise.
      */
-    // 
+    //
     function isBaseFeeAcceptable() internal view returns (bool) {
-        return
-            IBaseFee(0xb5e1CAcB567d98faaDB60a1fD4820720141f064F)
-                .isCurrentBaseFeeAcceptable();
+        return IBaseFee(0xb5e1CAcB567d98faaDB60a1fD4820720141f064F).isCurrentBaseFeeAcceptable();
     }
 
     /**
@@ -680,7 +676,7 @@ abstract contract BaseStrategy {
      *  This call and `tendTrigger` should never return `true` at the
      *  same time.
      *
-     *  See `min/maxReportDelay`, `forceHarvestTriggerOnce`, `isBaseFeeAcceptable` 
+     *  See `min/maxReportDelay`, `forceHarvestTriggerOnce`, `isBaseFeeAcceptable`
      *  to adjust the
      *  strategist-controlled parameters that will influence whether this call
      *  returns `true` or not. These parameters will be used in conjunction
@@ -757,7 +753,7 @@ abstract contract BaseStrategy {
             // Free up returns for Vault to pull
             (profit, loss, debtPayment) = prepareReturn(debtOutstanding);
         }
-        
+
         // we're done harvesting, so reset our trigger if we used it
         forceHarvestTriggerOnce = false;
 
