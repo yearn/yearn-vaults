@@ -106,10 +106,13 @@ event Deposit:
     shares: uint256
     amount: uint256
 
-
 event Withdraw:
     recipient: indexed(address)
     shares: uint256
+    amount: uint256
+
+event Sweep:
+    token: indexed(address)
     amount: uint256
 
 event LockedProfitDegradationUpdated:
@@ -1838,4 +1841,5 @@ def sweep(token: address, amount: uint256 = MAX_UINT256):
     value: uint256 = amount
     if value == MAX_UINT256:
         value = ERC20(token).balanceOf(self)
+    log Sweep(token, value)
     self.erc20_safe_transfer(token, self.governance, value)
