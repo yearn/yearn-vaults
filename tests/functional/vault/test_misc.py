@@ -142,7 +142,9 @@ def test_sweep(gov, vault, rando, token, other_token):
         vault.sweep(other_token, {"from": rando})
 
     before = other_token.balanceOf(vault)
-    vault.sweep(other_token, 1, {"from": gov})
+    tx = vault.sweep(other_token, 1, {"from": gov})
+    assert tx.events["Sweep"]["token"] == other_token
+
     assert other_token.balanceOf(vault) == before - 1
     assert other_token.balanceOf(gov) == 1
     vault.sweep(other_token, {"from": gov})
