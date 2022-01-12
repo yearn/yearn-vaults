@@ -263,6 +263,9 @@ abstract contract BaseStrategy {
 
     event UpdatedMetadataURI(string metadataURI);
 
+    event SetHealthCheck(address);
+    event SetDoHealthCheck(bool);
+
     // The minimum number of seconds between harvest calls. See
     // `setMinReportDelay()` for more details.
     uint256 public minReportDelay;
@@ -364,10 +367,12 @@ abstract contract BaseStrategy {
     }
 
     function setHealthCheck(address _healthCheck) external onlyVaultManagers {
+        emit SetHealthCheck(_healthCheck);
         healthCheck = _healthCheck;
     }
 
     function setDoHealthCheck(bool _doHealthCheck) external onlyVaultManagers {
+        emit SetDoHealthCheck(_doHealthCheck);
         doHealthCheck = _doHealthCheck;
     }
 
@@ -781,6 +786,7 @@ abstract contract BaseStrategy {
         if (doHealthCheck && healthCheck != address(0)) {
             require(HealthCheck(healthCheck).check(profit, loss, debtPayment, debtOutstanding, totalDebt), "!healthcheck");
         } else {
+            emit SetDoHealthCheck(true);
             doHealthCheck = true;
         }
 
