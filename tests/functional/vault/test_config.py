@@ -207,6 +207,5 @@ def test_vault_setGovernance(gov, vault, rando):
 def test_vault_setParams_bad_vals(gov, vault):
     with brownie.reverts():
         vault.setRewards(ZERO_ADDRESS, {"from": gov})
-
     with brownie.reverts():
         vault.setRewards(vault, {"from": gov})

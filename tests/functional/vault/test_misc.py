@@ -149,7 +149,9 @@ def test_sweep(gov, vault, rando, token, other_token):
         vault.sweep(other_token, {"from": rando})
 
     before = other_token.balanceOf(vault)
-    vault.sweep(other_token, 1, {"from": gov})
+    tx = vault.sweep(other_token, 1, {"from": gov})
+    assert tx.events["Sweep"]["token"] == other_token
+
     assert other_token.balanceOf(vault) == before - 1
     assert other_token.balanceOf(gov) == 1
     vault.sweep(other_token, {"from": gov})
@@ -315,3 +317,11 @@ def test_erc20_safe_transferFrom(
     # Normal ERC-20 vault deposits (via erc20_safe_transferFrom) should work
     token.approve(vault, MAX_UINT256, {"from": gov})
     vault.deposit(5000, {"from": gov})
+
+
+def test_deposit_withdraw_events(gov, token, vault):
+    token.approve(vault, MAX_UINT256, {"from": gov})
+    tx = vault.deposit(5000, {"from": gov})
+    assert tx.events["Deposit"]["recipient"] == gov
+    tx = vault.withdraw(5000, {"from": gov})
+    assert tx.events["Withdraw"]["recipient"] == gov

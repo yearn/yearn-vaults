@@ -18,7 +18,10 @@ def test_performance_fees(
 
     token.transfer(strategy, 10 ** token.decimals(), {"from": gov})
     chain.sleep(1)
-    common_health_check.setDisabledCheck(strategy, True, {"from": gov})
+    tx = common_health_check.setDisabledCheck(strategy, True, {"from": gov})
+    tx.events["DisableHealthCheck"]["disabled"] == True
+    tx.events["DisableHealthCheck"]["strategy"] == strategy
+
     strategy.harvest({"from": strategist})
 
     assert vault.balanceOf(rewards) == 0.045 * 10 ** token.decimals()

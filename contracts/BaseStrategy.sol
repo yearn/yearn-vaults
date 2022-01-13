@@ -5,6 +5,7 @@ pragma experimental ABIEncoderV2;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
+import {StrategyLib} from "./StrategyLib.sol";
 
 struct StrategyParams {
     uint256 performanceFee;
@@ -284,6 +285,10 @@ abstract contract BaseStrategy {
         require(msg.sender == governance());
     }
 
+    function _onlyRewarder() internal {
+        require(msg.sender == governance() || msg.sender == strategist);
+    }
+
     function _onlyKeepers() internal {
         require(
             msg.sender == keeper ||
@@ -320,7 +325,7 @@ abstract contract BaseStrategy {
 
         vault = VaultAPI(_vault);
         want = IERC20(vault.token());
-        SafeERC20.safeApprove(want, _vault, uint256(-1)); // Give Vault unlimited access (might save gas)
+        SafeERC20.safeApprove(want, _vault, type(uint256).max); // Give Vault unlimited access (might save gas)
         strategist = _strategist;
         rewards = _rewards;
         keeper = _keeper;
@@ -331,7 +336,7 @@ abstract contract BaseStrategy {
         profitFactor = 100;
         debtThreshold = 0;
 
-        vault.approve(rewards, uint256(-1)); // Allow rewards to be pulled
+        vault.approve(rewards, type(uint256).max); // Allow rewards to be pulled
     }
 
     /**
@@ -377,11 +382,10 @@ abstract contract BaseStrategy {
      * @param _rewards The address to use for pulling rewards.
      */
     function setRewards(address _rewards) external {
-        _onlyStrategist();
-        require(_rewards != address(0));
-        vault.approve(rewards, 0);
+        _onlyRewarder();
+        address oldRewards = rewards;
         rewards = _rewards;
-        vault.approve(rewards, uint256(-1));
+        StrategyLib.internalSetRewards(oldRewards, _rewards, address(vault));
         emit UpdatedRewards(_rewards);
     }
 
@@ -670,38 +674,16 @@ abstract contract BaseStrategy {
      * @return `true` if `harvest()` should be called, `false` otherwise.
      */
     function harvestTrigger(uint256 callCostInWei) public view virtual returns (bool) {
-        uint256 callCost = ethToWant(callCostInWei);
-        StrategyParams memory params = vault.strategies(address(this));
-
-        // Should not trigger if Strategy is not activated
-        if (params.activation == 0) return false;
-
-        // Should not trigger if we haven't waited long enough since previous harvest
-        if (block.timestamp.sub(params.lastReport) < minReportDelay) return false;
-
-        // Should trigger if hasn't been called in a while
-        if (block.timestamp.sub(params.lastReport) >= maxReportDelay) return true;
-
-        // If some amount is owed, pay it back
-        // NOTE: Since debt is based on deposits, it makes sense to guard against large
-        //       changes to the value from triggering a harvest directly through user
-        //       behavior. This should ensure reasonable resistance to manipulation
-        //       from user-initiated withdrawals as the outstanding debt fluctuates.
-        uint256 outstanding = vault.debtOutstanding();
-        if (outstanding > debtThreshold) return true;
-
-        // Check for profits and losses
-        uint256 total = estimatedTotalAssets();
-        // Trigger if we have a loss to report
-        if (total.add(debtThreshold) < params.totalDebt) return true;
-
-        uint256 profit = 0;
-        if (total > params.totalDebt) profit = total.sub(params.totalDebt); // We've earned a profit!
-
-        // Otherwise, only trigger if it "makes sense" economically (gas cost
-        // is <N% of value moved)
-        uint256 credit = vault.creditAvailable();
-        return (profitFactor.mul(callCost) < credit.add(profit));
+        return
+            StrategyLib.internalHarvestTrigger(
+                address(vault),
+                address(this),
+                ethToWant(callCostInWei),
+                minReportDelay,
+                maxReportDelay,
+                debtThreshold,
+                profitFactor
+            );
     }
 
     /**
@@ -879,7 +861,6 @@ abstract contract BaseStrategyInitializable is BaseStrategy {
     }
 
     function clone(address _vault) external returns (address) {
-        require(isOriginal, "!clone");
         return this.clone(_vault, msg.sender, msg.sender, msg.sender);
     }
 
@@ -889,6 +870,7 @@ abstract contract BaseStrategyInitializable is BaseStrategy {
         address _rewards,
         address _keeper
     ) external returns (address newStrategy) {
+        require(isOriginal, "!clone");
         // Copied from https://github.com/optionality/clone-factory/blob/master/contracts/CloneFactory.sol
         bytes20 addressBytes = bytes20(address(this));
 

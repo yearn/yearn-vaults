@@ -1,6 +1,6 @@
 import pytest
 
-from brownie import Token, TokenNoReturn
+from brownie import ZERO_ADDRESS, Token, TokenNoReturn
 
 
 @pytest.fixture
@@ -89,6 +89,11 @@ def keeper(accounts):
     yield accounts[5]
 
 
+@pytest.fixture(autouse=True)
+def StrategyLib(strategist, StrategyLib):
+    yield strategist.deploy(StrategyLib)
+
+
 @pytest.fixture(params=["RegularStrategy", "ClonedStrategy"])
 def strategy(gov, strategist, keeper, rewards, vault, TestStrategy, request):
     strategy = strategist.deploy(TestStrategy, vault)
@@ -111,6 +116,29 @@ def strategy(gov, strategist, keeper, rewards, vault, TestStrategy, request):
         {"from": gov},
     )
     yield strategy
+
+
+@pytest.fixture
+def increase_pps(CommonHealthCheck, strategy, chain):
+    def increase_pps(vault, token, amount, sender):
+        common_health_check = vault.healthCheck()
+        if common_health_check != ZERO_ADDRESS:
+            common_health_check = CommonHealthCheck.at(common_health_check)
+            common_health_check.setDisabledCheck(strategy, True)
+
+        token.transfer(strategy, amount, {"from": sender})
+        managementFee = vault.managementFee()
+        performanceFee = vault.performanceFee()
+        vault.setManagementFee(0)
+        vault.setPerformanceFee(0)
+        vault.updateStrategyPerformanceFee(strategy, 0)
+        strategy.harvest()
+        vault.setManagementFee(managementFee)
+        vault.setPerformanceFee(performanceFee)
+        chain.sleep(7 * 3600)
+        chain.mine()
+
+    yield increase_pps
 
 
 @pytest.fixture
