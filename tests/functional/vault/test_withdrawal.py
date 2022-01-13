@@ -398,7 +398,6 @@ def test_locked_profit_over_big_period(
     chain.sleep(sleepFor + 1)
     chain.mine(1)
 
-
     assert lockedUntil == vault.lastReport() + vault.previousHarvestTimeDelta()
     assert (
         vault.pricePerShare()
