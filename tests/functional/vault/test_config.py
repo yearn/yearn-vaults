@@ -208,7 +208,10 @@ def test_vault_setGovernance(gov, vault, rando):
 def test_vault_setLockedProfitDegradation_range(gov, vault):
     # value must be between 0 and DEGRADATION_COEFFICIENT (inclusive)
     vault.setLockedProfitDegradation(0, {"from": gov})
-    vault.setLockedProfitDegradation(DEGRADATION_COEFFICIENT, {"from": gov})
+    tx = vault.setLockedProfitDegradation(DEGRADATION_COEFFICIENT, {"from": gov})
+    assert (
+        tx.events["LockedProfitDegradationUpdated"]["value"] == DEGRADATION_COEFFICIENT
+    )
     with brownie.reverts():
         vault.setLockedProfitDegradation(DEGRADATION_COEFFICIENT + 1, {"from": gov})
 

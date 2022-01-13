@@ -137,3 +137,27 @@ def test_report_loss(chain, token, gov, vault, strategy, common_health_check):
     assert token.balanceOf(strategy) == 0
 
     assert vault.debtRatio() == 0
+
+
+def test_small_loss(chain, vault, strategy, gov, token):
+    if token.decimals() != 18:
+        pytest.skip("Only 18 decimals")
+
+    vault.addStrategy(strategy, 10_000, 0, 2 ** 256 - 1, 0, {"from": gov})
+    token.approve(vault, 2 ** 256 - 1, {"from": gov})
+    vault.deposit(300 * 10 ** 18, {"from": gov})
+
+    chain.sleep(DAY // 10)
+    chain.sleep(1)
+    strategy.harvest({"from": gov})
+    assert token.balanceOf(strategy) == 300 * 10 ** 18
+
+    # Small loss
+    chain.sleep(1)
+    strategy._takeFunds(9 * 10 ** 15, {"from": gov})
+    strategy.harvest({"from": gov})
+    params = vault.strategies(strategy).dict()
+    assert params["totalLoss"] == 9 * 10 ** 15
+
+    # Since the loss is too small, debtRatio doesn't change
+    assert params["debtRatio"] == 10_000

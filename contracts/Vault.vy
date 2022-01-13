@@ -1,4 +1,4 @@
-# @version 0.2.16
+# @version 0.3.1
 """
 @title Yearn Token Vault
 @license GNU AGPLv3
@@ -63,18 +63,6 @@ interface HealthCheck:
     def doHealthCheck(strategy: address) -> bool: view
     def enableCheck(strategy: address): nonpayable
 
-event Transfer:
-    sender: indexed(address)
-    receiver: indexed(address)
-    value: uint256
-
-
-event Approval:
-    owner: indexed(address)
-    spender: indexed(address)
-    value: uint256
-
-
 name: public(String[64])
 symbol: public(String[32])
 decimals: public(uint256)
@@ -101,6 +89,34 @@ struct StrategyParams:
     totalDebt: uint256  # Total outstanding debt that Strategy has
     totalGain: uint256  # Total returns that Strategy has realized for Vault
     totalLoss: uint256  # Total losses that Strategy has realized for Vault
+
+event Transfer:
+    sender: indexed(address)
+    receiver: indexed(address)
+    value: uint256
+
+
+event Approval:
+    owner: indexed(address)
+    spender: indexed(address)
+    value: uint256
+
+event Deposit:
+    recipient: indexed(address)
+    shares: uint256
+    amount: uint256
+
+event Withdraw:
+    recipient: indexed(address)
+    shares: uint256
+    amount: uint256
+
+event Sweep:
+    token: indexed(address)
+    amount: uint256
+
+event LockedProfitDegradationUpdated:
+    value: uint256
 
 event StrategyAdded:
     strategy: indexed(address)
@@ -452,6 +468,7 @@ def setLockedProfitDegradation(degradation: uint256):
     # Since "degradation" is of type uint256 it can never be less than zero
     assert degradation <= DEGRADATION_COEFFICIENT
     self.lockedProfitDegradation = degradation
+    log LockedProfitDegradationUpdated(degradation) 
 
 
 @external
@@ -911,6 +928,8 @@ def deposit(_amount: uint256 = MAX_UINT256, recipient: address = msg.sender) -> 
     # Tokens are transferred from msg.sender (may be different from _recipient)
     self.erc20_safe_transferFrom(self.token.address, msg.sender, self, amount)
     self.totalIdle += amount
+    
+    log Deposit(recipient, shares, amount)
 
     return shares  # Just in case someone wants them
 
@@ -993,8 +1012,10 @@ def _reportLoss(strategy: address, loss: uint256):
             loss * self.debtRatio / self.totalDebt,
             self.strategies[strategy].debtRatio,
         )
-        self.strategies[strategy].debtRatio -= ratio_change
-        self.debtRatio -= ratio_change
+        # If the loss is too small, ratio_change will be 0
+        if ratio_change != 0:
+            self.strategies[strategy].debtRatio -= ratio_change
+            self.debtRatio -= ratio_change
     # Finally, adjust our strategy's parameters by the loss
     self.strategies[strategy].totalLoss += loss
     self.strategies[strategy].totalDebt = totalDebt - loss
@@ -1141,7 +1162,8 @@ def withdraw(
     # Withdraw remaining balance to _recipient (may be different to msg.sender) (minus fee)
     self.totalIdle -= value
     self.erc20_safe_transfer(self.token.address, recipient, value)
-
+    log Withdraw(recipient, shares, value)
+    
     return value
 
 
@@ -1838,4 +1860,5 @@ def sweep(token: address, amount: uint256 = MAX_UINT256):
 
     if value == MAX_UINT256:
         value = ERC20(token).balanceOf(self)
+    log Sweep(token, value)
     self.erc20_safe_transfer(token, self.governance, value)
