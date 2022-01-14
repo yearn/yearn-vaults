@@ -104,6 +104,19 @@ Any command `in code blocks` is meant to be executed from a Mac/Linux terminal o
       - If you’re using WSL, go to the Remote [WSL] tab
       - Otherwise choose the Workspace tab
         - Search for _Solidity_ and copy and paste _v0.6.12+commit.27d51765_ into the _Solidity: Compile Using Remote Version_ textbox
+    - Set solidity remapping
+      - To resolve imports properly in vscode you will need to remap how `@openzeppelin` is resolved
+      - Goto _File -> Preferences -> Settings_
+      - Search for `solidity`
+      - Look for `Solidity: Remappings` and press `Edit in settings.json`
+      - Enter the following remapping with the path of where brownie installed the solidity dependencies. For example:
+      - ```
+        {
+          //...prev configs...,
+          "solidity.remappings": [
+            "@openzeppelin=/home/<username>/.brownie/packages/OpenZeppelin/openzeppelin-contracts@3.1.0"
+          ] 
+        }```
     - Set Black as the linter.
       - You'll see a toast notification the bottom right asking about linting, choose _black_
       - If you don't see this, just go to _File_ -> _Preferences_ -> _Settings_
