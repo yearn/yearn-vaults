@@ -290,7 +290,7 @@ abstract contract BaseStrategy {
     }
 
     modifier onlyRewarder() {
-        _onlyRewarded();
+        _onlyRewarder();
         _;
     }
 
