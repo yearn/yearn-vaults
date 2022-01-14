@@ -298,7 +298,7 @@ abstract contract BaseStrategy {
         _onlyKeepers();
         _;
     }
-        
+
     function _onlyAuthorized() internal {
         require(msg.sender == strategist || msg.sender == governance());
     }
