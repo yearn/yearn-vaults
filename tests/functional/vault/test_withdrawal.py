@@ -92,7 +92,7 @@ def test_forced_withdrawal(
     assert token.balanceOf(vault) == 0
 
     # One of our strategies suffers a loss
-    total_assets = vault.totalAssets()
+    vault.totalAssets()
     loss = token.balanceOf(strategies[0]) // 2  # 10% of total
     common_health_check.setStrategyLimits(strategies[0], 5000, 5000, {"from": gov})
     strategies[0]._takeFunds(loss, {"from": gov})
@@ -247,12 +247,12 @@ def test_withdrawal_with_empty_queue(
     assert vault.balanceOf(gov) == strategy_balance
     assert token.balanceOf(gov) == free_balance
 
-    # Calling it a second time with strategy_balance should be a no-op
-    vault.withdraw(
-        strategy_balance * vault.pricePerShare() // 10 ** vault.decimals(),
-        {"from": gov},
-    )
-    assert token.balanceOf(gov) == free_balance
+    # Calling it a second time with strategy_balance should revert as we cannot withdraw more shares
+    with brownie.reverts():
+        vault.withdraw(
+            strategy_balance * vault.pricePerShare() // 10 ** vault.decimals(),
+            {"from": gov},
+        )
 
     # Re-establish the withdrawal queue
     vault.addStrategyToQueue(strategy, {"from": gov})
@@ -462,3 +462,69 @@ def test_withdraw_not_enough_funds_with_gains(
     priceAfter = vault.pricePerShare()
 
     assert priceBefore <= priceAfter  # with decimals=2 price remains the same.
+
+
+def test_withdraw_with_less_than_min_shares(
+    chain, token, gov, Vault, guardian, rewards, common_health_check, TestStrategy
+):
+    vault = guardian.deploy(Vault)
+    vault.initialize(
+        token,
+        gov,
+        rewards,
+        token.symbol() + " yVault",
+        "yv" + token.symbol(),
+        guardian,
+        common_health_check,
+    )
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+
+    strategy = gov.deploy(TestStrategy, vault)
+    vault.addStrategy(strategy, 1000, 0, 10, 1000, {"from": gov})
+
+    # Withdraw at least 1 share, when total supply of shares is 0
+    with brownie.reverts():
+        vault.withdraw(1, {"from": gov})
+
+    # If `minShares` is explicitly set to 0, let the txn succeed.
+    shares = vault.withdraw(1, gov, 1, 0, {"from": gov})
+    assert shares == 0
+
+    token.approve(vault, 2 ** 256 - 1, {"from": gov})
+    vault.deposit(1000, {"from": gov})
+
+    # Withdraw when minShares > maxShares
+    with brownie.reverts():
+        vault.deposit(10, gov, 1, 20)
+
+    # Remove all tokens from gov to make asserts easier
+    token.approve(gov, 2 ** 256 - 1, {"from": gov})
+    token.transferFrom(gov, guardian, token.balanceOf(gov), {"from": gov})
+
+    chain.sleep(8640)
+    common_health_check.setDisabledCheck(strategy, True, {"from": gov})
+    strategy.harvest({"from": gov})
+
+    free_balance = token.balanceOf(vault)
+    strategy_balance = token.balanceOf(strategy)
+
+    # A few tokens have been transferred from vault to strategy
+    assert free_balance == 990
+    assert strategy_balance == 10
+
+    # Remove strategy so that the vault cannot withdraw from it
+    vault.removeStrategyFromQueue(strategy, {"from": gov})
+
+    assert (
+        vault.balanceOf(gov) == 1000 * (10 ** vault.decimals()) // vault.pricePerShare()
+    )
+
+    # Withdraw 991 tokens, but since only 990 tokens can be withdrawn, this reverts
+    with brownie.reverts():
+        vault.withdraw(
+            1000 * (10 ** vault.decimals()) // vault.pricePerShare(),
+            gov,
+            1,
+            991 * (10 ** vault.decimals()) // vault.pricePerShare(),
+            {"from": gov},
+        )

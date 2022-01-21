@@ -467,7 +467,7 @@ def setLockedProfitDegradation(degradation: uint256):
     # Since "degradation" is of type uint256 it can never be less than zero
     assert degradation <= DEGRADATION_COEFFICIENT
     self.lockedProfitDegradation = degradation
-    log LockedProfitDegradationUpdated(degradation) 
+    log LockedProfitDegradationUpdated(degradation)
 
 
 @external
@@ -926,7 +926,7 @@ def deposit(_amount: uint256 = MAX_UINT256, recipient: address = msg.sender) -> 
 
     # Tokens are transferred from msg.sender (may be different from _recipient)
     self.erc20_safe_transferFrom(self.token.address, msg.sender, self, amount)
-    
+
     log Deposit(recipient, shares, amount)
 
     return shares  # Just in case someone wants them
@@ -960,7 +960,7 @@ def _sharesForAmount(amount: uint256) -> uint256:
         return  (
             amount
             * self.totalSupply
-            / _freeFunds 
+            / _freeFunds
         )
     else:
         return 0
@@ -1026,6 +1026,7 @@ def withdraw(
     maxShares: uint256 = MAX_UINT256,
     recipient: address = msg.sender,
     maxLoss: uint256 = 1,  # 0.01% [BPS]
+    minShares: uint256 = 1,
 ) -> uint256:
     """
     @notice
@@ -1069,12 +1070,16 @@ def withdraw(
     @param maxLoss
         The maximum acceptable loss to sustain on withdrawal. Defaults to 0.01%.
         If a loss is specified, up to that amount of shares may be burnt to cover losses on withdrawal.
+    @param minShares
+        Minimum number of shares to try and redeem for tokens, defaults to 1.
+        Revert if the final shares being redeemed is less than `minShares`.
+        If 0 is passed, the function will succeed even if no shares are redeemed.
     @return The quantity of tokens redeemed for `_shares`.
     """
-    shares: uint256 = maxShares  # May reduce this number below
-
     # Max Loss is <=100%, revert otherwise
     assert maxLoss <= MAX_BPS
+
+    shares: uint256 = maxShares  # May reduce this number below
 
     # If _shares not specified, transfer full share balance
     if shares == MAX_UINT256:
@@ -1083,8 +1088,8 @@ def withdraw(
     # Limit to only the shares they own
     assert shares <= self.balanceOf[msg.sender]
 
-    # Ensure we are withdrawing something
-    assert shares > 0
+    # Ensure we are withdrawing at least `minShares`
+    assert shares >= minShares
 
     # See @dev note, above.
     value: uint256 = self._shareValue(shares)
@@ -1141,6 +1146,7 @@ def withdraw(
             # NOTE: Burn # of shares that corresponds to what Vault has on-hand,
             #       including the losses that were incurred above during withdrawals
             shares = self._sharesForAmount(value + totalLoss)
+            assert shares >= minShares
 
         # NOTE: This loss protection is put in place to revert if losses from
         #       withdrawing are more than what is considered acceptable.
@@ -1154,7 +1160,7 @@ def withdraw(
     # Withdraw remaining balance to _recipient (may be different to msg.sender) (minus fee)
     self.erc20_safe_transfer(self.token.address, recipient, value)
     log Withdraw(recipient, shares, value)
-    
+
     return value
 
 
