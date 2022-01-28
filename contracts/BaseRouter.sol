@@ -66,7 +66,7 @@ abstract contract BaseRouter {
 
     /**
      * @notice
-     *  Used to get the most revent vault for the token using the registry.
+     *  Used to get the most recent vault for the token using the registry.
      * @return An instance of a VaultAPI
      */
     function bestVault(address token) public view virtual returns (VaultAPI) {
