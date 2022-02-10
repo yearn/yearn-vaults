@@ -95,4 +95,12 @@ jobs:
       - name: Run black
         run: black --check --include "(tests|scripts)" .
 
-# TODO: Add Slither Static Analyzer
+  slither:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Check out github repository
+        uses: actions/checkout@v2
+        
+      - name: Run Slither
+        uses: crytic/slither-action@v0.1.0
