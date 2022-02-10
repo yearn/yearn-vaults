@@ -95,10 +95,10 @@ jobs:
       - name: Run black
         run: black --check --include "(tests|scripts)" .
 
-  slither:
-    runs-on: ubuntu-latest
+    slither:
+      runs-on: ubuntu-latest
     
-    steps:
+      steps:
       - name: Check out github repository
         uses: actions/checkout@v2
         
