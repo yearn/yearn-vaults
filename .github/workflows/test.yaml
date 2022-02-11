@@ -27,9 +27,9 @@ jobs:
         key: ${{ runner.os }}-compiler-cache
 
     - name: Setup node.js
-      uses: actions/setup-node@v1
+      uses: actions/setup-node@v2
       with:
-        node-version: '12.x'
+        node-version: '14.x'
 
     - name: Install ganache
       run: npm install -g ganache-cli@6.12.1
@@ -112,7 +112,7 @@ jobs:
     - name: Setup node.js
       uses: actions/setup-node@v1
       with:
-        node-version: '12.x'
+        node-version: '14.x'
 
     - name: Install ganache
       run: npm install -g ganache-cli@6.12.1
@@ -142,4 +142,17 @@ jobs:
       run: pip install -r requirements-dev.txt
 
     - name: Run Tests
-      run: brownie test tests/integration/ -s --revert-tb
+      run: brownie test tests/integration/ -s --revert-tb\
+      id: brownie
+
+    - name: Run Slither
+      uses: crytic/slither-action@v0.1.0
+      continue-on-error: true
+      id: slither
+      with:
+        sarif: results.sarif
+
+    - name: Upload SARIF file
+      uses: github/codeql-action/upload-sarif@v1
+      with:
+        sarif_file: ${{ steps.slither.outputs.sarif }}
