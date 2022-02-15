@@ -19,7 +19,7 @@ To run the project you need:
   [here](https://eth-brownie.readthedocs.io/en/stable/install.html).
 - Local env variables for [Etherscan API](https://etherscan.io/apis) and
   [Infura](https://infura.io/) (`ETHERSCAN_TOKEN`, `WEB3_INFURA_PROJECT_ID`).
-- Local Ganache environment installed with `npm install -g ganache-cli@6.12.1`.
+- Local Ganache environment installed with `npm install -g ganache`.
 
 ## Installation
 
@@ -69,10 +69,10 @@ Any command `in code blocks` is meant to be executed from a Mac/Linux terminal o
      - If you're on Windows (pure Windows, not WSL), you'll need to install the [C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) before executing this
 5. Install Node.js 10.x
    - Linux or Mac: via your [package manager](https://nodejs.org/en/download/package-manager/)
-   - Windows: [x64 installer](https://nodejs.org/dist/latest-v12.x/node-v12.13.0-x64.msi)
-   - Other [10.x downloads](https://nodejs.org/dist/latest-v12.x)
-6. Install [Ganache](https://github.com/trufflesuite/ganache-cli)
-   - `npm install -g ganache-cli@6.12.1`
+   - Windows: [x64 installer](https://nodejs.org/dist/latest-v14.x/node-v12.13.0-x64.msi)
+   - Other [10.x downloads](https://nodejs.org/dist/latest-v14.x)
+6. Install [Ganache](https://github.com/trufflesuite/ganache)
+   - `npm install -g ganache`
 7. [Install Yarn](https://classic.yarnpkg.com/en/docs/install)
 8. [Install Black](https://pypi.org/project/black/)
    - `python3 -m pip install black`
