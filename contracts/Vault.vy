@@ -1146,6 +1146,8 @@ def withdraw(
         #       withdrawing are more than what is considered acceptable.
         assert totalLoss <= maxLoss * (value + totalLoss) / MAX_BPS
 
+    assert shares <= maxShares
+
     # Burn shares (full value of what is being withdrawn)
     self.totalSupply -= shares
     self.balanceOf[msg.sender] -= shares
