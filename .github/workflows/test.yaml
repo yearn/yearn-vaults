@@ -16,7 +16,7 @@ jobs:
          group: [1, 2, 3, 4, 5, 6]
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
 
     - name: Cache compiler installations
       uses: actions/cache@v2
@@ -27,12 +27,12 @@ jobs:
         key: ${{ runner.os }}-compiler-cache
 
     - name: Setup node.js
-      uses: actions/setup-node@v1
+      uses: actions/setup-node@v2
       with:
-        node-version: '12.x'
+        node-version: '14.x'
 
     - name: Install ganache
-      run: npm install -g ganache-cli@6.12.1
+      run: npm install -g ganache
 
     - name: Set up python 3.8
       uses: actions/setup-python@v2
@@ -99,7 +99,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
 
     - name: Cache compiler installations
       uses: actions/cache@v2
@@ -110,12 +110,12 @@ jobs:
         key: ${{ runner.os }}-compiler-cache
 
     - name: Setup node.js
-      uses: actions/setup-node@v1
+      uses: actions/setup-node@v2
       with:
-        node-version: '12.x'
+        node-version: '14.x'
 
     - name: Install ganache
-      run: npm install -g ganache-cli@6.12.1
+      run: npm install -g ganache
 
     - name: Set up python 3.8
       uses: actions/setup-python@v2

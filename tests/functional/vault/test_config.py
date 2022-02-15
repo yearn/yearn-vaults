@@ -11,7 +11,7 @@ PACKAGE_VERSION = yaml.safe_load(
 )["version"]
 
 
-DEGRADATION_COEFFICIENT = 10 ** 18
+DEGRADATION_COEFFICIENT = 10**18
 
 
 def test_api_adherrance(check_api_adherrance, Vault, interface):
