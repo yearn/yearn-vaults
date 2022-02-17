@@ -97,7 +97,7 @@ def main():
 
         # Wait a minute if we didn't make any calls
         if calls_made > 0:
-            gas_cost = (starting_balance - bot.balance()) / 10 ** 18
+            gas_cost = (starting_balance - bot.balance()) / 10**18
             num_harvests = bot.balance() // (starting_balance - bot.balance())
             print(f"Made {calls_made} calls, spent {gas_cost} ETH on gas.")
             print(
