@@ -95,61 +95,6 @@ jobs:
       id: build_cache_duration
       run: brownie test tests/functional --store-durations --gas --coverage
 
-
-  slither:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Cache compiler installations
-      uses: actions/cache@v2
-      with:
-        path: |
-          ~/.solcx
-          ~/.vvm/vyper-*
-        key: ${{ runner.os }}-compiler-cache
-
-    - name: Setup node.js
-      uses: actions/setup-node@v2
-      with:
-        node-version: '14.x'
-
-    - name: Install ganache
-      run: npm install -g ganache-cli@6.12.1
-
-    - name: Set up python 3.8
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.8
-
-    - name: Set pip cache directory path
-      id: pip-cache-dir-path
-      run: |
-        echo "::set-output name=dir::$(pip cache dir)"
-
-    - name: Restore pip cache
-      uses: actions/cache@v2
-      id: pip-cache
-      with:
-        path: |
-          ${{ steps.pip-cache-dir-path.outputs.dir }}
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements-dev.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-${{ hashFiles('**/requirements-dev.txt') }}
-          ${{ runner.os }}-pip-
-
-    - name: Install python dependencies
-      run: pip install -r requirements-dev.txt
-
-    - name: Run Tests
-      run: brownie compile
-      id: compile
-
-    - name: Run Slither
-      uses: crytic/slither-action@v0.1.0
-      continue-on-error: true
-      id: slither
-      with:
-        sarif: results.sarif
-
   integration:
     runs-on: ubuntu-latest
 
