@@ -149,3 +149,8 @@ def rando(accounts):
 @pytest.fixture
 def registry(gov, Registry):
     yield gov.deploy(Registry)
+
+@pytest.fixture
+def simpleStrategy(strategist, token, vault, SimpleStrategy):
+    strategy = strategist.deploy(SimpleStrategy, token, vault)
+    yield strategy

@@ -1,6 +1,7 @@
 import pytest
 import brownie
-
+from brownie import ZERO_ADDRESS
+from contextlib import contextmanager
 
 @pytest.fixture
 def vault(gov, token, Vault):
@@ -12,6 +13,21 @@ def vault(gov, token, Vault):
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     yield vault
 
+@contextmanager
+def expect_balance_change(
+        token, account, increase,
+        error_message='Balance did not have expected change'
+):
+    balance_before = token.balanceOf(account)
+    try:
+        yield
+    finally:
+        balance_after = token.balanceOf(account)
+        real_increase = balance_after - balance_before
+        assert real_increase == increase, error_message
+
+def to_full_token(amount, decimals = 18):
+    return int(amount * 10**decimals)
 
 def test_deposit_with_zero_funds(vault, token, rando):
     assert token.balanceOf(rando) == 0
@@ -276,3 +292,55 @@ def test_do_not_issue_zero_shares(gov, token, vault, increase_pps):
     assert vault.pricePerShare() == 2 * 10 ** token.decimals()  # 2:1 price
     with brownie.reverts():
         vault.deposit(1, {"from": gov})
+
+def test_deposit_withdraw_whale(gov, vault, token, simpleStrategy, accounts):
+    main_user = accounts[5];
+
+    total_balance = token.balanceOf(gov)
+    token.transfer(main_user, total_balance, {'from': gov})
+
+    strategy_share = 8_000
+    vault.addStrategy(simpleStrategy, strategy_share, 0, 2**256 - 1, 0)
+    vault.setDepositLimit(2**256-1)
+    # confirm only a single strategy in queue
+    assert vault.withdrawalQueue(0) == simpleStrategy.address
+    assert vault.withdrawalQueue(1) == ZERO_ADDRESS
+    
+    token.approve(vault,  2**256 - 1, {'from': main_user})
+
+    with expect_balance_change(vault, main_user, total_balance):
+        vault.deposit({'from': main_user})
+    
+    strategy_share = total_balance * strategy_share / 10_000
+    with expect_balance_change(token, simpleStrategy, strategy_share):
+        simpleStrategy.initialReport()
+
+    total_debt = simpleStrategy.totalDebt()
+    assert total_debt == strategy_share
+    
+    tokenDecimals = token.decimals()
+    vaultDecimals = vault.decimals()
+    vault_reserves = token.balanceOf(vault)
+    
+    shares_before = vault.balanceOf(main_user)
+    max_shares = to_full_token((vault_reserves / to_full_token(1, tokenDecimals)) + 20, vaultDecimals)  # 20 tokens above vault reserves
+    max_value_handicap = max_shares - vault_reserves - 1
+
+    assert shares_before >= max_shares, 'insufficient shares'
+
+    # tiny loss (10 wei) used as example larger losses lead to more additional shares burnt
+    loss = 10
+    # sets next withdrawal and loss amount in dummy strategy to simplify PoC
+    simpleStrategy.setNext(max_value_handicap - loss, loss)
+    max_loss = 1  # 0.01%
+
+    with brownie.reverts():
+        tx = vault.withdraw(max_shares, main_user,
+                        max_loss, {'from': main_user})
+    
+    shares_after = vault.balanceOf(main_user)
+    shares_burnt = shares_before - shares_after
+
+    assert shares_burnt <= max_shares, 'More shares burnt than allowed'
+    assert shares_burnt == 0, 'Shares burnt must be zero'
+    assert shares_after == to_full_token(30000, tokenDecimals), 'Shares after withdrawing must be the same as initial'
