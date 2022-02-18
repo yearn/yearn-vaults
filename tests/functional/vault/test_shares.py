@@ -29,7 +29,7 @@ def expect_balance_change(
 
 
 def to_full_token(amount, decimals=18):
-    return int(amount * 10 ** decimals)
+    return int(amount * 10**decimals)
 
 
 def test_deposit_with_zero_funds(vault, token, rando):
@@ -304,13 +304,13 @@ def test_deposit_withdraw_whale(gov, vault, token, simpleStrategy, accounts):
     token.transfer(main_user, total_balance, {"from": gov})
 
     strategy_share = 8_000
-    vault.addStrategy(simpleStrategy, strategy_share, 0, 2 ** 256 - 1, 0)
-    vault.setDepositLimit(2 ** 256 - 1)
+    vault.addStrategy(simpleStrategy, strategy_share, 0, 2**256 - 1, 0)
+    vault.setDepositLimit(2**256 - 1)
     # confirm only a single strategy in queue
     assert vault.withdrawalQueue(0) == simpleStrategy.address
     assert vault.withdrawalQueue(1) == ZERO_ADDRESS
 
-    token.approve(vault, 2 ** 256 - 1, {"from": main_user})
+    token.approve(vault, 2**256 - 1, {"from": main_user})
 
     with expect_balance_change(vault, main_user, total_balance):
         vault.deposit({"from": main_user})
