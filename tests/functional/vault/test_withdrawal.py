@@ -218,7 +218,15 @@ def test_progressive_withdrawal(
 
 
 def test_withdrawal_with_empty_queue(
-    chain, token, gov, Vault, guardian, rewards, common_health_check, TestStrategy
+    chain,
+    token,
+    gov,
+    Vault,
+    guardian,
+    rewards,
+    common_health_check,
+    TestStrategy,
+    increase_pps,
 ):
     vault = guardian.deploy(Vault)
     vault.initialize(
@@ -244,7 +252,8 @@ def test_withdrawal_with_empty_queue(
 
     chain.sleep(8640)
     common_health_check.setDisabledCheck(strategy, True, {"from": gov})
-    strategy.harvest({"from": gov})
+
+    increase_pps(vault, strategy, token, 1000, guardian)
     assert token.balanceOf(vault) < vault.totalAssets()
 
     vault.removeStrategyFromQueue(strategy, {"from": gov})
@@ -252,11 +261,10 @@ def test_withdrawal_with_empty_queue(
     free_balance = token.balanceOf(vault)
     strategy_balance = token.balanceOf(strategy)
     assert (
-        vault.balanceOf(gov) == 1000 * (10 ** vault.decimals()) // vault.pricePerShare()
+        vault.balanceOf(gov)
+        == vault.totalAssets() * (10 ** vault.decimals()) // vault.pricePerShare()
     )
-    vault.withdraw(
-        1000 * (10 ** vault.decimals()) // vault.pricePerShare(), {"from": gov}
-    )
+    vault.withdraw(vault.balanceOf(gov), {"from": gov})
 
     # This means withdrawal will not revert even when we didn't get the total amount back
     assert (

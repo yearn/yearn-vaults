@@ -132,7 +132,7 @@ def increase_pps(CommonHealthCheck, chain):
         vault.setManagementFee(0, {"from": vault.governance()})
         vault.setPerformanceFee(0, {"from": vault.governance()})
         vault.updateStrategyPerformanceFee(strategy, 0, {"from": vault.governance()})
-        strategy.harvest()
+        strategy.harvest({"from": vault.governance()})
         vault.setManagementFee(managementFee, {"from": vault.governance()})
         vault.setPerformanceFee(performanceFee, {"from": vault.governance()})
         chain.sleep(7 * 3600)
