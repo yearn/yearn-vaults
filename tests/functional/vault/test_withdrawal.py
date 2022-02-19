@@ -134,7 +134,15 @@ def test_forced_withdrawal(
 
 
 def test_progressive_withdrawal(
-    chain, token, gov, Vault, guardian, rewards, TestStrategy, common_health_check
+    chain,
+    token,
+    gov,
+    Vault,
+    guardian,
+    rewards,
+    TestStrategy,
+    common_health_check,
+    increase_pps,
 ):
     vault = guardian.deploy(Vault)
     vault.initialize(
@@ -166,7 +174,7 @@ def test_progressive_withdrawal(
     # Deposit something in strategies
     chain.sleep(1)  # Needs to be a second ahead, at least
     for s in strategies:
-        s.harvest({"from": gov})
+        increase_pps(vault, s, token, 500, guardian)
     assert token.balanceOf(vault) < vault.totalAssets()  # Some debt is in strategies
 
     # Trying to withdraw 0 shares. It should revert
@@ -190,7 +198,12 @@ def test_progressive_withdrawal(
     )
     assert token.balanceOf(gov) == free_balance + balance_strat1
     assert vault.balanceOf(gov) > 0
-    assert vault.maxAvailableShares() == token.balanceOf(strategies[1])
+    assert (
+        vault.maxAvailableShares()
+        == token.balanceOf(strategies[1])
+        * (10 ** vault.decimals())
+        // vault.pricePerShare()
+    )
 
     # Withdraw the final part
     balance_strat2 = token.balanceOf(strategies[1])
