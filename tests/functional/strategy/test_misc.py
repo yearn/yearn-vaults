@@ -25,7 +25,7 @@ def test_harvest_tend_authority(gov, keeper, strategist, strategy, rando, chain)
 
 def test_harvest_tend_trigger(chain, gov, vault, token, TestStrategy):
     strategy = gov.deploy(TestStrategy, vault)
-    # Trigger doesn't work until strategy is added
+    # Trigger doesn't work until strategy has assets or debtRatio
     assert not strategy.harvestTrigger(0)
 
     vault.addStrategy(strategy, 2_000, 0, MAX_UINT256, 50, {"from": gov})

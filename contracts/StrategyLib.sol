@@ -18,6 +18,7 @@ library StrategyLib {
         uint256 callCost,
         uint256 minReportDelay,
         uint256 maxReportDelay,
+        uint256 creditThreshold,
         bool forceHarvestTriggerOnce
     ) public view returns (bool) {
         StrategyParams memory params = VaultAPI(vault).strategies(strategy);
@@ -37,6 +38,11 @@ library StrategyLib {
 
         // Should not trigger if we haven't waited long enough since previous harvest
         if (block.timestamp.sub(params.lastReport) < minReportDelay) return false;
+
+        // harvest our credit if it's above our threshold
+        if (VaultAPI(vault).creditAvailable() > creditThreshold) {
+            return true;
+        }
 
         // Otherwise, return false
         return false;

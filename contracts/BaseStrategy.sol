@@ -256,6 +256,9 @@ abstract contract BaseStrategy {
     // See note on `setEmergencyExit()`.
     bool public emergencyExit;
 
+    // See note on setCreditThreshold().
+    uint256 public creditThreshold; 
+
     // See note on `setforceHarvestTriggerOnce()` for more details.
     bool internal forceHarvestTriggerOnce;
 
@@ -395,7 +398,7 @@ abstract contract BaseStrategy {
      *  Used to change `rewards`. EOA or smart contract which has the permission
      *  to pull rewards from the vault.
      *
-     *  This may only be called by the strategist.
+     *  This may only be called by the strategist or governance.
      * @param _rewards The address to use for pulling rewards.
      */
     function setRewards(address _rewards) external onlyRewarder {
@@ -437,6 +440,18 @@ abstract contract BaseStrategy {
     function setMaxReportDelay(uint256 _delay) external onlyAuthorized {
         maxReportDelay = _delay;
         emit UpdatedMaxReportDelay(_delay);
+    }
+
+    /**
+     * @notice
+     *  Used to change creditThreshold. creditThreshold is the amount of credit
+     *  (in underlying tokens) that will automatically trigger a harvest.
+     *  
+     * @param _creditThreshold The amount of credit that the strategy has 
+     * available from the vault that will trigger a harvest.
+     */
+    function setCreditThreshold(uint256 _creditThreshold) external onlyAuthorized {
+        creditThreshold = _creditThreshold;
     }
 
     /**
