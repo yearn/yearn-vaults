@@ -80,6 +80,7 @@ def test_strategy_harvest_permission(
         ("minReportDelay", "setMinReportDelay", 1000, True, True),
         ("maxReportDelay", "setMaxReportDelay", 2000, True, True),
         ("creditThreshold", "setCreditThreshold", 1000, True, True),
+        ("baseFeeOracle", "setBaseFeeOracle", None, True, True),
     ],
 )
 def test_strategy_setParams(
