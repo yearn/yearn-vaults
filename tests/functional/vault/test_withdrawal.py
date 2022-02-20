@@ -174,7 +174,7 @@ def test_progressive_withdrawal(
     # Deposit something in strategies
     chain.sleep(1)  # Needs to be a second ahead, at least
     for s in strategies:
-        increase_pps(vault, s, token, 500, guardian)
+        increase_pps(vault, token, 500, guardian, s)
     assert token.balanceOf(vault) < vault.totalAssets()  # Some debt is in strategies
 
     # Trying to withdraw 0 shares. It should revert
@@ -253,7 +253,7 @@ def test_withdrawal_with_empty_queue(
     chain.sleep(8640)
     common_health_check.setDisabledCheck(strategy, True, {"from": gov})
 
-    increase_pps(vault, strategy, token, 1000, guardian)
+    increase_pps(vault, token, 1000, guardian, strategy)
     assert token.balanceOf(vault) < vault.totalAssets()
 
     vault.removeStrategyFromQueue(strategy, {"from": gov})
