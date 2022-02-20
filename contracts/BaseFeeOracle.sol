@@ -13,6 +13,9 @@ contract BaseFeeOracle {
     // Max acceptable base fee for the operation
     uint256 public maxAcceptableBaseFee;
 
+    // Boolean to determine if we are in testing mode or not
+    bool public useTesting;
+
     // Daddy can grant and revoke access to the setter
     address internal constant gov = 0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52;
 
@@ -29,14 +32,21 @@ contract BaseFeeOracle {
 
     function isCurrentBaseFeeAcceptable() public view returns (bool) {
         uint256 baseFee;
-        try baseFeeProvider.basefee_global() returns (uint256 currentBaseFee) {
-            baseFee = currentBaseFee;
-        } catch {
-            // Useful for testing until ganache supports london fork
-            // Hard-code current base fee to 1000 gwei
-            // This should also help keepers that run in a fork without
-            // baseFee() to avoid reverting and potentially abandoning the job
+
+        if (useTesting) {
+            // when testing on development network, we need to be able to hardcode this
+            // without fear of reverts.
             baseFee = 1000 gwei;
+        } else {
+            try baseFeeProvider.basefee_global() returns (uint256 currentBaseFee) {
+                baseFee = currentBaseFee;
+            } catch {
+                // Useful for testing until ganache supports london fork
+                // Hard-code current base fee to 1000 gwei
+                // This should also help keepers that run in a fork without
+                // baseFee() to avoid reverting and potentially abandoning the job
+                baseFee = 1000 gwei;
+            }
         }
 
         return baseFee <= maxAcceptableBaseFee;
@@ -50,6 +60,11 @@ contract BaseFeeOracle {
     function setAuthorized(address _target) external {
         _onlyGovernance();
         authorizedAddresses[_target] = true;
+    }
+
+    function setUseTesting(bool _useTesting) external {
+        _onlyAuthorized();
+        useTesting = _useTesting;
     }
 
     function revokeAuthorized(address _target) external {

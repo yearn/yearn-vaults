@@ -41,8 +41,9 @@ def test_harvest_tend_trigger(
     # But, still won't be true if we don't have our baseFeeOracle setup
     assert not strategy.harvestTrigger(0)
 
-    # set our baseFeeOracle
+    # set our baseFeeOracle, let it know we are testing
     strategy.setBaseFeeOracle(base_fee_oracle, {"from": gov})
+    base_fee_oracle.setUseTesting(True, {"from": brain})
     assert not strategy.harvestTrigger(0)
 
     # set our target gas price to be permissive
