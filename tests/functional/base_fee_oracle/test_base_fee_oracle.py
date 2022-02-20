@@ -18,6 +18,7 @@ def test_set_and_revoke_authorized(gov, rando, base_fee_oracle):
         base_fee_oracle.setAuthorized(rando, {"from": rando})
     base_fee_oracle.setAuthorized(rando, {"from": gov})
     base_fee_oracle.setMaxAcceptableBaseFee(100, {"from": rando})
+    base_fee_oracle.setMaxAcceptableBaseFee(1000, {"from": gov})
 
     # now revoke their access, bad rando!
     base_fee_oracle.revokeAuthorized(rando, {"from": gov})
