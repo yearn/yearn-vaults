@@ -710,7 +710,8 @@ abstract contract BaseStrategy {
      * @return `true` if `harvest()` should be called, `false` otherwise.
      */
     function harvestTrigger(uint256 callCostInWei) public view virtual returns (bool) {
-        // Should not trigger if strategy is not active (no assets and no debtRatio). This means we don't need to adjust keeper job.
+        // Don't trigger if strategy is not active (no assets and no debtRatio). Adding this check
+        // means we don't need to turn off keeper job if strategy temporarily has no assets or debtRatio.
         if (!isActive()) {
             return false;
         }
