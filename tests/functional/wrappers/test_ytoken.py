@@ -110,8 +110,8 @@ def test_migrate(token, registry, create_vault, sign_vault_permit, ytoken, gov):
     sig1 = sign_vault_permit(vault1, rando, ytoken.address)
     sig2 = sign_vault_permit(vault2, rando, ytoken.address)
     ytoken.permitAll([vault1, vault2], [sig1, sig2], {"from": rando.address})
-    assert vault1.allowance(rando.address, ytoken) == 2**256 - 1
-    assert vault2.allowance(rando.address, ytoken) == 2**256 - 1
+    assert vault1.allowance(rando.address, ytoken) == 2 ** 256 - 1
+    assert vault2.allowance(rando.address, ytoken) == 2 ** 256 - 1
 
     ytoken.migrate({"from": rando.address})
     assert vault1.balanceOf(rando.address) == 0

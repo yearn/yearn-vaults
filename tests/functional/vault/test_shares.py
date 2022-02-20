@@ -11,7 +11,7 @@ def vault(gov, token, Vault):
     vault.initialize(
         token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
     )
-    vault.setDepositLimit(2**256 - 1, {"from": gov})
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     yield vault
 
 
@@ -34,21 +34,21 @@ def to_full_token(amount, decimals=18):
 
 def test_deposit_with_zero_funds(vault, token, rando):
     assert token.balanceOf(rando) == 0
-    token.approve(vault, 2**256 - 1, {"from": rando})
+    token.approve(vault, 2 ** 256 - 1, {"from": rando})
     with brownie.reverts():
         vault.deposit({"from": rando})
 
 
 def test_deposit_with_wrong_amount(vault, token, gov):
     balance = token.balanceOf(gov) + 1
-    token.approve(vault, 2**256 - 1, {"from": gov})
+    token.approve(vault, 2 ** 256 - 1, {"from": gov})
     with brownie.reverts():
         vault.deposit(balance, {"from": gov})
 
 
 def test_deposit_with_wrong_recipient(vault, token, gov):
     balance = token.balanceOf(gov)
-    token.approve(vault, 2**256 - 1, {"from": gov})
+    token.approve(vault, 2 ** 256 - 1, {"from": gov})
     with brownie.reverts():
         vault.deposit(
             balance, "0x0000000000000000000000000000000000000000", {"from": gov}
@@ -68,7 +68,7 @@ def test_deposit_all_and_withdraw_all(gov, vault, token):
     assert vault.balanceOf(gov) == balance // 2
 
     # When deposit limit is lifted, deposit everything
-    vault.setDepositLimit(2**256 - 1, {"from": gov})
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     vault.deposit({"from": gov})
     # vault has tokens
     assert token.balanceOf(vault) == balance
@@ -117,7 +117,7 @@ def test_deposit_withdraw(gov, vault, token):
 
 
 def test_deposit_limit(gov, token, vault):
-    token.approve(vault, 2**256 - 1, {"from": gov})
+    token.approve(vault, 2 ** 256 - 1, {"from": gov})
 
     vault.setDepositLimit(0, {"from": gov})
 
@@ -144,7 +144,7 @@ def test_deposit_limit(gov, token, vault):
     with brownie.reverts():
         vault.deposit({"from": gov})
 
-    vault.setDepositLimit(2**256 - 1, {"from": gov})
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
 
     # Now it will take the rest
     vault.deposit({"from": gov})
@@ -281,7 +281,7 @@ def test_transferFrom(accounts, token, vault):
     assert vault.balanceOf(b) == token.balanceOf(vault) // 2
 
     # If approval is unlimited, little bit of a gas savings
-    vault.approve(c, 2**256 - 1, {"from": a})
+    vault.approve(c, 2 ** 256 - 1, {"from": a})
     vault.transferFrom(a, b, vault.balanceOf(a), {"from": c})
 
     assert vault.balanceOf(a) == 0

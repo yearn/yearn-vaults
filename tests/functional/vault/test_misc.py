@@ -2,7 +2,7 @@ import pytest
 import brownie
 import pytest
 
-MAX_UINT256 = 2**256 - 1
+MAX_UINT256 = 2 ** 256 - 1
 MAX_BPS = 10000
 
 

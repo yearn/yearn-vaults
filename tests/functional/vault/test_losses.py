@@ -2,7 +2,7 @@ import pytest
 import brownie
 
 DAY = 86400  # seconds
-MAX_UINT256 = 2**256 - 1
+MAX_UINT256 = 2 ** 256 - 1
 
 
 @pytest.fixture
@@ -19,7 +19,7 @@ def vault(gov, token, Vault, common_health_check):
         gov,
         common_health_check,
     )
-    vault.setDepositLimit(2**256 - 1, {"from": gov})
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     yield vault
 
 
@@ -33,7 +33,7 @@ def test_losses_updates_less_and_debt(
     chain, vault, strategy, gov, token, common_health_check
 ):
     vault.addStrategy(strategy, 1000, 0, 1000, 0, {"from": gov})
-    token.approve(vault, 2**256 - 1, {"from": gov})
+    token.approve(vault, 2 ** 256 - 1, {"from": gov})
     vault.deposit(5000, {"from": gov})
 
     chain.sleep(DAY // 10)
@@ -76,8 +76,8 @@ def test_losses_updates_less_and_debt(
 
 
 def test_total_loss(chain, vault, strategy, gov, token, common_health_check):
-    vault.addStrategy(strategy, 10_000, 0, 2**256 - 1, 1_000, {"from": gov})
-    token.approve(vault, 2**256 - 1, {"from": gov})
+    vault.addStrategy(strategy, 10_000, 0, 2 ** 256 - 1, 1_000, {"from": gov})
+    token.approve(vault, 2 ** 256 - 1, {"from": gov})
     vault.deposit(5000, {"from": gov})
     strategy.harvest({"from": gov})
     assert token.balanceOf(strategy) == 5000
@@ -100,7 +100,7 @@ def test_loss_should_be_removed_from_locked_profit(
     vault.setLockedProfitDegradation(1e10, {"from": gov})
 
     vault.addStrategy(strategy, 1000, 0, 1000, 0, {"from": gov})
-    token.approve(vault, 2**256 - 1, {"from": gov})
+    token.approve(vault, 2 ** 256 - 1, {"from": gov})
     vault.deposit(5000, {"from": gov})
     common_health_check.setDisabledCheck(strategy, True, {"from": gov})
     strategy.harvest({"from": gov})
@@ -143,21 +143,21 @@ def test_small_loss(chain, vault, strategy, gov, token):
     if token.decimals() != 18:
         pytest.skip("Only 18 decimals")
 
-    vault.addStrategy(strategy, 10_000, 0, 2**256 - 1, 0, {"from": gov})
-    token.approve(vault, 2**256 - 1, {"from": gov})
-    vault.deposit(300 * 10**18, {"from": gov})
+    vault.addStrategy(strategy, 10_000, 0, 2 ** 256 - 1, 0, {"from": gov})
+    token.approve(vault, 2 ** 256 - 1, {"from": gov})
+    vault.deposit(300 * 10 ** 18, {"from": gov})
 
     chain.sleep(DAY // 10)
     chain.sleep(1)
     strategy.harvest({"from": gov})
-    assert token.balanceOf(strategy) == 300 * 10**18
+    assert token.balanceOf(strategy) == 300 * 10 ** 18
 
     # Small loss
     chain.sleep(1)
-    strategy._takeFunds(9 * 10**15, {"from": gov})
+    strategy._takeFunds(9 * 10 ** 15, {"from": gov})
     strategy.harvest({"from": gov})
     params = vault.strategies(strategy).dict()
-    assert params["totalLoss"] == 9 * 10**15
+    assert params["totalLoss"] == 9 * 10 ** 15
 
     # Since the loss is too small, debtRatio doesn't change
     assert params["debtRatio"] == 10_000

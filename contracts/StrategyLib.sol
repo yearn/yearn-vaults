@@ -21,7 +21,7 @@ library StrategyLib {
         bool forceHarvestTriggerOnce
     ) public view returns (bool) {
         StrategyParams memory params = VaultAPI(vault).strategies(strategy);
-        
+
         // Should trigger if hasn't been called in a while
         if (block.timestamp.sub(params.lastReport) >= maxReportDelay) return true;
 

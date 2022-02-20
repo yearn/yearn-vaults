@@ -1,7 +1,7 @@
 import pytest
 import brownie
 
-MAX_UINT256 = 2**256 - 1
+MAX_UINT256 = 2 ** 256 - 1
 
 
 def test_harvest_tend_authority(gov, keeper, strategist, strategy, rando, chain):

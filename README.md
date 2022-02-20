@@ -110,13 +110,14 @@ Any command `in code blocks` is meant to be executed from a Mac/Linux terminal o
       - Search for `solidity`
       - Look for `Solidity: Remappings` and press `Edit in settings.json`
       - Enter the following remapping with the path of where brownie installed the solidity dependencies. For example:
-      - ```
+      - ````
         {
           //...prev configs...,
           "solidity.remappings": [
             "@openzeppelin=/home/<username>/.brownie/packages/OpenZeppelin/openzeppelin-contracts@3.1.0"
-          ] 
+          ]
         }```
+        ````
     - Set Black as the linter.
       - You'll see a toast notification the bottom right asking about linting, choose _black_
       - If you don't see this, just go to _File_ -> _Preferences_ -> _Settings_
@@ -194,5 +195,5 @@ For security concerns, please visit [Bug Bounty](https://github.com/yearn/yearn-
 You can read more about Yearn Finance on our documentation [webpage](https://docs.yearn.finance).
 
 ## Discussion
- 
+
 For questions not covered in the docs, please visit [our Discord server](http://discord.yearn.finance).
