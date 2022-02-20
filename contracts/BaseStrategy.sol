@@ -237,6 +237,8 @@ abstract contract BaseStrategy {
 
     event UpdatedRewards(address rewards);
 
+    event UpdatedBaseFeeOracle(address oracle);
+
     event UpdatedMinReportDelay(uint256 delay);
 
     event UpdatedMaxReportDelay(uint256 delay);
@@ -262,6 +264,9 @@ abstract contract BaseStrategy {
 
     // See note on setCreditThreshold().
     uint256 public creditThreshold;
+
+    // See note on setBaseFeeOracle().
+    address public baseFeeOracle;
 
     // See note on `setforceHarvestTriggerOnce()` for more details.
     bool internal forceHarvestTriggerOnce;
@@ -410,6 +415,21 @@ abstract contract BaseStrategy {
         rewards = _rewards;
         StrategyLib.internalSetRewards(oldRewards, _rewards, address(vault));
         emit UpdatedRewards(_rewards);
+    }
+
+    /**
+     * @notice
+     *  Used to change our base fee oracle. This is a smart contract that reads 
+     *  the base fee via the EVM opcode, performs some logic, and then determines
+     *  if, based on that logic, we should harvest or not. See StrategyLib.sol 
+     *  for the function itself.
+     *
+     *  This may only be called by the strategist or governance.
+     * @param _oracle The address to use for our base fee oracle.
+     */
+    function setBaseFeeOracle(address _oracle) external onlyAuthorized {
+        baseFeeOracle = _oracle;
+        emit UpdatedBaseFeeOracle(_oracle);
     }
 
     /**
@@ -703,6 +723,7 @@ abstract contract BaseStrategy {
                 minReportDelay,
                 maxReportDelay,
                 creditThreshold,
+                baseFeeOracle,
                 forceHarvestTriggerOnce
             );
     }

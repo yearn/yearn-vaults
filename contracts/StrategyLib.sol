@@ -19,6 +19,7 @@ library StrategyLib {
         uint256 minReportDelay,
         uint256 maxReportDelay,
         uint256 creditThreshold,
+        address baseFeeOracle,
         bool forceHarvestTriggerOnce
     ) public view returns (bool) {
         StrategyParams memory params = VaultAPI(vault).strategies(strategy);
@@ -27,7 +28,7 @@ library StrategyLib {
         if (block.timestamp.sub(params.lastReport) >= maxReportDelay) return true;
 
         // check if the base fee gas price is higher than we allow. if it is, block everything below here.
-        if (!isBaseFeeAcceptable()) {
+        if (!isBaseFeeAcceptable(baseFeeOracle)) {
             return false;
         }
 
@@ -54,12 +55,16 @@ library StrategyLib {
      *  is used in our harvestTrigger to prevent costly harvests during times of
      *  high network congestion.
      *
-     *  This baseFee target is configurable via Yearn's yBrain multisig.
-     * @return `true` if baseFee is below our target, `false` otherwise.
+     *  This baseFee target is configurable via Yearn's yBrain multisig or governance.
+     * @return `true` if baseFee is below our target, `false` otherwise or if not setup.
      */
     //
-    function isBaseFeeAcceptable() internal view returns (bool) {
-        return IBaseFee(0xb5e1CAcB567d98faaDB60a1fD4820720141f064F).isCurrentBaseFeeAcceptable();
+    function isBaseFeeAcceptable(address _oracle) internal view returns (bool) {
+        if (_oracle == address(0)) {
+            return false;
+        } else {
+            return IBaseFee(_oracle).isCurrentBaseFeeAcceptable();
+        }
     }
 
     function internalSetRewards(

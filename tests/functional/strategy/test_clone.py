@@ -71,6 +71,7 @@ def test_clone(
     assert new_strategy.minReportDelay() == 0
     assert new_strategy.maxReportDelay() == 86400 * 7
     assert new_strategy.creditThreshold() == 1000000e18
+    assert new_strategy.baseFeeOracle() == ZERO_ADDRESS
 
 
 def test_double_initialize(TestStrategy, vault, other_vault, gov):

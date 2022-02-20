@@ -24,8 +24,7 @@ def management(accounts):
 
 
 @pytest.fixture
-def strategist_ms(accounts):
-    # like governance, but better
+def brain(accounts):
     yield accounts.at("0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7", force=True)
 
 
@@ -35,8 +34,8 @@ def common_health_check(gov, CommonHealthCheck):
 
 
 @pytest.fixture
-def gasOracle():
-    yield Contract("0xb5e1CAcB567d98faaDB60a1fD4820720141f064F")
+def base_fee_oracle(gov, BaseFeeOracle):
+    yield gov.deploy(BaseFeeOracle)
 
 
 @pytest.fixture

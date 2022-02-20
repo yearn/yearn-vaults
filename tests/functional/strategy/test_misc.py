@@ -24,7 +24,7 @@ def test_harvest_tend_authority(gov, keeper, strategist, strategy, rando, chain)
 
 
 def test_harvest_tend_trigger(
-    chain, gov, vault, token, TestStrategy, gasOracle, strategist_ms
+    chain, gov, vault, token, TestStrategy, base_fee_oracle, brain
 ):
     strategy = gov.deploy(TestStrategy, vault)
     # Trigger doesn't work until strategy has assets or debtRatio
@@ -34,25 +34,40 @@ def test_harvest_tend_trigger(
     last_report = vault.strategies(strategy).dict()["lastReport"]
     strategy.setMinReportDelay(10, {"from": gov})
 
-    # set our target gas price to be permissive
-    gasOracle.setMaxAcceptableBaseFee(10000 * 1e9, {"from": strategist_ms})
-
     # Must wait at least the minimum amount of time for it to be true
     assert not strategy.harvestTrigger(0)
     chain.mine(timedelta=1 + strategy.minReportDelay() - (chain.time() - last_report))
+
+    # But, still won't be true if we don't have our baseFeeOracle setup
+    assert not strategy.harvestTrigger(0)
+
+    # set our baseFeeOracle
+    strategy.setBaseFeeOracle(base_fee_oracle, {"from": gov})
+    assert not strategy.harvestTrigger(0)
+
+    # set our target gas price to be permissive
+    base_fee_oracle.setMaxAcceptableBaseFee(10_000 * 1e9, {"from": brain})
+    assert base_fee_oracle.isCurrentBaseFeeAcceptable()
     assert strategy.harvestTrigger(0)
 
-    # bump up our minDelay so it won't be true
+    # bump up our minDelay so trigger won't be true
     strategy.setMinReportDelay(86400 * 10, {"from": gov})
+    assert not strategy.harvestTrigger(0)
 
-    # deposit funds to our vault, should trigger true due to credit available (make it lower)
+    # test our manual trigger
+    strategy.setForceHarvestTriggerOnce(True, {"from": gov})
+    assert strategy.harvestTrigger(0)
+    strategy.setForceHarvestTriggerOnce(False, {"from": gov})
+    assert not strategy.harvestTrigger(0)
+
+    # deposit funds to our vault, should trigger true due to credit available (make it lower first)
     strategy.setCreditThreshold(1, {"from": gov})
     token.approve(vault, token.balanceOf(gov), {"from": gov})
     vault.deposit(token.balanceOf(gov) // 2, {"from": gov})
     assert strategy.harvestTrigger(0)
 
     # harvest should trigger false due to high gas price
-    gasOracle.setMaxAcceptableBaseFee(1, {"from": strategist_ms})
+    base_fee_oracle.setMaxAcceptableBaseFee(1, {"from": brain})
     assert not strategy.harvestTrigger(0)
 
     # After maxReportDelay has passed, gas price doesn't matter
