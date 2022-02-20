@@ -5,6 +5,10 @@ pragma experimental ABIEncoderV2;
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 import {StrategyParams, VaultAPI, StrategyAPI} from "./BaseStrategy.sol";
 
+interface IBaseFee {
+    function isCurrentBaseFeeAcceptable() external view returns (bool);
+}
+
 library StrategyLib {
     using SafeMath for uint256;
 
@@ -54,6 +58,20 @@ library StrategyLib {
         // is <N% of value moved)
         uint256 credit = VaultAPI(vault).creditAvailable();
         return (profitFactor.mul(callCost) < credit.add(profit));
+    }
+
+    /**
+     * @notice
+     *  Check if the current network baseFee is below our external target. This
+     *  is used in our harvestTrigger to prevent costly harvests during times of
+     *  high network congestion.
+     *
+     *  This baseFee target is configurable via Yearn's yBrain multisig.
+     * @return `true` if baseFee is below our target, `false` otherwise.
+     */
+    //
+    function isBaseFeeAcceptable() internal view returns (bool) {
+        return IBaseFee(0xb5e1CAcB567d98faaDB60a1fD4820720141f064F).isCurrentBaseFeeAcceptable();
     }
 
     function internalSetRewards(
