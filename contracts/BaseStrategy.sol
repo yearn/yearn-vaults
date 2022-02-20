@@ -256,6 +256,9 @@ abstract contract BaseStrategy {
     // See note on `setEmergencyExit()`.
     bool public emergencyExit;
 
+    // See note on `setforceHarvestTriggerOnce()` for more details.
+    bool internal forceHarvestTriggerOnce;
+
     // modifiers
     modifier onlyAuthorized() {
         _onlyAuthorized();
