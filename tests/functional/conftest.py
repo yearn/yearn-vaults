@@ -1,6 +1,6 @@
 import pytest
 
-from brownie import ZERO_ADDRESS, Token, TokenNoReturn, Contract
+from brownie import ZERO_ADDRESS, Token, TokenNoReturn
 
 
 @pytest.fixture
