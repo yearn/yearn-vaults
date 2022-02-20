@@ -240,7 +240,7 @@ abstract contract BaseStrategy {
     event UpdatedMinReportDelay(uint256 delay);
 
     event UpdatedMaxReportDelay(uint256 delay);
-    
+
     event UpdatedCreditThreshold(uint256 creditThreshold);
 
     event EmergencyExitEnabled();
