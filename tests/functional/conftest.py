@@ -119,8 +119,11 @@ def strategy(gov, strategist, keeper, rewards, vault, TestStrategy, request):
 
 
 @pytest.fixture
-def increase_pps(CommonHealthCheck, strategy, chain):
-    def increase_pps(vault, token, amount, sender):
+def increase_pps(Vault, CommonHealthCheck, strategy, chain):
+    default_strategy = strategy
+
+    def increase_pps(vault, token, amount, sender, strategy=default_strategy):
+        governance = vault.governance()
         common_health_check = vault.healthCheck()
         if common_health_check != ZERO_ADDRESS:
             common_health_check = CommonHealthCheck.at(common_health_check)
@@ -129,12 +132,12 @@ def increase_pps(CommonHealthCheck, strategy, chain):
         token.transfer(strategy, amount, {"from": sender})
         managementFee = vault.managementFee()
         performanceFee = vault.performanceFee()
-        vault.setManagementFee(0)
-        vault.setPerformanceFee(0)
-        vault.updateStrategyPerformanceFee(strategy, 0)
-        strategy.harvest()
-        vault.setManagementFee(managementFee)
-        vault.setPerformanceFee(performanceFee)
+        vault.setManagementFee(0, {"from": governance})
+        vault.setPerformanceFee(0, {"from": governance})
+        vault.updateStrategyPerformanceFee(strategy, 0, {"from": governance})
+        strategy.harvest({"from": governance})
+        vault.setManagementFee(managementFee, {"from": governance})
+        vault.setPerformanceFee(performanceFee, {"from": governance})
         chain.sleep(7 * 3600)
         chain.mine()
 

@@ -134,7 +134,15 @@ def test_forced_withdrawal(
 
 
 def test_progressive_withdrawal(
-    chain, token, gov, Vault, guardian, rewards, TestStrategy, common_health_check
+    chain,
+    token,
+    gov,
+    Vault,
+    guardian,
+    rewards,
+    TestStrategy,
+    common_health_check,
+    increase_pps,
 ):
     vault = guardian.deploy(Vault)
     vault.initialize(
@@ -166,7 +174,7 @@ def test_progressive_withdrawal(
     # Deposit something in strategies
     chain.sleep(1)  # Needs to be a second ahead, at least
     for s in strategies:
-        s.harvest({"from": gov})
+        increase_pps(vault, token, 500, guardian, s)
     assert token.balanceOf(vault) < vault.totalAssets()  # Some debt is in strategies
 
     # Trying to withdraw 0 shares. It should revert
@@ -176,7 +184,7 @@ def test_progressive_withdrawal(
     # First withdraw everything possible without fees
     free_balance = token.balanceOf(vault)
     vault.withdraw(
-        free_balance * vault.pricePerShare() // 10 ** vault.decimals(), {"from": gov}
+        free_balance * (10 ** vault.decimals()) // vault.pricePerShare(), {"from": gov}
     )
     assert token.balanceOf(gov) == free_balance
     assert vault.balanceOf(gov) > 0
@@ -185,17 +193,24 @@ def test_progressive_withdrawal(
     balance_strat1 = token.balanceOf(strategies[0])
     assert balance_strat1 > 0
     vault.withdraw(
-        balance_strat1 * vault.pricePerShare() // 10 ** vault.decimals(), {"from": gov}
+        balance_strat1 * (10 ** vault.decimals()) // vault.pricePerShare(),
+        {"from": gov},
     )
     assert token.balanceOf(gov) == free_balance + balance_strat1
     assert vault.balanceOf(gov) > 0
-    assert vault.maxAvailableShares() == token.balanceOf(strategies[1])
+    assert (
+        vault.maxAvailableShares()
+        == token.balanceOf(strategies[1])
+        * (10 ** vault.decimals())
+        // vault.pricePerShare()
+    )
 
     # Withdraw the final part
     balance_strat2 = token.balanceOf(strategies[1])
     assert balance_strat2 > 0
     vault.withdraw(
-        balance_strat2 * vault.pricePerShare() // 10 ** vault.decimals(), {"from": gov}
+        balance_strat2 * (10 ** vault.decimals()) // vault.pricePerShare(),
+        {"from": gov},
     )
     assert token.balanceOf(gov) == free_balance + balance_strat1 + balance_strat2
     assert vault.balanceOf(gov) == 0
@@ -203,7 +218,15 @@ def test_progressive_withdrawal(
 
 
 def test_withdrawal_with_empty_queue(
-    chain, token, gov, Vault, guardian, rewards, common_health_check, TestStrategy
+    chain,
+    token,
+    gov,
+    Vault,
+    guardian,
+    rewards,
+    common_health_check,
+    TestStrategy,
+    increase_pps,
 ):
     vault = guardian.deploy(Vault)
     vault.initialize(
@@ -229,7 +252,8 @@ def test_withdrawal_with_empty_queue(
 
     chain.sleep(8640)
     common_health_check.setDisabledCheck(strategy, True, {"from": gov})
-    strategy.harvest({"from": gov})
+
+    increase_pps(vault, token, 1000, guardian, strategy)
     assert token.balanceOf(vault) < vault.totalAssets()
 
     vault.removeStrategyFromQueue(strategy, {"from": gov})
@@ -237,19 +261,21 @@ def test_withdrawal_with_empty_queue(
     free_balance = token.balanceOf(vault)
     strategy_balance = token.balanceOf(strategy)
     assert (
-        vault.balanceOf(gov) == 1000 * vault.pricePerShare() // 10 ** vault.decimals()
+        vault.balanceOf(gov)
+        == vault.totalAssets() * (10 ** vault.decimals()) // vault.pricePerShare()
     )
-    vault.withdraw(
-        1000 * vault.pricePerShare() // 10 ** vault.decimals(), {"from": gov}
-    )
+    vault.withdraw(vault.balanceOf(gov), {"from": gov})
 
     # This means withdrawal will not revert even when we didn't get the total amount back
-    assert vault.balanceOf(gov) == strategy_balance
+    assert (
+        vault.balanceOf(gov)
+        == strategy_balance * (10 ** vault.decimals()) // vault.pricePerShare()
+    )
     assert token.balanceOf(gov) == free_balance
 
     # Calling it a second time with strategy_balance should be a no-op
     vault.withdraw(
-        strategy_balance * vault.pricePerShare() // 10 ** vault.decimals(),
+        strategy_balance * (10 ** vault.decimals()) // vault.pricePerShare(),
         {"from": gov},
     )
     assert token.balanceOf(gov) == free_balance
@@ -258,7 +284,7 @@ def test_withdrawal_with_empty_queue(
     vault.addStrategyToQueue(strategy, {"from": gov})
 
     vault.withdraw(
-        strategy_balance * vault.pricePerShare() // 10 ** vault.decimals(),
+        strategy_balance * (10 ** vault.decimals()) // vault.pricePerShare(),
         {"from": gov},
     )
     assert token.balanceOf(gov) == free_balance + strategy_balance
