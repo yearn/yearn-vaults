@@ -419,9 +419,9 @@ abstract contract BaseStrategy {
 
     /**
      * @notice
-     *  Used to change our base fee oracle. This is a smart contract that reads 
+     *  Used to change our base fee oracle. This is a smart contract that reads
      *  the base fee via the EVM opcode, performs some logic, and then determines
-     *  if, based on that logic, we should harvest or not. See StrategyLib.sol 
+     *  if, based on that logic, we should harvest or not. See StrategyLib.sol
      *  for the function itself.
      *
      *  This may only be called by the strategist or governance.

@@ -15,18 +15,18 @@ contract BaseFeeOracle {
 
     // Daddy can grant and revoke access to the setter
     address internal constant gov = 0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52;
-    
+
     // SMS is authorized by default
     address internal constant brain = 0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7;
-    
+
     // Addresses that can set the max acceptable base fee
     mapping(address => bool) public authorizedAddresses;
-    
+
     constructor() public {
         maxAcceptableBaseFee = 80 gwei;
         authorizedAddresses[brain] = true;
     }
-    
+
     function isCurrentBaseFeeAcceptable() public view returns (bool) {
         uint256 baseFee;
         try baseFeeProvider.basefee_global() returns (uint256 currentBaseFee) {
@@ -41,12 +41,12 @@ contract BaseFeeOracle {
 
         return baseFee <= maxAcceptableBaseFee;
     }
-    
+
     function setMaxAcceptableBaseFee(uint256 _maxAcceptableBaseFee) external {
         _onlyAuthorized();
         maxAcceptableBaseFee = _maxAcceptableBaseFee;
     }
-    
+
     function setAuthorized(address _target) external {
         _onlyGovernance();
         authorizedAddresses[_target] = true;
@@ -56,7 +56,7 @@ contract BaseFeeOracle {
         _onlyGovernance();
         authorizedAddresses[_target] = false;
     }
-    
+
     function _onlyAuthorized() internal view {
         require(authorizedAddresses[msg.sender] == true, "!authorized");
     }
@@ -64,5 +64,4 @@ contract BaseFeeOracle {
     function _onlyGovernance() internal view {
         require(msg.sender == gov, "!governance");
     }
-    
 }
