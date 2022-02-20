@@ -17,13 +17,11 @@ library StrategyLib {
         address strategy,
         uint256 callCost,
         uint256 minReportDelay,
-        uint256 maxReportDelay
+        uint256 maxReportDelay,
+        bool forceHarvestTriggerOnce
     ) public view returns (bool) {
         StrategyParams memory params = VaultAPI(vault).strategies(strategy);
-        // Should not trigger if Strategy is not activated
-        if (params.activation == 0) {
-            return false;
-        }
+        
         // Should trigger if hasn't been called in a while
         if (block.timestamp.sub(params.lastReport) >= maxReportDelay) return true;
 
@@ -32,10 +30,16 @@ library StrategyLib {
             return false;
         }
 
+        // trigger if we want to manually harvest
+        if (forceHarvestTriggerOnce) {
+            return true;
+        }
+
         // Should not trigger if we haven't waited long enough since previous harvest
         if (block.timestamp.sub(params.lastReport) < minReportDelay) return false;
 
-
+        // Otherwise, return false
+        return false;
     }
 
     /**

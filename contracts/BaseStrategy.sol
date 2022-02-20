@@ -450,6 +450,19 @@ abstract contract BaseStrategy {
     }
 
     /**
+     * @notice
+     *  Used to change `forceHarvestTriggerOnce`. `forceHarvestTriggerOnce` is used
+     *  to tell our keeper to harvest, the next time that gas price is acceptable.
+     *
+     *  This may only be called by governance or the strategist.
+     * @param _forceHarvestTriggerOnce A boolean for yes/no if we should manually
+     * harvest a strategy.
+     */
+    function setForceHarvestTriggerOnce(bool _forceHarvestTriggerOnce) external onlyAuthorized {
+        forceHarvestTriggerOnce = _forceHarvestTriggerOnce;
+    }
+
+    /**
      * Resolve governance address from Vault contract, used to make assertions
      * on protected functions in the Strategy.
      */
@@ -542,7 +555,10 @@ abstract contract BaseStrategy {
             uint256 _profit,
             uint256 _loss,
             uint256 _debtPayment
-        );
+        ); {
+        // reset our force harvest trigger
+        forceHarvestTriggerOnce = false;
+    }
 
     /**
      * Perform any adjustments to the core position(s) of this Strategy given
@@ -633,7 +649,8 @@ abstract contract BaseStrategy {
      *  This call and `tendTrigger` should never return `true` at the
      *  same time.
      *
-     *  See `min/maxReportDelay` to adjust the
+     *  See `min/maxReportDelay`, `forceHarvestTriggerOnce`, `isBaseFeeAcceptable` 
+     *  (the latter being in the StrategyLib.sol file) to adjust the
      *  strategist-controlled parameters that will influence whether this call
      *  returns `true` or not. These parameters will be used in conjunction
      *  with the parameters reported to the Vault (see `params`) to determine
@@ -648,13 +665,19 @@ abstract contract BaseStrategy {
      * @return `true` if `harvest()` should be called, `false` otherwise.
      */
     function harvestTrigger(uint256 callCostInWei) public view virtual returns (bool) {
+        // Should not trigger if strategy is not active (no assets and no debtRatio). This means we don't need to adjust keeper job.
+        if (!isActive()) {
+            return false;
+        }
+        
         return
             StrategyLib.internalHarvestTrigger(
                 address(vault),
                 address(this),
                 ethToWant(callCostInWei),
                 minReportDelay,
-                maxReportDelay
+                maxReportDelay,
+                forceHarvestTriggerOnce
             );
     }
 
