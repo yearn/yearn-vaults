@@ -555,7 +555,8 @@ abstract contract BaseStrategy {
             uint256 _profit,
             uint256 _loss,
             uint256 _debtPayment
-        ); {
+        )
+    {
         // reset our force harvest trigger
         forceHarvestTriggerOnce = false;
     }
@@ -649,7 +650,7 @@ abstract contract BaseStrategy {
      *  This call and `tendTrigger` should never return `true` at the
      *  same time.
      *
-     *  See `min/maxReportDelay`, `forceHarvestTriggerOnce`, `isBaseFeeAcceptable` 
+     *  See `min/maxReportDelay`, `forceHarvestTriggerOnce`, `isBaseFeeAcceptable`
      *  (the latter being in the StrategyLib.sol file) to adjust the
      *  strategist-controlled parameters that will influence whether this call
      *  returns `true` or not. These parameters will be used in conjunction
@@ -669,7 +670,7 @@ abstract contract BaseStrategy {
         if (!isActive()) {
             return false;
         }
-        
+
         return
             StrategyLib.internalHarvestTrigger(
                 address(vault),
