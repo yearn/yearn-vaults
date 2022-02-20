@@ -19,6 +19,10 @@ struct StrategyParams {
     uint256 totalLoss;
 }
 
+interface IBaseFee {
+    function isCurrentBaseFeeAcceptable() external view returns (bool);
+}
+
 interface VaultAPI is IERC20 {
     function name() external view returns (string calldata);
 
@@ -662,6 +666,20 @@ abstract contract BaseStrategy {
     function tend() external onlyKeepers {
         // Don't take profits with this call, but adjust for better gains
         adjustPosition(vault.debtOutstanding());
+    }
+
+    /**
+     * @notice
+     *  Check if the current network baseFee is below our external target. This
+     *  is used in our harvestTrigger to prevent costly harvests during times of
+     *  high network congestion.
+     *
+     *  This baseFee target is configurable via Yearn's yBrain multisig.
+     * @return `true` if baseFee is below our target, `false` otherwise.
+     */
+    //
+    function isBaseFeeAcceptable() internal view returns (bool) {
+        return IBaseFee(0xb5e1CAcB567d98faaDB60a1fD4820720141f064F).isCurrentBaseFeeAcceptable();
     }
 
     /**
