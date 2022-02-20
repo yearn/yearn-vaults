@@ -24,10 +24,6 @@ library StrategyLib {
         if (params.activation == 0) {
             return false;
         }
-
-        // Should not trigger if we haven't waited long enough since previous harvest
-        if (block.timestamp.sub(params.lastReport) < minReportDelay) return false;
-
         // Should trigger if hasn't been called in a while
         if (block.timestamp.sub(params.lastReport) >= maxReportDelay) return true;
 
@@ -35,6 +31,10 @@ library StrategyLib {
         if (!isBaseFeeAcceptable()) {
             return false;
         }
+
+        // Should not trigger if we haven't waited long enough since previous harvest
+        if (block.timestamp.sub(params.lastReport) < minReportDelay) return false;
+
 
     }
 
