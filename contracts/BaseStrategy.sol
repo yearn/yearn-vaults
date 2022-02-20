@@ -240,8 +240,12 @@ abstract contract BaseStrategy {
     event UpdatedMinReportDelay(uint256 delay);
 
     event UpdatedMaxReportDelay(uint256 delay);
+    
+    event UpdatedCreditThreshold(uint256 creditThreshold);
 
     event EmergencyExitEnabled();
+
+    event ForcedHarvestTriggerOnce();
 
     event UpdatedMetadataURI(string metadataURI);
 
@@ -452,6 +456,7 @@ abstract contract BaseStrategy {
      */
     function setCreditThreshold(uint256 _creditThreshold) external onlyAuthorized {
         creditThreshold = _creditThreshold;
+        emit UpdatedCreditThreshold(_creditThreshold);
     }
 
     /**
@@ -478,6 +483,7 @@ abstract contract BaseStrategy {
      */
     function setForceHarvestTriggerOnce(bool _forceHarvestTriggerOnce) external onlyAuthorized {
         forceHarvestTriggerOnce = _forceHarvestTriggerOnce;
+        emit ForcedHarvestTriggerOnce();
     }
 
     /**
