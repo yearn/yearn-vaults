@@ -1,6 +1,6 @@
 import pytest
 
-from brownie import ZERO_ADDRESS, Token, TokenNoReturn
+from brownie import ZERO_ADDRESS, Token, TokenNoReturn, Contract
 
 
 @pytest.fixture
@@ -24,8 +24,19 @@ def management(accounts):
 
 
 @pytest.fixture
+def strategist_ms(accounts):
+    # like governance, but better
+    yield accounts.at("0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7", force=True)
+
+
+@pytest.fixture
 def common_health_check(gov, CommonHealthCheck):
     yield gov.deploy(CommonHealthCheck)
+
+
+@pytest.fixture
+def gasOracle():
+    yield Contract("0xb5e1CAcB567d98faaDB60a1fD4820720141f064F")
 
 
 @pytest.fixture

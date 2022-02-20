@@ -23,10 +23,10 @@ library StrategyLib {
     ) public view returns (bool) {
         StrategyParams memory params = VaultAPI(vault).strategies(strategy);
 
-        // Should trigger if hasn't been called in a while
+        // Trigger regardless of gas price if we've waited too long
         if (block.timestamp.sub(params.lastReport) >= maxReportDelay) return true;
 
-        // check if the base fee gas price is higher than we allow. if it is, block harvests.
+        // check if the base fee gas price is higher than we allow. if it is, block everything below here.
         if (!isBaseFeeAcceptable()) {
             return false;
         }
@@ -36,8 +36,8 @@ library StrategyLib {
             return true;
         }
 
-        // Should not trigger if we haven't waited long enough since previous harvest
-        if (block.timestamp.sub(params.lastReport) < minReportDelay) return false;
+        // Trigger if we've waited long enough
+        if (block.timestamp.sub(params.lastReport) > minReportDelay) return true;
 
         // harvest our credit if it's above our threshold
         if (VaultAPI(vault).creditAvailable() > creditThreshold) {

@@ -257,7 +257,7 @@ abstract contract BaseStrategy {
     bool public emergencyExit;
 
     // See note on setCreditThreshold().
-    uint256 public creditThreshold; 
+    uint256 public creditThreshold;
 
     // See note on `setforceHarvestTriggerOnce()` for more details.
     bool internal forceHarvestTriggerOnce;
@@ -355,7 +355,7 @@ abstract contract BaseStrategy {
         keeper = _keeper;
 
         // initialize variables
-        creditThreshold = 1_000_000 * 10 ** vault.decimals();
+        creditThreshold = 1000000e18; // set this large, can decrease later
         maxReportDelay = 86400 * 7;
 
         vault.approve(rewards, type(uint256).max); // Allow rewards to be pulled
@@ -446,8 +446,8 @@ abstract contract BaseStrategy {
      * @notice
      *  Used to change creditThreshold. creditThreshold is the amount of credit
      *  (in underlying tokens) that will automatically trigger a harvest.
-     *  
-     * @param _creditThreshold The amount of credit that the strategy has 
+     *
+     * @param _creditThreshold The amount of credit that the strategy has
      * available from the vault that will trigger a harvest.
      */
     function setCreditThreshold(uint256 _creditThreshold) external onlyAuthorized {

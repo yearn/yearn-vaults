@@ -23,7 +23,9 @@ def test_harvest_tend_authority(gov, keeper, strategist, strategy, rando, chain)
         strategy.harvest({"from": rando})
 
 
-def test_harvest_tend_trigger(chain, gov, vault, token, TestStrategy):
+def test_harvest_tend_trigger(
+    chain, gov, vault, token, TestStrategy, gasOracle, strategist_ms
+):
     strategy = gov.deploy(TestStrategy, vault)
     # Trigger doesn't work until strategy has assets or debtRatio
     assert not strategy.harvestTrigger(0)
@@ -31,58 +33,30 @@ def test_harvest_tend_trigger(chain, gov, vault, token, TestStrategy):
     vault.addStrategy(strategy, 2_000, 0, MAX_UINT256, 50, {"from": gov})
     last_report = vault.strategies(strategy).dict()["lastReport"]
     strategy.setMinReportDelay(10, {"from": gov})
-    # Must wait at least the minimum amount of time for it to be active
+
+    # set our target gas price to be permissive
+    gasOracle.setMaxAcceptableBaseFee(10000 * 1e9, {"from": strategist_ms})
+
+    # Must wait at least the minimum amount of time for it to be true
     assert not strategy.harvestTrigger(0)
     chain.mine(timedelta=strategy.minReportDelay() - (chain.time() - last_report))
     assert strategy.harvestTrigger(0)
 
-    # Not high enough profit:cost ratio
-    assert not strategy.harvestTrigger(MAX_UINT256 // strategy.profitFactor())
+    # bump up our minDelay so it won't be true
+    strategy.setMinReportDelay(86400 * 10, {"from": gov})
 
-    # After maxReportDelay has expired, profit doesn't matter
+    # deposit funds to our vault, should trigger true due to credit available
+    token.approve(vault, token.balanceOf(gov), {"from": gov})
+    vault.deposit(token.balanceOf(gov) // 2, {"from": gov})
+    assert strategy.harvestTrigger(0)
+
+    # harvest should trigger false due to high gas price
+    gasOracle.setMaxAcceptableBaseFee(1 * 1e9, {"from": strategist_ms})
+    assert not strategy.harvestTrigger(0)
+
+    # After maxReportDelay has passed, gas price doesn't matter
     chain.mine(timedelta=strategy.maxReportDelay() - (chain.time() - last_report))
-    assert strategy.harvestTrigger(MAX_UINT256)
-    strategy.harvest({"from": gov})  # Resets the reporting
-
-    # Check that trigger works if gas costs is less than profitFactor
-    profit = 10 ** token.decimals()
-    token.transfer(strategy, profit, {"from": gov})
-    chain.mine(timedelta=strategy.minReportDelay() + 5)
-    assert not strategy.harvestTrigger(profit // strategy.profitFactor())
-    assert strategy.harvestTrigger(profit // strategy.profitFactor() - 1)
-    strategy.harvest({"from": gov})
-
-    # Check that trigger works if strategy is in debt using debt threshold
-    chain.mine(timedelta=strategy.minReportDelay() + 5)
-    assert vault.debtOutstanding(strategy) == 0
-    vault.revokeStrategy(strategy, {"from": gov})
-    assert vault.debtOutstanding(strategy) > strategy.debtThreshold()
-    assert strategy.harvestTrigger(MAX_UINT256)
-
-    chain.undo()
-
-    # Check that trigger works if strategy has no outstanding debt but does have a loss
-    chain.mine(timedelta=strategy.minReportDelay())
-    loss = token.balanceOf(strategy) // 10
-    strategy._takeFunds(loss, {"from": gov})
-    assert vault.debtOutstanding(strategy) == 0
-    assert vault.debtOutstanding(strategy) <= strategy.debtThreshold()
-    totalDebt = vault.strategies(strategy).dict()["totalDebt"]
-    assert strategy.estimatedTotalAssets() + strategy.debtThreshold() < totalDebt
-    assert strategy.harvestTrigger(MAX_UINT256)
-
-    chain.undo()
-
-    # Check that trigger works in emergency exit mode
-    strategy.setEmergencyExit({"from": gov})
-    assert strategy.harvestTrigger(MAX_UINT256)
-
-    # Stops after it runs out of balance
-    while strategy.harvestTrigger(0):
-        chain.sleep(1)
-        strategy.harvest({"from": gov})
-
-    assert strategy.estimatedTotalAssets() == 0
+    assert strategy.harvestTrigger(0)
 
 
 def test_sweep_authority(
