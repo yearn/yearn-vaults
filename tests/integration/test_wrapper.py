@@ -30,7 +30,7 @@ class Migration:
 
     def setup(self):
         # NOTE: Approve wrapper for all future deposits (only once)
-        self.token.approve(self.wrapper, 2 ** 256 - 1, {"from": self.user})
+        self.token.approve(self.wrapper, 2**256 - 1, {"from": self.user})
 
         # NOTE: Deposit a little bit to start (so we don't just always skip)
         self.wrapper.deposit(self.starting_balance // 10, {"from": self.user})
@@ -46,7 +46,7 @@ class Migration:
 
         # NOTE: yToken's are non-custodial, so you need to authorize them
         if self.wrapper._name == "yToken":
-            vault.approve(self.wrapper, 2 ** 256 - 1, {"from": self.user})
+            vault.approve(self.wrapper, 2**256 - 1, {"from": self.user})
 
         self.vaults.append(vault)
 
@@ -110,7 +110,7 @@ def test_migration_wrapper(
 
     # NOTE: yToken's are non-custodial, so you need to authorize them
     if wrapper._name == "yToken":
-        vault.approve(wrapper, 2 ** 256 - 1, {"from": whale})
+        vault.approve(wrapper, 2**256 - 1, {"from": whale})
 
     state_machine(
         Migration, chain, registry, token, create_vault, wrapper, vault, whale, gov

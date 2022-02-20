@@ -1,7 +1,7 @@
 import pytest
 import brownie
 
-MAX_UINT256 = 2 ** 256 - 1
+MAX_UINT256 = 2**256 - 1
 
 
 def test_harvest_tend_authority(gov, keeper, strategist, strategy, rando, chain):
@@ -39,19 +39,20 @@ def test_harvest_tend_trigger(
 
     # Must wait at least the minimum amount of time for it to be true
     assert not strategy.harvestTrigger(0)
-    chain.mine(timedelta=strategy.minReportDelay() - (chain.time() - last_report))
+    chain.mine(timedelta=1 + strategy.minReportDelay() - (chain.time() - last_report))
     assert strategy.harvestTrigger(0)
 
     # bump up our minDelay so it won't be true
     strategy.setMinReportDelay(86400 * 10, {"from": gov})
 
-    # deposit funds to our vault, should trigger true due to credit available
+    # deposit funds to our vault, should trigger true due to credit available (make it lower)
+    strategy.setCreditThreshold(1, {"from": gov})
     token.approve(vault, token.balanceOf(gov), {"from": gov})
     vault.deposit(token.balanceOf(gov) // 2, {"from": gov})
     assert strategy.harvestTrigger(0)
 
     # harvest should trigger false due to high gas price
-    gasOracle.setMaxAcceptableBaseFee(1 * 1e9, {"from": strategist_ms})
+    gasOracle.setMaxAcceptableBaseFee(1, {"from": strategist_ms})
     assert not strategy.harvestTrigger(0)
 
     # After maxReportDelay has passed, gas price doesn't matter
