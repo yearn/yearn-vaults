@@ -76,7 +76,7 @@ contract BaseFeeOracle {
     }
 
     function _onlyAuthorized() internal view {
-        require(authorizedAddresses[msg.sender] == true, "!authorized");
+        require(authorizedAddresses[msg.sender] == true || msg.sender == governance, "!authorized");
     }
 
     function _onlyGovernance() internal view {
