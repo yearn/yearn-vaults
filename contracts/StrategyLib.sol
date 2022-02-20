@@ -17,9 +17,7 @@ library StrategyLib {
         address strategy,
         uint256 callCost,
         uint256 minReportDelay,
-        uint256 maxReportDelay,
-        uint256 debtThreshold,
-        uint256 profitFactor
+        uint256 maxReportDelay
     ) public view returns (bool) {
         StrategyParams memory params = VaultAPI(vault).strategies(strategy);
         // Should not trigger if Strategy is not activated
@@ -38,26 +36,6 @@ library StrategyLib {
             return false;
         }
 
-        // If some amount is owed, pay it back
-        // NOTE: Since debt is based on deposits, it makes sense to guard against large
-        //       changes to the value from triggering a harvest directly through user
-        //       behavior. This should ensure reasonable resistance to manipulation
-        //       from user-initiated withdrawals as the outstanding debt fluctuates.
-        uint256 outstanding = VaultAPI(vault).debtOutstanding();
-        if (outstanding > debtThreshold) return true;
-
-        // Check for profits and losses
-        uint256 total = StrategyAPI(strategy).estimatedTotalAssets();
-        // Trigger if we have a loss to report
-        if (total.add(debtThreshold) < params.totalDebt) return true;
-
-        uint256 profit = 0;
-        if (total > params.totalDebt) profit = total.sub(params.totalDebt); // We've earned a profit!
-
-        // Otherwise, only trigger if it "makes sense" economically (gas cost
-        // is <N% of value moved)
-        uint256 credit = VaultAPI(vault).creditAvailable();
-        return (profitFactor.mul(callCost) < credit.add(profit));
     }
 
     /**

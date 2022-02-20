@@ -241,10 +241,6 @@ abstract contract BaseStrategy {
 
     event UpdatedMaxReportDelay(uint256 delay);
 
-    event UpdatedProfitFactor(uint256 profitFactor);
-
-    event UpdatedDebtThreshold(uint256 debtThreshold);
-
     event EmergencyExitEnabled();
 
     event UpdatedMetadataURI(string metadataURI);
@@ -256,14 +252,6 @@ abstract contract BaseStrategy {
     // The maximum number of seconds between harvest calls. See
     // `setMaxReportDelay()` for more details.
     uint256 public maxReportDelay;
-
-    // The minimum multiple that `callCost` must be above the credit/profit to
-    // be "justifiable". See `setProfitFactor()` for more details.
-    uint256 public profitFactor;
-
-    // Use this to adjust the threshold at which running a debt causes a
-    // harvest trigger. See `setDebtThreshold()` for more details.
-    uint256 public debtThreshold;
 
     // See note on `setEmergencyExit()`.
     bool public emergencyExit;
@@ -363,8 +351,6 @@ abstract contract BaseStrategy {
         // initialize variables
         minReportDelay = 0;
         maxReportDelay = 86400;
-        profitFactor = 100;
-        debtThreshold = 0;
 
         vault.approve(rewards, type(uint256).max); // Allow rewards to be pulled
     }
@@ -448,39 +434,6 @@ abstract contract BaseStrategy {
     function setMaxReportDelay(uint256 _delay) external onlyAuthorized {
         maxReportDelay = _delay;
         emit UpdatedMaxReportDelay(_delay);
-    }
-
-    /**
-     * @notice
-     *  Used to change `profitFactor`. `profitFactor` is used to determine
-     *  if it's worthwhile to harvest, given gas costs. (See `harvestTrigger()`
-     *  for more details.)
-     *
-     *  This may only be called by governance or the strategist.
-     * @param _profitFactor A ratio to multiply anticipated
-     * `harvest()` gas cost against.
-     */
-    function setProfitFactor(uint256 _profitFactor) external onlyAuthorized {
-        profitFactor = _profitFactor;
-        emit UpdatedProfitFactor(_profitFactor);
-    }
-
-    /**
-     * @notice
-     *  Sets how far the Strategy can go into loss without a harvest and report
-     *  being required.
-     *
-     *  By default this is 0, meaning any losses would cause a harvest which
-     *  will subsequently report the loss to the Vault for tracking. (See
-     *  `harvestTrigger()` for more details.)
-     *
-     *  This may only be called by governance or the strategist.
-     * @param _debtThreshold How big of a loss this Strategy may carry without
-     * being required to report to the Vault.
-     */
-    function setDebtThreshold(uint256 _debtThreshold) external onlyAuthorized {
-        debtThreshold = _debtThreshold;
-        emit UpdatedDebtThreshold(_debtThreshold);
     }
 
     /**
@@ -680,7 +633,7 @@ abstract contract BaseStrategy {
      *  This call and `tendTrigger` should never return `true` at the
      *  same time.
      *
-     *  See `min/maxReportDelay`, `profitFactor`, `debtThreshold` to adjust the
+     *  See `min/maxReportDelay` to adjust the
      *  strategist-controlled parameters that will influence whether this call
      *  returns `true` or not. These parameters will be used in conjunction
      *  with the parameters reported to the Vault (see `params`) to determine
@@ -701,9 +654,7 @@ abstract contract BaseStrategy {
                 address(this),
                 ethToWant(callCostInWei),
                 minReportDelay,
-                maxReportDelay,
-                debtThreshold,
-                profitFactor
+                maxReportDelay
             );
     }
 
