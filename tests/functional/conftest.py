@@ -24,11 +24,6 @@ def management(accounts):
 
 
 @pytest.fixture
-def brain(accounts):
-    yield accounts.at("0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7", force=True)
-
-
-@pytest.fixture
 def common_health_check(gov, CommonHealthCheck):
     yield gov.deploy(CommonHealthCheck)
 

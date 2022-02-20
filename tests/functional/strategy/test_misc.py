@@ -23,9 +23,7 @@ def test_harvest_tend_authority(gov, keeper, strategist, strategy, rando, chain)
         strategy.harvest({"from": rando})
 
 
-def test_harvest_tend_trigger(
-    chain, gov, vault, token, TestStrategy, base_fee_oracle, brain
-):
+def test_harvest_tend_trigger(chain, gov, vault, token, TestStrategy, base_fee_oracle):
     strategy = gov.deploy(TestStrategy, vault)
     # Trigger doesn't work until strategy has assets or debtRatio
     assert not strategy.harvestTrigger(0)
@@ -43,11 +41,11 @@ def test_harvest_tend_trigger(
 
     # set our baseFeeOracle, let it know we are testing
     strategy.setBaseFeeOracle(base_fee_oracle, {"from": gov})
-    base_fee_oracle.setUseTesting(True, {"from": brain})
+    base_fee_oracle.setUseTesting(True, {"from": gov})
     assert not strategy.harvestTrigger(0)
 
     # set our target gas price to be permissive
-    base_fee_oracle.setMaxAcceptableBaseFee(10_000 * 1e9, {"from": brain})
+    base_fee_oracle.setMaxAcceptableBaseFee(10_000 * 1e9, {"from": gov})
     assert base_fee_oracle.isCurrentBaseFeeAcceptable()
     assert strategy.harvestTrigger(0)
 
@@ -68,7 +66,7 @@ def test_harvest_tend_trigger(
     assert strategy.harvestTrigger(0)
 
     # harvest should trigger false due to high gas price
-    base_fee_oracle.setMaxAcceptableBaseFee(1, {"from": brain})
+    base_fee_oracle.setMaxAcceptableBaseFee(1, {"from": gov})
     assert not strategy.harvestTrigger(0)
 
     # After maxReportDelay has passed, gas price doesn't matter

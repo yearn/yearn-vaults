@@ -7,29 +7,26 @@ interface IBaseFee {
 }
 
 contract BaseFeeOracle {
-    // Provider to read current block's base fee
+    // Provider to read current block's base fee. this will change if using a network other than etherum.
     IBaseFee internal constant baseFeeProvider = IBaseFee(0xf8d0Ec04e94296773cE20eFbeeA82e76220cD549);
 
     // Max acceptable base fee for the operation
     uint256 public maxAcceptableBaseFee;
 
-    // Boolean to determine if we are in testing mode or not
+    // Boolean to determine if we are in testing mode or not, only controllable by gov
     bool public useTesting;
 
-    // Daddy can grant and revoke access to the setter
-    address internal constant gov = 0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52;
-
-    // SMS is authorized by default
-    address internal constant brain = 0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7;
+    // Governance can grant and revoke access to the setter
+    address public governance;
 
     // Addresses that can set the max acceptable base fee
     mapping(address => bool) public authorizedAddresses;
 
     constructor() public {
-        maxAcceptableBaseFee = 80 gwei;
-        authorizedAddresses[brain] = true;
+        governance = msg.sender; // our deployer should be gov, they can set up the rest
     }
 
+    ///@notice Returns whether we should allow harvests based on current base fee.
     function isCurrentBaseFeeAcceptable() public view returns (bool) {
         uint256 baseFee;
 
@@ -62,8 +59,14 @@ contract BaseFeeOracle {
         authorizedAddresses[_target] = true;
     }
 
+    function setGovernance(address _target) external {
+        _onlyGovernance();
+        governance = _target;
+    }
+
+    ///@notice This should never be used in production, only in testing
     function setUseTesting(bool _useTesting) external {
-        _onlyAuthorized();
+        _onlyGovernance();
         useTesting = _useTesting;
     }
 
@@ -77,6 +80,6 @@ contract BaseFeeOracle {
     }
 
     function _onlyGovernance() internal view {
-        require(msg.sender == gov, "!governance");
+        require(msg.sender == governance, "!governance");
     }
 }
