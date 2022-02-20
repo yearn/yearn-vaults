@@ -79,8 +79,7 @@ def test_strategy_harvest_permission(
         ("keeper", "setKeeper", None, True, True),
         ("minReportDelay", "setMinReportDelay", 1000, True, True),
         ("maxReportDelay", "setMaxReportDelay", 2000, True, True),
-        ("profitFactor", "setProfitFactor", 1000, True, True),
-        ("debtThreshold", "setDebtThreshold", 1000, True, True),
+        ("creditThreshold", "setCreditThreshold", 1000, True, True),
     ],
 )
 def test_strategy_setParams(

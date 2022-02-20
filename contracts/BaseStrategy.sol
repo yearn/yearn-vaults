@@ -355,8 +355,8 @@ abstract contract BaseStrategy {
         keeper = _keeper;
 
         // initialize variables
-        minReportDelay = 0;
-        maxReportDelay = 86400;
+        creditThreshold = 1_000_000 * 10 ** vault.decimals();
+        maxReportDelay = 86400 * 7;
 
         vault.approve(rewards, type(uint256).max); // Allow rewards to be pulled
     }
@@ -696,6 +696,7 @@ abstract contract BaseStrategy {
                 ethToWant(callCostInWei),
                 minReportDelay,
                 maxReportDelay,
+                creditThreshold,
                 forceHarvestTriggerOnce
             );
     }
