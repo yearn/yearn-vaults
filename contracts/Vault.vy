@@ -1141,10 +1141,14 @@ def withdraw(
             # NOTE: Burn # of shares that corresponds to what Vault has on-hand,
             #       including the losses that were incurred above during withdrawals
             shares = self._sharesForAmount(value + totalLoss)
+            # NOTE: Check current shares must be lower than maxShare.
+            #       This implies that large withdrawals within certain parameter ranges might fail.
+            assert shares <= maxShares
 
         # NOTE: This loss protection is put in place to revert if losses from
         #       withdrawing are more than what is considered acceptable.
         assert totalLoss <= maxLoss * (value + totalLoss) / MAX_BPS
+
 
     # Burn shares (full value of what is being withdrawn)
     self.totalSupply -= shares
