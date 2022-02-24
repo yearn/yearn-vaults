@@ -26,6 +26,7 @@ def test_strategy_harvest(vault, gov, strategy, token, common_health_check, chai
     chain.sleep(10)
     strategy.harvest()
     strategy.setHealthCheck(common_health_check, {"from": gov})
+    chain.sleep(1)
 
     chain.snapshot()
     # Small gain doesn't trigger
@@ -73,7 +74,7 @@ def test_strategy_harvest_custom_limits(
     common_health_check.setStrategyLimits(
         strategy, 5000, 0, {"from": gov}
     )  # big gain no loss
-
+    chain.sleep(1)
     chain.snapshot()
 
     balance = strategy.estimatedTotalAssets()
