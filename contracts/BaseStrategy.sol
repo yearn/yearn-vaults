@@ -443,7 +443,7 @@ abstract contract BaseStrategy {
      */
     function setRewards(address _rewards) external onlyRewarder {
         require(_rewards != address(0));
-        address oldRewards = rewards;
+        vault.approve(rewards, 0);
         rewards = _rewards;
         vault.approve(rewards, uint256(-1));
         emit UpdatedRewards(_rewards);
