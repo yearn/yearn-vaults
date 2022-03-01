@@ -399,7 +399,7 @@ def setGovernance(governance: address):
     @param governance The address requested to take over Vault governance.
     """
     assert msg.sender == self.governance
-    log NewPendingGovernance(msg.sender)
+    log NewPendingGovernance(governance)
     self.pendingGovernance = governance
 
 
