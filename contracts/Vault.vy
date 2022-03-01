@@ -201,6 +201,8 @@ event StrategyRemovedFromQueue:
 event StrategyAddedToQueue:
     strategy: indexed(address) # Address of the strategy that is added to the withdrawal queue
 
+event NewPendingGovernance:
+    pendingGovernance: indexed(address)
 
 # NOTE: Track the total for overhead targeting purposes
 strategies: public(HashMap[address, StrategyParams])
@@ -379,6 +381,7 @@ def setGovernance(governance: address):
     @param governance The address requested to take over Vault governance.
     """
     assert msg.sender == self.governance
+    log NewPendingGovernance(governance)
     self.pendingGovernance = governance
 
 
