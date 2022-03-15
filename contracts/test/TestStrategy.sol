@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.6.12;
+pragma solidity ^0.8.12;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {BaseStrategyInitializable, StrategyParams, VaultAPI} from "../BaseStrategy.sol";
 
 /*
@@ -11,6 +12,7 @@ import {BaseStrategyInitializable, StrategyParams, VaultAPI} from "../BaseStrate
  */
 
 contract TestStrategy is BaseStrategyInitializable {
+    using SafeERC20 for IERC20;
     bool public doReentrancy;
     bool public delegateEverything;
 
@@ -19,7 +21,7 @@ contract TestStrategy is BaseStrategyInitializable {
     // to test `BaseStrategy.protectedTokens()`
     address public constant protectedToken = address(0xbad);
 
-    constructor(address _vault) public BaseStrategyInitializable(_vault) {}
+    constructor(address _vault) BaseStrategyInitializable(_vault) {}
 
     function name() external view override returns (string memory) {
         return string(abi.encodePacked("TestStrategy ", apiVersion()));
@@ -76,17 +78,17 @@ contract TestStrategy is BaseStrategyInitializable {
         uint256 totalDebt = vault.strategies(address(this)).totalDebt;
         if (totalAssets > _debtOutstanding) {
             _debtPayment = _debtOutstanding;
-            totalAssets = totalAssets.sub(_debtOutstanding);
+            totalAssets = totalAssets - _debtOutstanding;
         } else {
             _debtPayment = totalAssets;
             totalAssets = 0;
         }
-        totalDebt = totalDebt.sub(_debtPayment);
+        totalDebt = totalDebt - _debtPayment;
 
         if (totalAssets > totalDebt) {
-            _profit = totalAssets.sub(totalDebt);
+            _profit = totalAssets - totalDebt;
         } else {
-            _loss = totalDebt.sub(totalAssets);
+            _loss = totalDebt - totalAssets;
         }
     }
 
@@ -105,11 +107,11 @@ contract TestStrategy is BaseStrategyInitializable {
         uint256 totalAssets = want.balanceOf(address(this));
         if (_amountNeeded > totalAssets) {
             _liquidatedAmount = totalAssets;
-            _loss = _amountNeeded.sub(totalAssets);
+            _loss = _amountNeeded - totalAssets;
         } else {
             // NOTE: Just in case something was stolen from this contract
             if (totalDebt > totalAssets) {
-                _loss = totalDebt.sub(totalAssets);
+                _loss = totalDebt - totalAssets;
                 if (_loss > _amountNeeded) _loss = _amountNeeded;
             }
             _liquidatedAmount = _amountNeeded;
