@@ -1,4 +1,3 @@
-import pytest
 import brownie
 import pytest
 
