@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity >=0.6.0 <0.7.0;
+pragma solidity >=0.8.15;
 pragma experimental ABIEncoderV2;
 
 interface CustomHealthCheck {
@@ -52,7 +52,7 @@ contract CommonHealthCheck {
         _;
     }
 
-    constructor() public {
+    constructor() {
         governance = msg.sender;
         management = msg.sender;
         profitLimitRatio = 300;
