@@ -1759,7 +1759,7 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     # Compute the line of credit the Vault is able to offer the Strategy (if any)
     credit: uint256 = self._creditAvailable(msg.sender)
 
-    # Outstanding debt the Strategy wants to take back from the Vault (if any)
+    # Outstanding debt the Vault wants to take back from the Strategy (if any)
     # NOTE: debtOutstanding <= StrategyParams.totalDebt
     debt: uint256 = self._debtOutstanding(msg.sender)
     debtPayment: uint256 = min(_debtPayment, debt)
