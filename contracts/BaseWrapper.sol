@@ -133,7 +133,7 @@ abstract contract BaseWrapper {
      *  Used to get the TVL on the underlying vaults.
      *  @return assets the sum of all the assets managed by the underlying vaults.
      */
-    function totalAssets() public view returns (uint256 assets) {
+    function totalAssets() public view virtual returns (uint256 assets) {
         VaultAPI[] memory vaults = allVaults();
 
         for (uint256 id = 0; id < vaults.length; id++) {
