@@ -580,7 +580,7 @@ abstract contract BaseStrategy {
 
     /**
      * Liquidate up to `_amountNeeded` of `want` of this strategy's positions,
-     * irregardless of slippage. Any excess will be re-invested with `adjustPosition()`.
+     * regardless of slippage. Any excess will be re-invested with `adjustPosition()`.
      * This function should return the amount of `want` tokens made available by the
      * liquidation. If there is a difference between them, `_loss` indicates whether the
      * difference is due to a realized loss, or if there is some other sitution at play
