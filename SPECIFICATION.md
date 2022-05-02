@@ -13,7 +13,7 @@
 
 ### Definitions
 
-- Management: Trusted with privledged access for limited operations (ensuring performance of Vaults)
+- Management: Trusted with privileged access for limited operations (ensuring performance of Vaults)
 - Guardian: Trusted with privileged access for limited operations (ensuring safety of Vaults)
 
 ### Normal Operation
