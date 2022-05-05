@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.10;
 
+// defaults
+// intialzer and overrides
+// in LN 557
+
 // import erc20 from openzeppelin-contracts/token/ERC20/ERC20.sol;
 import { IERC20 } from "@openzeppelin/contracts/token/IERC20.sol";
 
@@ -26,6 +30,73 @@ interface HealthCheck {
     function enableCheckt(address strategy) external;
 }
 
+struct StrategyParams {
+    uint256 performanceFee,
+    uint256 activation,
+    uint256 debtRatio,
+    uint256 minDebtPerHarvest,
+    uint256 maxDebtPerHarvest,
+    uint256 lastReport,
+    uint256 totalDebt,
+    uint256 totalGain,
+    uint256 totalLoss
+}
+
 contract Vault {
-    
+
+    string private _name;
+    string private _symbol;
+
+    function name() external view returns (string) {
+        return _name;
+    }
+
+    function symbol() external view returns (string) {
+        return _symbol;
+    }
+
+    uint256 private constant MAXIMUM_STRATEGIES = 20;
+    uint256 private constant DEGRADATION_COEFFICIENT = 10 ** 18;
+    uint256 private constant SET_SIZE = 32;
+
+    mapping (address => StrategyParams) public strategies;
+
+    address private immutable guardian;
+    address private immutable management;
+    address private healthCheck;
+
+    address private immutable governance;
+
+    constructor(address token, address governance_, address healthCheck, address rewards, string name_, string symbol_) public {
+        _name = "Vault";
+        guardian = msg.sender;
+        healthCheck = address(0);
+
+        _name = name_;
+        _symbol = symbol_;
+
+        governance = governance;
+    }
+
+    function setName(string name) external {
+        require(msg.sender == _governance, "Only governance can set the name");
+        _name = name;
+    }
+
+    function setEmergencyShutdown(bool active) external {
+        if (active)
+            require(msg.sender == guardian || _governance, "Only guardian or governance can set emergency shutdown");
+        else
+            require(msg.sender == _governance, "Only governance can set the emergency shutdown");
+
+        emergencyShutdown = active;
+    }
+
+    function setWithdrawalQueue(queue calldata address[]) external {
+        require(msg.sender == guardian || _governance, "Only guardian or governance can set withdrawl queue");
+
+        for (uint i = 0; i < MAXIMUM_STRATEGIES; i++) {
+
+        }
+    }
 }
