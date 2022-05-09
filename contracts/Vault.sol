@@ -83,6 +83,28 @@ contract Vault {
         _name = name;
     }
 
+    function setManagement(address management_) external {
+
+    }
+
+    function setRewards(address rewards_) external {
+    }
+
+    function setLockedProfitDegradation(uint256 degradation) external {
+    }
+
+    function setDepositLimit(uint256 limit) external {
+    }
+
+    function setPerformanceFee(uint256 fee) external {
+    }
+
+    function setManagementFee(uint256 fee) external {
+    }
+
+    function setGuardian(address guardian_) external {
+    }
+
     function setEmergencyShutdown(bool active) external {
         if (active)
             require(msg.sender == guardian || _governance, "Only guardian or governance can set emergency shutdown");
@@ -99,4 +121,42 @@ contract Vault {
 
         }
     }
+
+    function erc20_safe_transfer(address token, address receiver, uint256 amount) internal {
+        // wrap openzeppelin-contracts/token/ERC20/ERC20.sol:safeTransfer
+    }
+
+    function erc20_safe_transfer_from(address token, address receiver, uint256 amount) external {
+    }
+
+    function _transfer(address token, address receiver, uint256 amount) internal {
+    }
+
+    function transfer(address receiver, uint256 amount) external {
+    }
+
+    function transferFrom(address sender, address receiver, uint256 amount) external {
+    }
+
+    function _totalAssets() internal view returns (uint256) {
+    }
+
+    function totalAssets() external view returns (uint256) {
+    }
+
+    function _calculateLockedProfit() internal view returns (uint256) {
+    }
+
+    function _freeFunds() internal view returns (uint256) {
+    }
+
+    function _issueSharesForAmount(address to, uint256 amount) internal returns (uint256) {
+
+    }
+
+    event Deposit();
+    event Withdrawal();
+    event Sweep();
+    event LockedProfitDegradationUpdated();
+    event StrategyAdded();
 }
