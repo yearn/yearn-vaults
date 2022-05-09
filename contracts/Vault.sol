@@ -154,6 +154,69 @@ contract Vault {
 
     }
 
+    function withdraw(uint256 amount) external returns (uint256) {
+        uint256 _amount = type(uint256).max;
+        address recipient = msg.sender;
+    }
+
+    function _shareValue(uint256 shares) internal view returns (uint256) {
+        
+    }
+
+    function _sharesForAmount(uint256 shares) internal view returns (uint256) {
+        
+    }
+
+    function maxAvailableShares() external view returns (uint256) {
+    }
+
+    function _reportLoss(address strategy, uint256 loss) internal {
+        
+    }
+
+    function withdraw(uint256 maxShares, address recipient, uint256 maxLoss) external {
+        
+    }
+
+    function pricePerShare() external view returns (uint256) {
+    }
+
+    function _organiseWithdrawalQueue() internal {
+        
+    }
+
+    function addStrategy(address strategy, uint256 debtRatio, uint256 minDebtPerHarvest, uint256 maxDebtPerHarvest, uint256 performanceFee, uint256 profitLimitRatio, uint256 lossLimitRatio) external {
+        
+    }
+
+    function updateStrategyDebtRatio(address strategy, uint256 debtRatio) external {
+        
+    }
+
+    function updateStrategyMinDebtPerHarvest(address strategy, uint256 minDebtPerHarvest) external {
+        
+    }
+
+    function updateStrategyPerformanceFee(address strategy, uint256 performanceFee) external {
+        
+    }
+
+    function setHealthCheck(address _healthCheck) external {
+        
+    }
+
+    function _revokeStrategy(address strategy) internal {
+        
+    }
+
+    function migrate(address oldVersion, address newVersion) external {
+        
+    }
+
+    function revokeStrategy() external {
+        address strategy = msg.sender;
+    }
+
     event Deposit();
     event Withdrawal();
     event Sweep();
