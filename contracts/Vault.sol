@@ -285,7 +285,7 @@ contract Vault {
     
     /// @param oldVersion: Old version of the strategy to be migrated
     /// @param newVersion: New version of the strategy
-    event StrategyMigrated(address indexed oldVersion, address newVersion);
+    event StrategyMigrated(address indexed oldVersion, address indexed newVersion);
     
     /// @param strategy: Address of the strategy that is revoked
     event StrategyRevoked(address indexed strategy);
@@ -296,5 +296,5 @@ contract Vault {
     /// @param strategy: Address of the strategy that is added to the withdrawal queue
     event StrategyAddedToQueue(address indexed strategy);
 
-    event UpdateHealthCheck(address healthCheck);
+    event UpdateHealthCheck(address indexed healthCheck);
 }
