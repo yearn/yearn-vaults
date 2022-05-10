@@ -66,6 +66,7 @@ contract Vault {
     address private healthCheck;
 
     address private immutable governance;
+    address private pendingGovernance;
 
     constructor(address token, address governance_, address healthCheck_, address rewards, string name_, string symbol_) public {
         _name = "Vault";
@@ -78,17 +79,20 @@ contract Vault {
     }
 
     function setName(string name) external {
-        require(msg.sender == _governance, "This may only be called by governance");
+        require(msg.sender == _governance, "This may only be called by governance.");
         _name = name;
     }
 
     function setSymbol(string symbol) external {
-        require(msg.sender == _governance, "This may only be called by governance");
+        require(msg.sender == _governance, "This may only be called by governance.");
         _symbol = symbol;
     }
 
     function setGovernance(address governance_) external {
-
+        require(msg.sender == _governance, "This may only be called by the current governance address.");
+        
+        // raise event NewPendingGovernance
+        pendingGovernance = governance_;
     }
 
     function setManagement(address management_) external {
@@ -96,16 +100,19 @@ contract Vault {
     }
 
     function setRewards(address rewards_) external {
-        
+
     }
 
     function setLockedProfitDegradation(uint256 degradation) external {
+
     }
 
     function setDepositLimit(uint256 limit) external {
+
     }
 
     function setPerformanceFee(uint256 fee) external {
+
     }
 
     function setManagementFee(uint256 fee) external {
@@ -116,9 +123,9 @@ contract Vault {
 
     function setEmergencyShutdown(bool active) external {
         if (active)
-            require(msg.sender == guardian || _governance, "Only guardian or governance can set emergency shutdown");
+            require(msg.sender == guardian || _governance, "This may only be called by governance or the guardian.");
         else
-            require(msg.sender == _governance, "Only governance can set the emergency shutdown");
+            require(msg.sender == _governance, "This may only be called by governance or the guardian.");
 
         emergencyShutdown = active;
     }
