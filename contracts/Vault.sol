@@ -67,20 +67,28 @@ contract Vault {
 
     address private immutable governance;
 
-    constructor(address token, address governance_, address healthCheck, address rewards, string name_, string symbol_) public {
+    constructor(address token, address governance_, address healthCheck_, address rewards, string name_, string symbol_) public {
         _name = "Vault";
         guardian = msg.sender;
         healthCheck = address(0);
 
         _name = name_;
         _symbol = symbol_;
-
-        governance = governance;
+        governance = governance_;
     }
 
     function setName(string name) external {
-        require(msg.sender == _governance, "Only governance can set the name");
+        require(msg.sender == _governance, "This may only be called by governance");
         _name = name;
+    }
+
+    function setSymbol(string symbol) external {
+        require(msg.sender == _governance, "This may only be called by governance");
+        _symbol = symbol;
+    }
+
+    function setGovernance(address governance_) external {
+
     }
 
     function setManagement(address management_) external {
@@ -88,6 +96,7 @@ contract Vault {
     }
 
     function setRewards(address rewards_) external {
+        
     }
 
     function setLockedProfitDegradation(uint256 degradation) external {
