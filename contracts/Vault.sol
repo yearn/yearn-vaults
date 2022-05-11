@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.10;
+pragma solidity ^0.8.13;
 
 // defaults
 // intialzer and overrides
 // in LN 557
 
 // import erc20 from openzeppelin-contracts/token/ERC20/ERC20.sol;
-import { IERC20 } from "@openzeppelin/contracts/token/IERC20.sol";
+// import { IERC20 } from "@openzeppelin/contracts/token/IERC20.sol";
 
 interface DetailedERC20 {
     function name () external view returns (string);
@@ -31,17 +31,19 @@ interface HealthCheck {
 }
 
 struct StrategyParams {
-    uint256 performanceFee,
-    uint256 activation,
-    uint256 debtRatio,
-    uint256 minDebtPerHarvest,
-    uint256 maxDebtPerHarvest,
-    uint256 lastReport,
-    uint256 totalDebt,
-    uint256 totalGain,
-    uint256 totalLoss
+    uint256 performanceFee;
+    uint256 activation;
+    uint256 debtRatio;
+    uint256 minDebtPerHarvest;
+    uint256 maxDebtPerHarvest;
+    uint256 lastReport;
+    uint256 totalDebt;
+    uint256 totalGain;
+    uint256 totalLoss;
 }
 
+
+// TODO: Implements ERC20
 contract Vault {
 
     string private _name;
@@ -55,11 +57,12 @@ contract Vault {
         return _symbol;
     }
 
+    mapping (address => StrategyParams) public strategies;
     uint256 private constant MAXIMUM_STRATEGIES = 20;
     uint256 private constant DEGRADATION_COEFFICIENT = 10 ** 18;
     uint256 private constant SET_SIZE = 32;
-
-    mapping (address => StrategyParams) public strategies;
+    address[] public withdrawalQueue;
+    bool public emergencyShutdown;
 
     address private immutable guardian;
     address private immutable management;
@@ -77,7 +80,7 @@ contract Vault {
     uint256 public activation;
     uint256 public lockedProfit;
     uint256 public lockedProfitDegradation;
-
+    address public rewards;
     uint256 public managementFee;
     uint256 public performanceFee;
     uint256 constant MAX_BPS = 10_000;
@@ -94,33 +97,33 @@ contract Vault {
         _self = address(this);
     }
 
-    function setName(string name) external {
-        require(msg.sender == _governance, "This may only be called by governance.");
-        _name = name;
+    function setName(string name_) external {
+        require(msg.sender == governance, "This may only be called by governance.");
+        _name = name_;
     }
 
-    function setSymbol(string symbol) external {
-        require(msg.sender == _governance, "This may only be called by governance.");
-        _symbol = symbol;
+    function setSymbol(string symbol_) external {
+        require(msg.sender == governance, "This may only be called by governance.");
+        _symbol = symbol_;
     }
 
     function setGovernance(address governance_) external {
-        require(msg.sender == _governance, "This may only be called by the current governance address.");
+        require(msg.sender == governance, "This may only be called by the current governance address.");
         
         emit NewPendingGovernance(governance_);
         pendingGovernance = governance_;
     }
 
     function setManagement(address management_) external {
-        require(msg.sender == _governance, "This may only be called by governance.");
+        require(msg.sender == governance, "This may only be called by governance.");
         management = management_;
 
         emit UpdateManagement(management_);
     }
 
     function setRewards(address rewards_) external {
-        require(msg.sender == _governance, "This may only be called by governance.");
-        require(rewards_ != address(0) || _self);
+        require(msg.sender == governance, "This may only be called by governance.");
+        assert(rewards_ != address(0) || _self);
 
         rewards = rewards_;
 
@@ -128,7 +131,7 @@ contract Vault {
     }
 
     function setLockedProfitDegradation(uint256 degradation) external {
-        require(msg.sender == _governance, "This may only be called by governance.");
+        require(msg.sender == governance, "This may only be called by governance.");
         require(degradation <= DEGRADATION_COEFFICIENT, "This may only be called by governance.");
 
         lockedProfitDegradation = degradation;
@@ -137,14 +140,14 @@ contract Vault {
     }
 
     function setDepositLimit(uint256 limit) external {
-        require(msg.sender == _governance, "This may only be called by governance.");
+        require(msg.sender == governance, "This may only be called by governance.");
         depositLimit = limit;
 
         emit UpdateDepositLimit(limit);
     }
 
     function setPerformanceFee(uint256 fee) external {
-        require(msg.sender == _governance, "This may only be called by governance.");
+        require(msg.sender == governance, "This may only be called by governance.");
         assert(fee <= MAX_BPS / 2);
         performance = fee;
 
@@ -152,7 +155,7 @@ contract Vault {
     }
 
     function setManagementFee(uint256 fee) external {
-        require(msg.sender == _governance, "This may only be called by governance.");
+        require(msg.sender == governance, "This may only be called by governance.");
         assert(fee <= MAX_BPS);
         performance = fee;
 
@@ -160,7 +163,7 @@ contract Vault {
     }
 
     function setGuardian(address guardian_) external {
-        require(msg.sender == (guardian || _governance), "This may only be called by governance or the guardian.");
+        require(msg.sender == (guardian || governance), "This may only be called by governance or the guardian.");
         guardian = guardian_;
 
         emit UpdateGuardian(guardian_);
@@ -168,16 +171,16 @@ contract Vault {
 
     function setEmergencyShutdown(bool active) external {
         if (active)
-            require(msg.sender == (guardian || _governance), "This may only be called by governance or the guardian.");
+            require(msg.sender == (guardian || governance), "This may only be called by governance or the guardian.");
         else
-            require(msg.sender == _governance, "This may only be called by governance or the guardian.");
+            require(msg.sender == governance, "This may only be called by governance or the guardian.");
 
         emergencyShutdown = active;
         emit EmergencyShutdown(active);
     }
 
-    function setWithdrawalQueue(queue calldata address[]) external {
-        require(msg.sender == guardian || _governance, "Only guardian or governance can set withdrawl queue");
+    function setWithdrawalQueue(address[] calldata queue) external {
+        require(msg.sender == guardian || governance, "Only guardian or governance can set withdrawl queue");
 
         for (uint i = 0; i < MAXIMUM_STRATEGIES; i++) {
             if (queue[i] == address(0)) {
@@ -186,11 +189,15 @@ contract Vault {
             }
             
             assert(withdrawalQueue[i] != address(0));
-            assert(strategies[queue[i]].activation > 0)
-        
+            assert(strategies[queue[i]].activation > 0);
+
+            // # NOTE: `key` is first `log_2(SET_SIZE)` bits of address (which is a hash)
+            // key: uint256 = bitwise_and(convert(queue[i], uint256), SET_SIZE - 1)
+            uint256 key = 0;
+            
             for (uint j = 0; j < SET_SIZE; j++) {
-                uint256 idx = 
-                assert(set[idx] != queue[i]);
+                uint256 idx = (key + j) % SET_SIZE;
+                // assert(set[idx] != queue[i]);
 
                 if (set[idx] == address(0)) {
                     set[idx] = queue[i];
@@ -267,11 +274,11 @@ contract Vault {
         
     }
 
-    function addStrategy(address strategy, uint256 debtRatio, uint256 minDebtPerHarvest, uint256 maxDebtPerHarvest, uint256 performanceFee, uint256 profitLimitRatio, uint256 lossLimitRatio) external {
+    function addStrategy(address strategy, uint256 debtRatio_, uint256 minDebtPerHarvest, uint256 maxDebtPerHarvest, uint256 performanceFee_, uint256 profitLimitRatio, uint256 lossLimitRatio) external {
         
     }
 
-    function updateStrategyDebtRatio(address strategy, uint256 debtRatio) external {
+    function updateStrategyDebtRatio(address strategy, uint256 debtRatio_) external {
         
     }
 
@@ -279,7 +286,7 @@ contract Vault {
         
     }
 
-    function updateStrategyPerformanceFee(address strategy, uint256 performanceFee) external {
+    function updateStrategyPerformanceFee(address strategy, uint256 performanceFee_) external {
         
     }
 

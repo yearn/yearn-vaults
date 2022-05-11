@@ -15,7 +15,8 @@
         "format": "prettier --write 'contracts/**/*.sol' --verbose",
         "format:check": "prettier --check '**/*.*(sol|json)'",
         "format:fix": "pretty-quick --pattern '**/*.*(sol|json)' --staged --verbose",
-        "hint": "solhint \"contracts/**/*.sol\""
+        "hint": "solhint \"contracts/**/*.sol\"",
+        "compile": "solc contracts/Vault.sol"
     },
     "husky": {
         "hooks": {
@@ -24,6 +25,7 @@
         }
     },
     "dependencies": {
+        "@openzeppelin/contracts": "^4.6.0",
         "solc": "^0.8.10"
     }
 }
