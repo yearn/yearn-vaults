@@ -68,6 +68,8 @@ contract Vault {
     address private immutable governance;
     address private pendingGovernance;
 
+    address private immutable _self;
+
     constructor(address token, address governance_, address healthCheck_, address rewards, string name_, string symbol_) public {
         _name = "Vault";
         guardian = msg.sender;
@@ -76,6 +78,7 @@ contract Vault {
         _name = name_;
         _symbol = symbol_;
         governance = governance_;
+        _self = address(this);
     }
 
     function setName(string name) external {
@@ -91,51 +94,100 @@ contract Vault {
     function setGovernance(address governance_) external {
         require(msg.sender == _governance, "This may only be called by the current governance address.");
         
-        // raise event NewPendingGovernance
+        // emit NewPendingGovernance
         pendingGovernance = governance_;
     }
 
     function setManagement(address management_) external {
+        require(msg.sender == _governance, "This may only be called by governance.");
+        management = management_;
 
+        // emit UpdateManagement
     }
 
     function setRewards(address rewards_) external {
+        require(msg.sender == _governance, "This may only be called by governance.");
+        require(rewards_ != address(0) || _self);
 
+        rewards = rewards_;
+
+        // emit UpdateRewards
     }
 
     function setLockedProfitDegradation(uint256 degradation) external {
+        require(msg.sender == _governance, "This may only be called by governance.");
+        require(degradation <= DEGRADATION_COEFFICIENT, "This may only be called by governance.");
 
+        lockedProfitDegradation = degradation;
+
+        // emit LockedProfitDegradationUpdated(degradation);
     }
 
     function setDepositLimit(uint256 limit) external {
+        require(msg.sender == _governance, "This may only be called by governance.");
+        depoistLimit = limit;
 
+        // emit UpdateDepositLimit(limit);
     }
 
     function setPerformanceFee(uint256 fee) external {
+        require(msg.sender == _governance, "This may only be called by governance.");
+        assert(fee <= MAX_BPS / 2);
+        performance = fee;
 
+        // emit UpdatePerformanceFee(fee);
     }
 
     function setManagementFee(uint256 fee) external {
+        require(msg.sender == _governance, "This may only be called by governance.");
+        assert(fee <= MAX_BPS);
+        performance = fee;
+
+        // emit UpdateManagementFee(fee);
     }
 
     function setGuardian(address guardian_) external {
+        require(msg.sender == (guardian || _governance), "This may only be called by governance or the guardian.");
+        guardian = guardian_;
+        // emit UpdateGuardian(guardian);
     }
 
     function setEmergencyShutdown(bool active) external {
         if (active)
-            require(msg.sender == guardian || _governance, "This may only be called by governance or the guardian.");
+            require(msg.sender == (guardian || _governance), "This may only be called by governance or the guardian.");
         else
             require(msg.sender == _governance, "This may only be called by governance or the guardian.");
 
         emergencyShutdown = active;
+        // emit EmergencyShutdown(active);
     }
 
     function setWithdrawalQueue(queue calldata address[]) external {
         require(msg.sender == guardian || _governance, "Only guardian or governance can set withdrawl queue");
 
         for (uint i = 0; i < MAXIMUM_STRATEGIES; i++) {
+            if (queue[i] == address(0)) {
+                assert(withdrawalQueue[i] == address(0));
+                break;
+            }
+            
+            assert(withdrawalQueue[i] != address(0));
+            assert(strategies[queue[i]].activation > 0)
+        
+            for (uint j = 0; j < SET_SIZE; j++) {
+                uint256 idx = 
+                assert(set[idx] != queue[i]);
 
+                if (set[idx] == address(0)) {
+                    set[idx] = queue[i];
+                    break;
+                }
+            }
+        
+            withdrawalQueue[i] = queue[i];
         }
+
+        // emit UpdateWithdrawalQueue(queue);
     }
 
     function erc20_safe_transfer(address token, address receiver, uint256 amount) internal {
