@@ -70,6 +70,19 @@ contract Vault {
 
     address private immutable _self;
 
+    uint256 public depositLimit;
+    uint256 public debtRatio;
+    uint256 public totalDebt;
+    uint256 public lastReport;
+    uint256 public activation;
+    uint256 public lockedProfit;
+    uint256 public lockedProfitDegradation;
+
+    uint256 public managementFee;
+    uint256 public performanceFee;
+    uint256 constant MAX_BPS = 10_000;
+    uint256 constant SECS_PER_YEAR = 31_556_952;  // 365.2425 days
+
     constructor(address token, address governance_, address healthCheck_, address rewards, string name_, string symbol_) public {
         _name = "Vault";
         guardian = msg.sender;
@@ -94,7 +107,7 @@ contract Vault {
     function setGovernance(address governance_) external {
         require(msg.sender == _governance, "This may only be called by the current governance address.");
         
-        // emit NewPendingGovernance
+        emit NewPendingGovernance(governance_);
         pendingGovernance = governance_;
     }
 
@@ -102,7 +115,7 @@ contract Vault {
         require(msg.sender == _governance, "This may only be called by governance.");
         management = management_;
 
-        // emit UpdateManagement
+        emit UpdateManagement(management_);
     }
 
     function setRewards(address rewards_) external {
@@ -111,7 +124,7 @@ contract Vault {
 
         rewards = rewards_;
 
-        // emit UpdateRewards
+        emit UpdateRewards(rewards_);
     }
 
     function setLockedProfitDegradation(uint256 degradation) external {
@@ -120,14 +133,14 @@ contract Vault {
 
         lockedProfitDegradation = degradation;
 
-        // emit LockedProfitDegradationUpdated(degradation);
+        emit LockedProfitDegradationUpdated(degradation);
     }
 
     function setDepositLimit(uint256 limit) external {
         require(msg.sender == _governance, "This may only be called by governance.");
-        depoistLimit = limit;
+        depositLimit = limit;
 
-        // emit UpdateDepositLimit(limit);
+        emit UpdateDepositLimit(limit);
     }
 
     function setPerformanceFee(uint256 fee) external {
@@ -135,7 +148,7 @@ contract Vault {
         assert(fee <= MAX_BPS / 2);
         performance = fee;
 
-        // emit UpdatePerformanceFee(fee);
+        emit UpdatePerformanceFee(fee);
     }
 
     function setManagementFee(uint256 fee) external {
@@ -143,13 +156,14 @@ contract Vault {
         assert(fee <= MAX_BPS);
         performance = fee;
 
-        // emit UpdateManagementFee(fee);
+        emit UpdateManagementFee(fee);
     }
 
     function setGuardian(address guardian_) external {
         require(msg.sender == (guardian || _governance), "This may only be called by governance or the guardian.");
         guardian = guardian_;
-        // emit UpdateGuardian(guardian);
+
+        emit UpdateGuardian(guardian_);
     }
 
     function setEmergencyShutdown(bool active) external {
@@ -159,7 +173,7 @@ contract Vault {
             require(msg.sender == _governance, "This may only be called by governance or the guardian.");
 
         emergencyShutdown = active;
-        // emit EmergencyShutdown(active);
+        emit EmergencyShutdown(active);
     }
 
     function setWithdrawalQueue(queue calldata address[]) external {
@@ -187,7 +201,7 @@ contract Vault {
             withdrawalQueue[i] = queue[i];
         }
 
-        // emit UpdateWithdrawalQueue(queue);
+        emit UpdateWithdrawalQueue(queue);
     }
 
     function erc20_safe_transfer(address token, address receiver, uint256 amount) internal {
