@@ -285,9 +285,84 @@ contract Vault {
         address strategy = msg.sender;
     }
 
-    event Deposit();
-    event Withdrawal();
-    event Sweep();
-    event LockedProfitDegradationUpdated();
-    event StrategyAdded();
+    event Transfer(address indexed sender, address indexed receiver, uint256 value);
+
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+
+    event Deposit(address indexed recipient, uint256 shares, uint256 amount);
+    
+    event Withdraw(address indexed recipient, uint256 shares, uint256 amount);
+    
+    event Sweep(address indexed token, uint256 amount);
+    
+    event LockedProfitDegradationUpdated(uint256 value);
+
+    /// @param debtRatio: Maximum borrow amount (in BPS of total assets)
+    /// @param minDebtPerHarvest: Lower limit on the increase of debt since last harvest
+    /// @param maxDebtPerHarvest: Upper limit on the increase of debt since last harvest
+    /// @param performanceFee: Strategist's fee (basis points)
+    event StrategyAdded(address indexed strategy, uint256 debtRatio, uint256 minDebtPerHarvest, uint256 maxDebtPerHarvest, uint256 performanceFee);
+    
+    event StrategyReported(address indexed strategy, uint256 gain, uint256 loss, uint256 debtPaid, uint256 totalGain, uint256 totalLoss, uint256 totalDebt, uint256 debtAdded, uint256 debtRatio);
+    
+    /// @param governance: New active governance
+    event UpdateGovernance(address governance);
+
+    /// @param governance: New pending governance
+    event NewPendingGovernance(address governance);
+    
+    /// @param management: New active manager
+    event UpdateManagement(address management);
+    
+    /// @param rewards: New active rewards recipient
+    event UpdateRewards(address rewards);
+    
+    /// @param depositLimit: New active deposit limit
+    event UpdateDepositLimit(uint256 depositLimit);
+    
+    /// @param performanceFee: New active performance fee
+    event UpdatePerformanceFee(uint256 performanceFee);
+    
+    /// @param managementFee: New active management fee
+    event UpdateManagementFee(uint256 managementFee);
+
+    /// @param guardian: Address of the active guardian
+    event UpdateGuardian(address guardian);
+    
+    /// @param active: New emergency shutdown state (if false, normal operation enabled)
+    event EmergencyShutdown(bool active);
+    
+    /// @param queue: New active withdrawal queue
+    event UpdateWithdrawalQueue(address[MAXIMUM_STRATEGIES] queue);
+    
+    /// @param strategy: Address of the strategy for the debt ratio adjustment
+    /// @param debtRatio: The new debt limit for the strategy (in BPS of total assets)
+    event StrategyUpdateDebtRatio(address indexed strategy, uint256 debtRatio);
+    
+    /// @param strategy: Address of the strategy for the rate limit adjustment
+    /// @param minDebtPerHarvest: Lower limit on the increase of debt since last harvest
+    event StrategyUpdateMinDebtPerHarvest(address indexed strategy, uint256 minDebtPerHarvest);
+    
+    /// @param strategy: Address of the strategy for the rate limit adjustment
+    /// @param maxDebtPerHarvest: Upper limit on the increase of debt since last harvest
+    event StrategyUpdateMaxDebtPerHarvest(address indexed strategy, uint256 maxDebtPerHarvest);
+    
+    /// @param strategy: Address of the strategy for the rate limit adjustment
+    /// @param performanceFee: The new performance fee for the strategy
+    event StrategyUpdatePerformanceFee(address indexed strategy, uint256 performanceFee);
+    
+    /// @param oldVersion: Old version of the strategy to be migrated
+    /// @param newVersion: New version of the strategy
+    event StrategyMigrated(address indexed oldVersion, address indexed newVersion);
+    
+    /// @param strategy: Address of the strategy that is revoked
+    event StrategyRevoked(address indexed strategy);
+    
+    /// @param strategy: Address of the strategy that is removed from the withdrawal queue
+    event StrategyRemovedFromQueue(address indexed strategy);
+    
+    /// @param strategy: Address of the strategy that is added to the withdrawal queue
+    event StrategyAddedToQueue(address indexed strategy);
+
+    event UpdateHealthCheck(address indexed healthCheck);
 }
