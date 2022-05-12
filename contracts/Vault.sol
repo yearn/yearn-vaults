@@ -5,14 +5,16 @@ pragma solidity ^0.8.13;
 // intialzer and overrides
 // in LN 557
 
-// import erc20 from openzeppelin-contracts/token/ERC20/ERC20.sol;
-// import { IERC20 } from "@openzeppelin/contracts/token/IERC20.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-interface DetailedERC20 {
-    function name () external view returns (string calldata);
-    function symbol () external view returns (string calldata);
-    function decimals () external view returns (uint256);
-}
+// it is not necessary to implement this since these attributes are included in the base contract (ERC20) since OZ v3.0
+// interface DetailedERC20 {
+//     function name () external view returns (string calldata);
+//     function symbol () external view returns (string calldata);
+//     function decimals () external view returns (uint256);
+// }
 
 interface Strategy {
     function want() external view returns (address);
@@ -43,21 +45,14 @@ struct StrategyParams {
 }
 
 // TODO: Implements ERC20
-contract Vault {
+contract Vault is ERC20 {
 
     // string public name;
     // string public symbol;
 
-    string private _name;
-    string private _symbol;
+    using SafeERC20 for IERC20;
 
-    function name() public view returns (string memory) {
-        return _name;
-    }
-
-    function symbol() public view returns (string memory) {
-        return _symbol;
-    }
+    IERC20 public immutable token;
 
     mapping (address => StrategyParams) public strategies;
     uint256 private constant MAXIMUM_STRATEGIES = 20;
@@ -87,7 +82,7 @@ contract Vault {
     uint256 constant MAX_BPS = 10_000;
     uint256 constant SECS_PER_YEAR = 31_556_952;  // 365.2425 days
 
-    constructor(address token, address governance_, address rewards_, string memory nameOverride, string memory symbolOverride) public {
+    constructor(address token_, address governance_, address rewards_, string memory nameOverride, string memory symbolOverride) public {
         _name = "Vault";
         
         governance = governance_;
@@ -97,7 +92,7 @@ contract Vault {
         management = msg.sender;
         healthCheck = address(0);
 
-        token = ERC20(token);
+        token = IERC20(token_);
         performanceFee = 1000;
         managementFee = 200;
 
@@ -224,20 +219,12 @@ contract Vault {
         // emit UpdateWithdrawalQueue(queue);
     }
 
-    function erc20_safe_transfer(address token, address receiver, uint256 amount) internal {
-        // wrap openzeppelin-contracts/token/ERC20/ERC20.sol:safeTransfer
+    function erc20_safe_transfer(address token_, address receiver, uint256 amount) internal {
+        IERC20(token_).safeTransfer(receiver, amount);
     }
 
-    function erc20_safe_transfer_from(address token, address receiver, uint256 amount) external {
-    }
-
-    function _transfer(address token, address receiver, uint256 amount) internal {
-    }
-
-    function transfer(address receiver, uint256 amount) external {
-    }
-
-    function transferFrom(address sender, address receiver, uint256 amount) external {
+    function erc20_safe_transfer_from(address token_, address sender, address receiver, uint256 amount) external {
+        IERC20(token_).safeTransferFrom(sender, receiver, amount);
     }
 
     function _totalAssets() internal view returns (uint256) {
