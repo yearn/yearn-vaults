@@ -87,7 +87,7 @@ contract Vault {
     uint256 constant MAX_BPS = 10_000;
     uint256 constant SECS_PER_YEAR = 31_556_952;  // 365.2425 days
 
-    constructor(address token, address governance_, address rewards_, string memory nameOverride, string memory symbol_) public {
+    constructor(address token, address governance_, address rewards_, string memory nameOverride, string memory symbolOverride) public {
         _name = "Vault";
         
         governance = governance_;
