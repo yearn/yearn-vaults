@@ -9,8 +9,8 @@ pragma solidity ^0.8.13;
 // import { IERC20 } from "@openzeppelin/contracts/token/IERC20.sol";
 
 interface DetailedERC20 {
-    function name () external view returns (string);
-    function symbol () external view returns (string);
+    function name () external view returns (string calldata);
+    function symbol () external view returns (string calldata);
     function decimals () external view returns (uint256);
 }
 
@@ -42,18 +42,20 @@ struct StrategyParams {
     uint256 totalLoss;
 }
 
-
 // TODO: Implements ERC20
 contract Vault {
+
+    // string public name;
+    // string public symbol;
 
     string private _name;
     string private _symbol;
 
-    function name() external view returns (string) {
+    function name() public view returns (string memory) {
         return _name;
     }
 
-    function symbol() external view returns (string) {
+    function symbol() public view returns (string memory) {
         return _symbol;
     }
 
@@ -64,12 +66,11 @@ contract Vault {
     address[] public withdrawalQueue;
     bool public emergencyShutdown;
 
-    address private immutable guardian;
-    address private immutable management;
-    address private healthCheck;
-
-    address private immutable governance;
+    address private governance;
+    address private guardian;
+    address private management;
     address private pendingGovernance;
+    address private healthCheck;
 
     address private immutable _self;
 
@@ -86,23 +87,33 @@ contract Vault {
     uint256 constant MAX_BPS = 10_000;
     uint256 constant SECS_PER_YEAR = 31_556_952;  // 365.2425 days
 
-    constructor(address token, address governance_, address healthCheck_, address rewards, string name_, string symbol_) public {
+    constructor(address token, address governance_, address rewards_, string memory nameOverride, string memory symbol_) public {
         _name = "Vault";
+        
+        governance = governance_;
+        _name = nameOverride;
+        _symbol = symbolOverride;
         guardian = msg.sender;
+        management = msg.sender;
         healthCheck = address(0);
 
-        _name = name_;
-        _symbol = symbol_;
-        governance = governance_;
+        token = ERC20(token);
+        performanceFee = 1000;
+        managementFee = 200;
+
+        lastReport = block.timestamp;
+        activation = block.timestamp;
+        lockedProfitDegradation = uint256(DEGRADATION_COEFFICIENT * 46 / 10 ** 6);
+
         _self = address(this);
     }
 
-    function setName(string name_) external {
+    function setName(string calldata name_) external {
         require(msg.sender == governance, "This may only be called by governance.");
         _name = name_;
     }
 
-    function setSymbol(string symbol_) external {
+    function setSymbol(string calldata symbol_) external {
         require(msg.sender == governance, "This may only be called by governance.");
         _symbol = symbol_;
     }
@@ -123,7 +134,7 @@ contract Vault {
 
     function setRewards(address rewards_) external {
         require(msg.sender == governance, "This may only be called by governance.");
-        assert(rewards_ != address(0) || _self);
+        assert(rewards_ != address(0) || rewards_ != _self);
 
         rewards = rewards_;
 
@@ -149,7 +160,7 @@ contract Vault {
     function setPerformanceFee(uint256 fee) external {
         require(msg.sender == governance, "This may only be called by governance.");
         assert(fee <= MAX_BPS / 2);
-        performance = fee;
+        performanceFee = fee;
 
         emit UpdatePerformanceFee(fee);
     }
@@ -157,13 +168,13 @@ contract Vault {
     function setManagementFee(uint256 fee) external {
         require(msg.sender == governance, "This may only be called by governance.");
         assert(fee <= MAX_BPS);
-        performance = fee;
+        managementFee = fee;
 
         emit UpdateManagementFee(fee);
     }
 
     function setGuardian(address guardian_) external {
-        require(msg.sender == (guardian || governance), "This may only be called by governance or the guardian.");
+        require(msg.sender == guardian || msg.sender == governance, "This may only be called by governance or the guardian.");
         guardian = guardian_;
 
         emit UpdateGuardian(guardian_);
@@ -171,7 +182,7 @@ contract Vault {
 
     function setEmergencyShutdown(bool active) external {
         if (active)
-            require(msg.sender == (guardian || governance), "This may only be called by governance or the guardian.");
+            require(msg.sender == guardian || msg.sender == governance, "This may only be called by governance or the guardian.");
         else
             require(msg.sender == governance, "This may only be called by governance or the guardian.");
 
@@ -180,7 +191,8 @@ contract Vault {
     }
 
     function setWithdrawalQueue(address[] calldata queue) external {
-        require(msg.sender == guardian || governance, "Only guardian or governance can set withdrawl queue");
+        require(msg.sender == guardian || msg.sender == governance, "Only guardian or governance can set withdrawl queue");
+        address[] memory set = new address[](SET_SIZE);
 
         for (uint i = 0; i < MAXIMUM_STRATEGIES; i++) {
             if (queue[i] == address(0)) {
@@ -193,7 +205,8 @@ contract Vault {
 
             // # NOTE: `key` is first `log_2(SET_SIZE)` bits of address (which is a hash)
             // key: uint256 = bitwise_and(convert(queue[i], uint256), SET_SIZE - 1)
-            uint256 key = 0;
+            // uint256 key = uint256(queue[i]) & SET_SIZE - 1;
+            uint256 key = SET_SIZE - 1; // hack to compile
             
             for (uint j = 0; j < SET_SIZE; j++) {
                 uint256 idx = (key + j) % SET_SIZE;
@@ -208,7 +221,7 @@ contract Vault {
             withdrawalQueue[i] = queue[i];
         }
 
-        emit UpdateWithdrawalQueue(queue);
+        // emit UpdateWithdrawalQueue(queue);
     }
 
     function erc20_safe_transfer(address token, address receiver, uint256 amount) internal {
