@@ -82,12 +82,12 @@ contract Vault is ERC20 {
     uint256 constant MAX_BPS = 10_000;
     uint256 constant SECS_PER_YEAR = 31_556_952;  // 365.2425 days
 
-    constructor(address token_, address governance_, address rewards_, string memory nameOverride, string memory symbolOverride) public {
-        _name = "Vault";
+    constructor(address token_, address governance_, address rewards_, string memory nameOverride, string memory symbolOverride) ERC20(nameOverride, symbolOverride) public {
+        // _name = "Vault";
         
         governance = governance_;
-        _name = nameOverride;
-        _symbol = symbolOverride;
+        // _name = nameOverride;
+        // _symbol = symbolOverride;
         guardian = msg.sender;
         management = msg.sender;
         healthCheck = address(0);
@@ -105,12 +105,12 @@ contract Vault is ERC20 {
 
     function setName(string calldata name_) external {
         require(msg.sender == governance, "This may only be called by governance.");
-        _name = name_;
+        // _name = name_;
     }
 
     function setSymbol(string calldata symbol_) external {
         require(msg.sender == governance, "This may only be called by governance.");
-        _symbol = symbol_;
+        // _symbol = symbol_;
     }
 
     function setGovernance(address governance_) external {
@@ -306,9 +306,9 @@ contract Vault is ERC20 {
         address strategy = msg.sender;
     }
 
-    event Transfer(address indexed sender, address indexed receiver, uint256 value);
-
-    event Approval(address indexed owner, address indexed spender, uint256 value);
+    // Already implemented in ERC20.sol
+    // event Transfer(address indexed sender, address indexed receiver, uint256 value);
+    // event Approval(address indexed owner, address indexed spender, uint256 value);
 
     event Deposit(address indexed recipient, uint256 shares, uint256 amount);
     
