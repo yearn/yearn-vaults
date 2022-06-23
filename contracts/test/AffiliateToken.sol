@@ -58,7 +58,7 @@ contract AffiliateToken is ERC20, BaseWrapper {
         uint256 totalShares = totalSupply();
 
         if (totalShares > 0) {
-             return (totalVaultBalance(address(this)) * numShares) / totalShares;
+            return (totalVaultBalance(address(this)) * numShares) / totalShares;
         } else {
             return numShares;
         }

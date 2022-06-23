@@ -93,7 +93,7 @@ contract yToken is IERC20, BaseWrapper {
     }
 
     function increaseAllowance(address spender, uint256 addedValue) public virtual returns (bool) {
-        _approve(msg.sender, spender, allowance[msg.sender][spender]+ addedValue);
+        _approve(msg.sender, spender, allowance[msg.sender][spender] + addedValue);
         return true;
     }
 

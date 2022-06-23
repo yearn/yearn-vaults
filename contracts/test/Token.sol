@@ -31,7 +31,6 @@ contract Token is ERC20 {
 }
 
 contract TokenNoReturn {
-
     string public name;
     string public symbol;
     uint8 public tokenDecimals;
