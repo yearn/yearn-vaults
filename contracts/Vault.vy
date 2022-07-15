@@ -65,7 +65,7 @@ interface HealthCheck:
 
 name: public(String[64])
 symbol: public(String[32])
-decimals: public(uint256)
+decimals: constant(uint256) = 18
 
 balanceOf: public(HashMap[address, uint256])
 allowance: public(HashMap[address, HashMap[address, uint256]])
@@ -218,6 +218,7 @@ event UpdateHealthCheck:
 # NOTE: Track the total for overhead targeting purposes
 strategies: public(HashMap[address, StrategyParams])
 MAXIMUM_STRATEGIES: constant(uint256) = 20
+MINIMUM_LIQUIDITY: constant(uint256) = 10 ** 6
 DEGRADATION_COEFFICIENT: constant(uint256) = 10 ** 18
 # SET_SIZE can be any number but having it in power of 2 will be more gas friendly and collision free.
 # Note: Make sure SET_SIZE is greater than MAXIMUM_STRATEGIES
@@ -299,6 +300,7 @@ def initialize(
     @param guardian The address authorized for guardian interactions. Defaults to caller.
     """
     assert self.activation == 0  # dev: no devops199
+    assert DetailedERC20(token).decimals() == 18
     self.token = ERC20(token)
     if nameOverride == "":
         self.name = concat(DetailedERC20(token).symbol(), " yVault")
@@ -308,9 +310,6 @@ def initialize(
         self.symbol = concat("yv", DetailedERC20(token).symbol())
     else:
         self.symbol = symbolOverride
-    decimals: uint256 = DetailedERC20(token).decimals()
-    self.decimals = decimals
-    assert decimals < 256 # dev: see VVE-2020-0001
 
     self.governance = governance
     log UpdateGovernance(governance)
@@ -853,13 +852,17 @@ def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
         # Mint amount of shares based on what the Vault is managing overall
         # NOTE: if sqrt(token.totalSupply()) > 1e39, this could potentially revert
         shares =  amount * totalSupply / self._freeFunds()  # dev: no free funds
+        self.totalSupply = totalSupply + shares
     else:
-        # No existing shares, so mint 1:1
-        shares = amount
-    assert shares != 0 # dev: division rounding resulted in zero
+        # Permanently lock the first MINIMUM_LIQUIDITY tokens
+        toBurn: uint256 = MINIMUM_LIQUIDITY
+        shares = amount - toBurn
+        self.totalSupply = totalSupply + amount
+        self.balanceOf[ZERO_ADDRESS] += toBurn
+        log Transfer(ZERO_ADDRESS, ZERO_ADDRESS, toBurn)
 
-    # Mint new shares
-    self.totalSupply = totalSupply + shares
+    assert shares != 0 # dev: division rounding resulted in zero
+    
     self.balanceOf[to] += shares
     log Transfer(ZERO_ADDRESS, to, shares)
 
@@ -904,20 +907,24 @@ def deposit(_amount: uint256 = MAX_UINT256, recipient: address = msg.sender) -> 
     assert recipient not in [self, ZERO_ADDRESS]
 
     amount: uint256 = _amount
+    total_assets: uint256 = self._totalAssets()
 
     # If _amount not specified, transfer the full token balance,
     # up to deposit limit
     if amount == MAX_UINT256:
         amount = min(
-            self.depositLimit - self._totalAssets(),
+            self.depositLimit - total_assets,
             self.token.balanceOf(msg.sender),
         )
     else:
         # Ensure deposit limit is respected
-        assert self._totalAssets() + amount <= self.depositLimit
+        assert total_assets + amount <= self.depositLimit
 
     # Ensure we are depositing something
     assert amount > 0
+
+    if total_assets == 0:
+        assert amount >= MINIMUM_LIQUIDITY # Enforce minimum liquidity
 
     # Issue new shares (needs to be done before taking deposit to be accurate)
     # Shares are issued to recipient (may be different from msg.sender)
