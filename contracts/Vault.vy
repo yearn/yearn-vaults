@@ -862,7 +862,7 @@ def _issueSharesForAmount(to: address, amount: uint256) -> uint256:
         log Transfer(ZERO_ADDRESS, ZERO_ADDRESS, toBurn)
 
     assert shares != 0 # dev: division rounding resulted in zero
-    
+
     self.balanceOf[to] += shares
     log Transfer(ZERO_ADDRESS, to, shares)
 
@@ -1177,7 +1177,7 @@ def pricePerShare() -> uint256:
     @dev See dev note on `withdraw`.
     @return The value of a single share.
     """
-    return self._shareValue(10 ** self.decimals)
+    return self._shareValue(10 ** decimals)
 
 
 @internal
