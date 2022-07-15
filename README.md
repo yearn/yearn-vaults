@@ -1,5 +1,7 @@
 # Yearn Vault Contracts
 
+[![GitPOAP Badge](https://public-api.gitpoap.io/v1/repo/yearn/yearn-vaults/badge)](https://www.gitpoap.io/gh/yearn/yearn-vaults)
+
 Please read and be familiar with the [Specification](SPECIFICATION.md).
 
 This repository is the set of smart contracts that are used for the Yearn Vaults.
