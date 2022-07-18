@@ -223,6 +223,7 @@ emergencyShutdown: public(bool)
 
 depositLimit: public(uint256)  # Limit for totalAssets the Vault can hold
 debtRatio: public(uint256)  # Debt ratio for the Vault across all strategies (in BPS, <= 10k)
+totalIdle: public(uint256)  # Amount of tokens that are on the vault
 totalDebt: public(uint256)  # Amount of tokens that all strategies have borrowed
 lastReport: public(uint256)  # block.timestamp of last report
 activation: public(uint256)  # block.timestamp of contract deployment
@@ -791,7 +792,7 @@ def permit(owner: address, spender: address, amount: uint256, expiry: uint256, s
 @internal
 def _totalAssets() -> uint256:
     # See note on `totalAssets()`.
-    return self.token.balanceOf(self) + self.totalDebt
+    return self.totalIdle + self.totalDebt
 
 
 @view
@@ -913,7 +914,8 @@ def deposit(_amount: uint256 = MAX_UINT256, recipient: address = msg.sender) -> 
 
     # Tokens are transferred from msg.sender (may be different from _recipient)
     self.erc20_safe_transferFrom(self.token.address, msg.sender, self, amount)
-    
+    self.totalIdle += amount
+
     log Deposit(recipient, shares, amount)
 
     return shares  # Just in case someone wants them
@@ -972,7 +974,7 @@ def maxAvailableShares() -> uint256:
         realized losses incurred during withdrawal.
     @return The total quantity of shares this Vault can provide.
     """
-    shares: uint256 = self._sharesForAmount(self.token.balanceOf(self))
+    shares: uint256 = self._sharesForAmount(self.totalIdle)
 
     for strategy in self.withdrawalQueue:
         if strategy == ZERO_ADDRESS:
@@ -1073,8 +1075,9 @@ def withdraw(
 
     # See @dev note, above.
     value: uint256 = self._shareValue(shares)
+    vault_balance: uint256 = self.totalIdle
 
-    if value > self.token.balanceOf(self):
+    if value > vault_balance:
         totalLoss: uint256 = 0
         # We need to go get some from our strategies in the withdrawal queue
         # NOTE: This performs forced withdrawals from each Strategy. During
@@ -1088,7 +1091,6 @@ def withdraw(
             if strategy == ZERO_ADDRESS:
                 break  # We've exhausted the queue
 
-            vault_balance: uint256 = self.token.balanceOf(self)
             if value <= vault_balance:
                 break  # We're done withdrawing
 
@@ -1103,8 +1105,10 @@ def withdraw(
                 continue  # Nothing to withdraw from this Strategy, try the next one
 
             # Force withdraw amount from each Strategy in the order set by governance
+            preBalance: uint256 = self.token.balanceOf(self)
             loss: uint256 = Strategy(strategy).withdraw(amountNeeded)
-            withdrawn: uint256 = self.token.balanceOf(self) - vault_balance
+            withdrawn: uint256 = self.token.balanceOf(self) - preBalance
+            vault_balance += withdrawn
 
             # NOTE: Withdrawer incurs any losses from liquidation
             if loss > 0:
@@ -1117,10 +1121,10 @@ def withdraw(
             self.strategies[strategy].totalDebt -= withdrawn
             self.totalDebt -= withdrawn
 
+        self.totalIdle = vault_balance
         # NOTE: We have withdrawn everything possible out of the withdrawal queue
         #       but we still don't have enough to fully pay them back, so adjust
         #       to the total amount we've freed up through forced withdrawals
-        vault_balance: uint256 = self.token.balanceOf(self)
         if value > vault_balance:
             value = vault_balance
             # NOTE: Burn # of shares that corresponds to what Vault has on-hand,
@@ -1135,7 +1139,8 @@ def withdraw(
     self.totalSupply -= shares
     self.balanceOf[msg.sender] -= shares
     log Transfer(msg.sender, ZERO_ADDRESS, shares)
-
+    
+    self.totalIdle -= value
     # Withdraw remaining balance to _recipient (may be different to msg.sender) (minus fee)
     self.erc20_safe_transfer(self.token.address, recipient, value)
     log Withdraw(recipient, shares, value)
@@ -1522,7 +1527,7 @@ def _creditAvailable(strategy: address) -> uint256:
 
     # Can only borrow up to what the contract has in reserve
     # NOTE: Running near 100% is discouraged
-    available = min(available, self.token.balanceOf(self))
+    available = min(available, self.totalIdle)
 
     # Adjust by min and max borrow limits (per harvest)
     # NOTE: min increase can be used to ensure that if a strategy has a minimum
@@ -1742,8 +1747,10 @@ def report(gain: uint256, loss: uint256, _debtPayment: uint256) -> uint256:
     #       the Vault based on the Strategy's debt limit (as well as the Vault's).
     totalAvail: uint256 = gain + debtPayment
     if totalAvail < credit:  # credit surplus, give to Strategy
+        self.totalIdle -= credit - totalAvail
         self.erc20_safe_transfer(self.token.address, msg.sender, credit - totalAvail)
     elif totalAvail > credit:  # credit deficit, take from Strategy
+        self.totalIdle += totalAvail - credit
         self.erc20_safe_transferFrom(self.token.address, msg.sender, self, totalAvail - credit)
     # else, don't do anything because it is balanced
 
@@ -1799,9 +1806,12 @@ def sweep(token: address, amount: uint256 = MAX_UINT256):
     """
     assert msg.sender == self.governance
     # Can't be used to steal what this Vault is protecting
-    assert token != self.token.address
     value: uint256 = amount
     if value == MAX_UINT256:
         value = ERC20(token).balanceOf(self)
+
+    if token == self.token.address:
+        value = self.token.balanceOf(self) - self.totalIdle
+
     log Sweep(token, value)
     self.erc20_safe_transfer(token, self.governance, value)

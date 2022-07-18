@@ -3,7 +3,7 @@ import pytest
 from collections import namedtuple
 from semantic_version import Version
 
-from brownie import yToken, AffiliateToken, Vault
+from brownie import yToken, AffiliateToken, TestStrategy
 from brownie.test import strategy
 
 
@@ -64,9 +64,28 @@ class Migration:
         vaults_in_use = [v for v in self.vaults if v.totalSupply() > 0]
         if len(vaults_in_use) > 0:
             vault = vaults_in_use[index % len(vaults_in_use)]
+            strategy = self.gov.deploy(TestStrategy, vault)
+
+            vault.addStrategy(
+                strategy,
+                0,  # 0% of Vault
+                0,  # Minimum debt increase per harvest
+                2 ** 256 - 1,  # maximum debt increase per harvest
+                0,  # 10% performance fee for Strategist
+                {"from": self.gov},
+            )
             amount = int(1e17)
             print(f"  {vault}.harvest({amount})")
-            self.token.transfer(vault, amount, {"from": self.user})
+            self.token.transfer(strategy, amount, {"from": self.user})
+            managementFee = vault.managementFee()
+            performanceFee = vault.performanceFee()
+            vault.setManagementFee(0, {"from": self.gov})
+            vault.setPerformanceFee(0, {"from": self.gov})
+            vault.updateStrategyPerformanceFee(strategy, 0, {"from": self.gov})
+            strategy.harvest()
+            assert self.token.balanceOf(strategy) == 0
+            vault.setManagementFee(managementFee, {"from": self.gov})
+            vault.setPerformanceFee(performanceFee, {"from": self.gov})
             # NOTE: Wait enough time where "profit locking" isn't a problem (about a day)
             self.chain.mine(timedelta=24 * 60 * 60)
 
