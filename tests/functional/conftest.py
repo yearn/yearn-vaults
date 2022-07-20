@@ -46,7 +46,7 @@ def create_vault(gov, guardian, rewards, create_token, patch_vault_version):
             token = create_token()
         vault = patch_vault_version(version).deploy({"from": guardian})
         vault.initialize(token, governance, rewards, "", "", guardian, governance)
-        vault.setDepositLimit(2 ** 256 - 1, {"from": governance})
+        vault.setDepositLimit(2**256 - 1, {"from": governance})
         return vault
 
     yield create_vault
@@ -90,7 +90,7 @@ def strategy(gov, strategist, keeper, rewards, vault, TestStrategy, request):
         strategy,
         4_000,  # 40% of Vault
         0,  # Minimum debt increase per harvest
-        2 ** 256 - 1,  # maximum debt increase per harvest
+        2**256 - 1,  # maximum debt increase per harvest
         1000,  # 10% performance fee for Strategist
         {"from": gov},
     )
@@ -106,6 +106,7 @@ def rando(accounts):
 def registry(gov, Registry):
     yield gov.deploy(Registry)
 
+
 @pytest.fixture
 def pump_pps(TestStrategy, gov, chain):
     def pump_pps(vault, amount):
@@ -115,7 +116,7 @@ def pump_pps(TestStrategy, gov, chain):
             strategy,
             0,  # 0% of Vault
             0,  # Minimum debt increase per harvest
-            2 ** 256 - 1,  # maximum debt increase per harvest
+            2**256 - 1,  # maximum debt increase per harvest
             0,  # 10% performance fee for Strategist
             {"from": gov},
         )
@@ -131,4 +132,5 @@ def pump_pps(TestStrategy, gov, chain):
         vault.setManagementFee(managementFee, {"from": gov})
         vault.setPerformanceFee(performanceFee, {"from": gov})
         chain.mine(timedelta=24 * 60 * 60)
+
     yield pump_pps

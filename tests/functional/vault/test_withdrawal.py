@@ -1,6 +1,6 @@
 import brownie
 
-MAX_UINT256 = 2 ** 256 - 1
+MAX_UINT256 = 2**256 - 1
 
 
 def test_multiple_withdrawals(token, gov, Vault, TestStrategy, chain):
@@ -15,9 +15,9 @@ def test_multiple_withdrawals(token, gov, Vault, TestStrategy, chain):
         gov,
         {"from": gov},
     )
-    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    vault.setDepositLimit(2**256 - 1, {"from": gov})
 
-    token.approve(vault, 2 ** 256 - 1, {"from": gov})
+    token.approve(vault, 2**256 - 1, {"from": gov})
     vault.deposit(1_000_000, {"from": gov})
 
     starting_balance = token.balanceOf(vault)
@@ -27,7 +27,7 @@ def test_multiple_withdrawals(token, gov, Vault, TestStrategy, chain):
             s,
             1_000,  # 10% of all tokens in Vault
             0,
-            2 ** 256 - 1,  # No harvest limit
+            2**256 - 1,  # No harvest limit
             0,  # No fee
             {"from": gov},
         )
@@ -58,16 +58,16 @@ def test_forced_withdrawal(token, gov, vault, TestStrategy, rando, chain):
     # Add strategies
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(5)]
     for s in strategies:
-        vault.addStrategy(s, 2_000, 0, 10 ** 21, 1000, {"from": gov})
+        vault.addStrategy(s, 2_000, 0, 10**21, 1000, {"from": gov})
 
     # Send tokens to random user
-    token.approve(gov, 2 ** 256 - 1, {"from": gov})
+    token.approve(gov, 2**256 - 1, {"from": gov})
     token.transferFrom(gov, rando, 1000, {"from": gov})
     assert token.balanceOf(rando) == 1000
 
     # rando and gov deposits tokens to the vault
-    token.approve(vault, 2 ** 256 - 1, {"from": gov})
-    token.approve(vault, 2 ** 256 - 1, {"from": rando})
+    token.approve(vault, 2**256 - 1, {"from": gov})
+    token.approve(vault, 2**256 - 1, {"from": rando})
     vault.deposit(1000, {"from": rando})
     vault.deposit(4000, {"from": gov})
 
@@ -139,15 +139,15 @@ def test_progressive_withdrawal(
         "yv" + token.symbol(),
         guardian,
     )
-    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    vault.setDepositLimit(2**256 - 1, {"from": gov})
 
     strategies = [gov.deploy(TestStrategy, vault) for _ in range(2)]
     for s in strategies:
         vault.addStrategy(s, 1000, 0, 10, 1000, {"from": gov})
 
-    token.approve(vault, 2 ** 256 - 1, {"from": gov})
+    token.approve(vault, 2**256 - 1, {"from": gov})
     vault.deposit(1000, {"from": gov})
-    token.approve(gov, 2 ** 256 - 1, {"from": gov})
+    token.approve(gov, 2**256 - 1, {"from": gov})
     token.transferFrom(
         gov, guardian, token.balanceOf(gov), {"from": gov}
     )  # Remove all tokens from gov
@@ -205,16 +205,16 @@ def test_withdrawal_with_empty_queue(
         "yv" + token.symbol(),
         guardian,
     )
-    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    vault.setDepositLimit(2**256 - 1, {"from": gov})
 
     strategy = gov.deploy(TestStrategy, vault)
     vault.addStrategy(strategy, 1000, 0, 10, 1000, {"from": gov})
 
-    token.approve(vault, 2 ** 256 - 1, {"from": gov})
+    token.approve(vault, 2**256 - 1, {"from": gov})
     vault.deposit(1000, {"from": gov})
 
     # Remove all tokens from gov to make asserts easier
-    token.approve(gov, 2 ** 256 - 1, {"from": gov})
+    token.approve(gov, 2**256 - 1, {"from": gov})
     token.transferFrom(gov, guardian, token.balanceOf(gov), {"from": gov})
 
     chain.sleep(8640)
@@ -267,14 +267,14 @@ def test_withdrawal_with_reentrancy(
         guardian,
     )
 
-    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    vault.setDepositLimit(2**256 - 1, {"from": gov})
 
     strategy = gov.deploy(TestStrategy, vault)
-    vault.addStrategy(strategy, 10_000, 0, 2 ** 256 - 1, 1000, {"from": gov})
+    vault.addStrategy(strategy, 10_000, 0, 2**256 - 1, 1000, {"from": gov})
 
     strategy._toggleReentrancyExploit()
 
-    token.approve(vault, 2 ** 256 - 1, {"from": gov})
+    token.approve(vault, 2**256 - 1, {"from": gov})
     vault.deposit(1000, {"from": gov})
 
     # move funds into strategy
@@ -323,7 +323,7 @@ def test_profit_degradation(chain, gov, token, vault, strategy, rando):
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
     vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
-    token.approve(vault, 2 ** 256 - 1, {"from": gov})
+    token.approve(vault, 2**256 - 1, {"from": gov})
 
     deposit = vault.totalAssets()
     token.transfer(strategy, deposit, {"from": gov})  # seed some profit

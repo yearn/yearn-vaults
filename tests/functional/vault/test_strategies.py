@@ -2,7 +2,7 @@ import pytest
 import brownie
 from brownie import ZERO_ADDRESS
 
-MAX_UINT256 = 2 ** 256 - 1
+MAX_UINT256 = 2**256 - 1
 
 
 @pytest.fixture
@@ -12,7 +12,7 @@ def vault(gov, management, token, Vault):
     vault.initialize(
         token, gov, gov, token.symbol() + " yVault", "yv" + token.symbol(), gov
     )
-    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    vault.setDepositLimit(2**256 - 1, {"from": gov})
     vault.setManagement(management, {"from": gov})
     yield vault
 
@@ -41,7 +41,7 @@ def test_liquidation_after_hack(chain, gov, vault, token, TestStrategy):
 
     # Deploy strategy and seed it with debt
     strategy = gov.deploy(TestStrategy, vault)
-    vault.addStrategy(strategy, 2_000, 0, 10 ** 21, 1000, {"from": gov})
+    vault.addStrategy(strategy, 2_000, 0, 10**21, 1000, {"from": gov})
     strategy.harvest({"from": gov})
 
     # The strategy suffers a loss
@@ -77,7 +77,7 @@ def strategy_with_wrong_vault(gov, token, vault, Vault, TestStrategy):
     )
     assert otherVault.token() == token
     assert otherVault != vault
-    otherVault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    otherVault.setDepositLimit(2**256 - 1, {"from": gov})
     yield gov.deploy(TestStrategy, otherVault)
 
 
