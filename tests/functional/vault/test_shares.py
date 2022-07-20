@@ -278,9 +278,15 @@ def test_do_not_issue_zero_shares(gov, token, vault, pump_pps):
         vault.deposit(1, {"from": gov})
 
 
-def test_airdrop_do_not_change_price(gov, vault, token):
+def test_airdrop_do_not_change_price(gov, vault, token, rando):
     assert vault.totalSupply() == 0
     token.approve(vault, 1, {"from": gov})
     vault.deposit(1, {"from": gov})
-    token.transfer(vault, 10**18, {"from": gov})
+    assert vault.balanceOf(gov) == 1
+    token.transfer(vault, 10**(token.decimals() + 2), {"from": gov})
     assert vault.pricePerShare() == 10 ** token.decimals()
+
+    token.transfer(rando, 1, {"from": gov})
+    token.approve(vault, 1, {"from": rando})
+    vault.deposit(1, {"from": rando})
+    assert vault.balanceOf(rando) == 1
