@@ -276,3 +276,11 @@ def test_do_not_issue_zero_shares(gov, token, vault, pump_pps):
     assert vault.pricePerShare() == 2 * 10 ** token.decimals()  # 2:1 price
     with brownie.reverts():
         vault.deposit(1, {"from": gov})
+
+
+def test_airdrop_do_not_change_price(gov, vault, token):
+    assert vault.totalSupply() == 0
+    token.approve(vault, 1, {"from": gov})
+    vault.deposit(1, {"from": gov})
+    token.transfer(vault, 10**18, {"from": gov})
+    assert vault.pricePerShare() == 10 ** token.decimals()
