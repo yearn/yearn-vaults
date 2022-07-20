@@ -129,6 +129,12 @@ event StrategyReported:
     debtAdded: uint256
     debtRatio: uint256
 
+event FeeReport:
+    gain: uint256
+    management_fee: uint256
+    performance_fee: uint256
+    strategist_fee: uint256
+    total_fee: uint256
 
 event UpdateGovernance:
     governance: address # New active governance
@@ -1664,6 +1670,7 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
         # NOTE: Governance earns any dust leftover from flooring math above
         if self.balanceOf[self] > 0:
             self._transfer(self, self.rewards, self.balanceOf[self])
+    log FeeReport(gain, management_fee, performance_fee, strategist_fee, total_fee)
     return total_fee
 
 
