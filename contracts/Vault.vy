@@ -1,4 +1,4 @@
-# @version 0.2.12
+# @version 0.3.3
 """
 @title Yearn Token Vault
 @license GNU AGPLv3
@@ -1669,7 +1669,7 @@ def _assessFees(strategy: address, gain: uint256) -> uint256:
         # NOTE: Governance earns any dust leftover from flooring math above
         if self.balanceOf[self] > 0:
             self._transfer(self, self.rewards, self.balanceOf[self])
-    log FeeReport(gain, management_fee, performance_fee, strategist_fee, duration)
+    log FeeReport(management_fee, performance_fee, strategist_fee, duration)
     return total_fee
 
 
