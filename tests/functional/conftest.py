@@ -1,6 +1,6 @@
 import pytest
 
-from brownie import Token, TokenNoReturn
+from brownie import Token, TokenNoReturn, Contract
 
 
 @pytest.fixture
@@ -105,3 +105,30 @@ def rando(accounts):
 @pytest.fixture
 def registry(gov, Registry):
     yield gov.deploy(Registry)
+
+@pytest.fixture
+def pump_pps(TestStrategy, gov, chain):
+    def pump_pps(vault, amount):
+        strategy = gov.deploy(TestStrategy, vault)
+        token = Contract.from_abi("token", vault.token(), Token.abi)
+        vault.addStrategy(
+            strategy,
+            0,  # 0% of Vault
+            0,  # Minimum debt increase per harvest
+            2 ** 256 - 1,  # maximum debt increase per harvest
+            0,  # 10% performance fee for Strategist
+            {"from": gov},
+        )
+        print(f"  {vault}.harvest({amount})")
+        token.transfer(strategy, amount, {"from": gov})
+        managementFee = vault.managementFee()
+        performanceFee = vault.performanceFee()
+        vault.setManagementFee(0, {"from": gov})
+        vault.setPerformanceFee(0, {"from": gov})
+        vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
+        strategy.harvest()
+        assert token.balanceOf(strategy) == 0
+        vault.setManagementFee(managementFee, {"from": gov})
+        vault.setPerformanceFee(performanceFee, {"from": gov})
+        chain.mine(timedelta=24 * 60 * 60)
+    yield pump_pps

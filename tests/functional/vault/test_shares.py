@@ -269,10 +269,10 @@ def test_transferFrom(accounts, token, vault):
     assert vault.balanceOf(b) == token.balanceOf(vault)
 
 
-def test_do_not_issue_zero_shares(gov, token, vault):
+def test_do_not_issue_zero_shares(gov, token, vault, pump_pps):
     token.approve(vault, 500, {"from": gov})
     vault.deposit(500, {"from": gov})
-    token.transfer(vault, 500)  # inflate price
+    pump_pps(vault, 500)
     assert vault.pricePerShare() == 2 * 10 ** token.decimals()  # 2:1 price
     with brownie.reverts():
         vault.deposit(1, {"from": gov})
