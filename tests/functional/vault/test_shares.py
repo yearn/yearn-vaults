@@ -283,7 +283,7 @@ def test_airdrop_do_not_change_price(gov, vault, token, rando):
     token.approve(vault, 1, {"from": gov})
     vault.deposit(1, {"from": gov})
     assert vault.balanceOf(gov) == 1
-    token.transfer(vault, 10**(token.decimals() + 2), {"from": gov})
+    token.transfer(vault, 10 ** (token.decimals() + 2), {"from": gov})
     assert vault.pricePerShare() == 10 ** token.decimals()
 
     token.transfer(rando, 1, {"from": gov})
