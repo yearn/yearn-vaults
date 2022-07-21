@@ -761,7 +761,7 @@ abstract contract BaseStrategy {
         // Otherwise, only trigger if it "makes sense" economically (gas cost
         // is <N% of value moved)
         uint256 credit = vault.creditAvailable();
-        return ((profitFactor + callCost) < (credit + profit));
+        return ((profitFactor * callCost) < (credit + profit));
     }
 
     /**
