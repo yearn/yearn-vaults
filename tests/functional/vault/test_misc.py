@@ -124,10 +124,6 @@ def test_negative_available_deposit_limit(Vault, token, gov):
 
 
 def test_sweep(gov, vault, rando, token, other_token):
-    # Vault wrapped token reverts on 0 sweep
-    with brownie.reverts():
-        vault.sweep(token, {"from": gov})
-
     # Airdrop want token
     airdropAmount = token.balanceOf(gov) // 2
     token.transfer(vault, airdropAmount, {"from": gov})
@@ -145,13 +141,7 @@ def test_sweep(gov, vault, rando, token, other_token):
     token.approve(vault, depositAmount, {"from": gov})
     vault.deposit(depositAmount, {"from": gov})
     assert token.balanceOf(vault) == depositAmount
-    with brownie.reverts():
-        vault.sweep(token, depositAmount, {"from": gov})
-
-    # Vault wrapped token works for specific exceeding idle balance
-    token.transfer(vault, airdropAmount, {"from": gov})
-    assert token.balanceOf(vault) == depositAmount + airdropAmount
-    vault.sweep(token, token.balanceOf(vault) - depositAmount, {"from": gov})
+    vault.sweep(token, depositAmount, {"from": gov})
     assert token.balanceOf(vault) == depositAmount
 
     # Airdrop random token
