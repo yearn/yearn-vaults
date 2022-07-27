@@ -135,6 +135,11 @@ event FeeReport:
     strategist_fee: uint256
     duration: uint256
 
+event WithdrawFromStrategy:
+    strategy: indexed(address)
+    totalDebt: uint256
+    loss: uint256
+
 event UpdateGovernance:
     governance: address # New active governance
 
@@ -1125,6 +1130,7 @@ def withdraw(
             # NOTE: This doesn't add to returns as it's not earned by "normal means"
             self.strategies[strategy].totalDebt -= withdrawn
             self.totalDebt -= withdrawn
+            log WithdrawFromStrategy(strategy, self.strategies[strategy].totalDebt, loss)
 
         self.totalIdle = vault_balance
         # NOTE: We have withdrawn everything possible out of the withdrawal queue
