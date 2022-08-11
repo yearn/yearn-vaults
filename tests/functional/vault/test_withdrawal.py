@@ -292,7 +292,7 @@ def test_withdrawal_with_reentrancy(
         vault.withdraw(vault.balanceOf(gov), {"from": gov})
 
 
-def test_user_withdraw(chain, gov, token, vault, strategy, rando):
+def test_user_withdraw(chain, gov, token, vault, strategy):
     # set fees to 0
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
