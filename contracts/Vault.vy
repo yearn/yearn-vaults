@@ -56,6 +56,7 @@ interface Strategy:
     def estimatedTotalAssets() -> uint256: view
     def withdraw(_amount: uint256) -> uint256: nonpayable
     def migrate(_newStrategy: address): nonpayable
+    def emergencyExit() -> bool: view
 
 name: public(String[64])
 symbol: public(String[32])
@@ -1274,6 +1275,7 @@ def updateStrategyDebtRatio(
     """
     assert msg.sender in [self.management, self.governance]
     assert self.strategies[strategy].activation > 0
+    assert Strategy.emergencyExit(strategy) == False # dev: strategy in emergency
     self.debtRatio -= self.strategies[strategy].debtRatio
     self.strategies[strategy].debtRatio = debtRatio
     self.debtRatio += debtRatio

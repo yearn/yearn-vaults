@@ -142,3 +142,9 @@ def test_set_emergency_exit_authority(
     strategy.setEmergencyExit({"from": management})
     brownie.chain.undo()
     strategy.setEmergencyExit({"from": guardian})
+
+
+def test_shupdown_cant_set(strategy, vault, gov):
+    strategy.setEmergencyExit({"from": gov})
+    with brownie.reverts():
+        vault.updateStrategyDebtRatio(strategy, 1)
