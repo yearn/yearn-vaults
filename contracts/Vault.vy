@@ -763,7 +763,7 @@ def decreaseAllowance(spender: address, amount: uint256) -> bool:
 
 
 @external
-def permit(owner: address, spender: address, amount: uint256, expiry: uint256, signature: Bytes[65]) -> bool:
+def permit(owner: address, spender: address, amount: uint256, deadline: uint256, v: uint8, r: bytes32, s: bytes32) -> bool:
     """
     @notice
         Approves spender by owner's signature to expend owner's tokens.
@@ -772,12 +772,14 @@ def permit(owner: address, spender: address, amount: uint256, expiry: uint256, s
     @param owner The address which is a source of funds and has signed the Permit.
     @param spender The address which is allowed to spend the funds.
     @param amount The amount of tokens to be spent.
-    @param expiry The timestamp after which the Permit is no longer valid.
-    @param signature A valid secp256k1 signature of Permit by owner encoded as r, s, v.
+    @param deadline The timestamp after which the Permit is no longer valid.
+    @param v part of the signature
+    @param r part of the signature
+    @param s part of the signature
     @return True, if transaction completes successfully
     """
     assert owner != ZERO_ADDRESS  # dev: invalid owner
-    assert expiry == 0 or expiry >= block.timestamp  # dev: permit expired
+    assert deadline >= block.timestamp  # dev: permit expired
     nonce: uint256 = self.nonces[owner]
     digest: bytes32 = keccak256(
         concat(
@@ -790,16 +792,12 @@ def permit(owner: address, spender: address, amount: uint256, expiry: uint256, s
                     convert(spender, bytes32),
                     convert(amount, bytes32),
                     convert(nonce, bytes32),
-                    convert(expiry, bytes32),
+                    convert(deadline, bytes32),
                 )
             )
         )
     )
-    # NOTE: signature is packed as r, s, v
-    r: uint256 = convert(slice(signature, 0, 32), uint256)
-    s: uint256 = convert(slice(signature, 32, 32), uint256)
-    v: uint256 = convert(slice(signature, 64, 1), uint256)
-    assert ecrecover(digest, v, r, s) == owner  # dev: invalid signature
+    assert ecrecover(digest, convert(v, uint256), convert(r, uint256), convert(s, uint256)) == owner  # dev: invalid signature
     self.allowance[owner][spender] = amount
     self.nonces[owner] = nonce + 1
     log Approval(owner, spender, amount)
