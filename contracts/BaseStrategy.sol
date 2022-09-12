@@ -947,7 +947,7 @@ abstract contract BaseStrategyInitializable is BaseStrategy {
     }
 
     function clone(address _vault) external returns (address) {
-        return this.clone(_vault, msg.sender, msg.sender, msg.sender);
+        return clone(_vault, msg.sender, msg.sender, msg.sender);
     }
 
     function clone(
