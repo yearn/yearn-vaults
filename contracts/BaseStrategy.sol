@@ -878,7 +878,9 @@ abstract contract BaseStrategy {
      */
     function setEmergencyExit() external onlyEmergencyAuthorized {
         emergencyExit = true;
-        vault.revokeStrategy();
+        if (vault.strategies(address(this)).debtRatio != 0) {
+            vault.revokeStrategy();
+        }
 
         emit EmergencyExitEnabled();
     }
