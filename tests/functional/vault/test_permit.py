@@ -6,7 +6,7 @@ from eth_account import Account
 AMOUNT = 100
 
 
-def test_permit(chain, rando, vault, sign_vault_permit, expires):
+def test_permit(chain, rando, vault, sign_vault_permit):
     owner = Account.create()
     deadline = chain[-1].timestamp + 3600
     signature = sign_vault_permit(
@@ -17,14 +17,15 @@ def test_permit(chain, rando, vault, sign_vault_permit, expires):
     assert vault.allowance(owner.address, rando) == AMOUNT
 
 
-def test_permit_wrong_signature(rando, vault, sign_vault_permit):
+def test_permit_wrong_signature(chain, rando, vault, sign_vault_permit):
     owner = Account.create()
     # NOTE: Default `allowance` is unlimited, not `AMOUNT`
-    signature = sign_vault_permit(vault, owner, str(rando))
+    deadline = chain[-1].timestamp + 3600
+    signature = sign_vault_permit(vault, owner, str(rando), deadline=deadline)
     assert vault.allowance(owner.address, rando) == 0
     with brownie.reverts("dev: invalid signature"):
         # Fails because wrong `allowance` value provided
-        vault.permit(owner.address, rando, AMOUNT, 0, signature, {"from": rando})
+        vault.permit(owner.address, rando, AMOUNT, deadline, signature, {"from": rando})
 
 
 def test_permit_expired(chain, rando, vault, sign_vault_permit):
