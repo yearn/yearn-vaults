@@ -6,10 +6,9 @@ from eth_account import Account
 AMOUNT = 100
 
 
-@pytest.mark.parametrize("expires", [True, False])
 def test_permit(chain, rando, vault, sign_vault_permit, expires):
     owner = Account.create()
-    deadline = chain[-1].timestamp + 3600 if expires else 0
+    deadline = chain[-1].timestamp + 3600
     signature = sign_vault_permit(
         vault, owner, str(rando), allowance=AMOUNT, deadline=deadline
     )
