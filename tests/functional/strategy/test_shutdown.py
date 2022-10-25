@@ -14,7 +14,6 @@ def test_emergency_shutdown(token, gov, vault, strategy, keeper, chain):
         {"from": gov},
     )
     # Do it once to seed it with debt
-    chain.sleep(1)
     strategy.harvest({"from": keeper})
     add_yield = lambda: token.transfer(
         strategy, token.balanceOf(strategy) // 50, {"from": gov}
@@ -75,7 +74,6 @@ def test_emergency_exit(token, gov, vault, strategy, keeper, chain, withSurplus)
     )
 
     # Do it once to seed it with debt
-    chain.sleep(1)
     strategy.harvest({"from": keeper})
     add_yield = lambda: token.transfer(
         strategy, token.balanceOf(strategy) // 50, {"from": gov}
@@ -133,9 +131,9 @@ def test_set_emergency_exit_authority(
     strategy, gov, strategist, keeper, rando, management, guardian
 ):
     # Can only setEmergencyExit as governance, strategist, vault management and guardian
-    with brownie.reverts("!authorized"):
+    with brownie.reverts():
         strategy.setEmergencyExit({"from": keeper})
-    with brownie.reverts("!authorized"):
+    with brownie.reverts():
         strategy.setEmergencyExit({"from": rando})
     strategy.setEmergencyExit({"from": gov})
     brownie.chain.undo()
@@ -144,3 +142,9 @@ def test_set_emergency_exit_authority(
     strategy.setEmergencyExit({"from": management})
     brownie.chain.undo()
     strategy.setEmergencyExit({"from": guardian})
+
+
+def test_shupdown_cant_set(strategy, vault, gov):
+    strategy.setEmergencyExit({"from": gov})
+    with brownie.reverts():
+        vault.updateStrategyDebtRatio(strategy, 1)

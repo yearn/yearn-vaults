@@ -7,6 +7,10 @@ on:
     - develop
   pull_request:
 
+concurrency: 
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
 
   functional:
@@ -29,10 +33,10 @@ jobs:
     - name: Setup node.js
       uses: actions/setup-node@v1
       with:
-        node-version: '12.x'
+        node-version: '14.x'
 
     - name: Install ganache
-      run: npm install -g ganache-cli@6.12.1
+      run: npm install -g ganache
 
     - name: Set up python 3.8
       uses: actions/setup-python@v2

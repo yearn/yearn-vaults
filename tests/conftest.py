@@ -94,7 +94,7 @@ def sign_token_permit():
         token: Token,
         owner: Account,  # NOTE: Must be a eth_key account, not Brownie
         spender: str,
-        allowance: int = 2 ** 256 - 1,  # Allowance to set with `permit`
+        allowance: int = 2**256 - 1,  # Allowance to set with `permit`
         deadline: int = 0,  # 0 means no time limit
         override_nonce: int = None,
     ):
@@ -145,7 +145,7 @@ def sign_vault_permit():
         vault: Vault,
         owner: Account,  # NOTE: Must be a eth_key account, not Brownie
         spender: str,
-        allowance: int = 2 ** 256 - 1,  # Allowance to set with `permit`
+        allowance: int = 2**256 - 1,  # Allowance to set with `permit`
         deadline: int = 0,  # 0 means no time limit
         override_nonce: int = None,
     ):
@@ -187,7 +187,7 @@ def sign_vault_permit():
             },
         }
         permit = encode_structured_data(data)
-        return owner.sign_message(permit).signature
+        return owner.sign_message(permit)
 
     return sign_vault_permit
 

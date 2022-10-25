@@ -1,7 +1,7 @@
 import pytest
 import brownie
 
-MAX_UINT256 = 2 ** 256 - 1
+MAX_UINT256 = 2**256 - 1
 
 
 def test_harvest_tend_authority(gov, keeper, strategist, strategy, rando, chain):
@@ -9,18 +9,17 @@ def test_harvest_tend_authority(gov, keeper, strategist, strategy, rando, chain)
     strategy.tend({"from": keeper})
     strategy.tend({"from": strategist})
     strategy.tend({"from": gov})
-    with brownie.reverts("!authorized"):
+    with brownie.reverts():
         strategy.tend({"from": rando})
 
     # Only keeper, strategist, or gov can call harvest
-    chain.sleep(1)
     strategy.harvest({"from": keeper})
 
     chain.sleep(1)
     strategy.harvest({"from": strategist})
     chain.sleep(1)
     strategy.harvest({"from": gov})
-    with brownie.reverts("!authorized"):
+    with brownie.reverts():
         strategy.harvest({"from": rando})
 
 
@@ -146,7 +145,7 @@ def test_sweep(gov, vault, strategy, rando, token, other_token):
     assert other_token.balanceOf(strategy) > 0
     assert other_token.balanceOf(gov) == 0
     # Not any random person can do this
-    with brownie.reverts("!authorized"):
+    with brownie.reverts():
         strategy.sweep(other_token, {"from": rando})
 
     before = other_token.balanceOf(strategy)
@@ -184,12 +183,11 @@ def test_set_metadataURI(gov, strategy, strategist, rando):
     assert strategy.metadataURI() == "ipfs://test2"
     strategy.setMetadataURI("ipfs://test3", {"from": strategist})
     assert strategy.metadataURI() == "ipfs://test3"
-    with brownie.reverts("!authorized"):
+    with brownie.reverts():
         strategy.setMetadataURI("ipfs://fake", {"from": rando})
 
 
 def test_reduce_debt_ratio(strategy, vault, gov, chain):
-    chain.sleep(1)
     strategy.harvest({"from": gov})
     assert vault.strategies(strategy).dict()["totalDebt"] > 0
     old_debt_ratio = vault.strategies(strategy).dict()["debtRatio"]

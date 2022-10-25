@@ -2,7 +2,7 @@ import pytest
 import brownie
 import pytest
 
-MAX_UINT256 = 2 ** 256 - 1
+MAX_UINT256 = 2**256 - 1
 MAX_BPS = 10000
 
 
@@ -124,14 +124,28 @@ def test_negative_available_deposit_limit(Vault, token, gov):
 
 
 def test_sweep(gov, vault, rando, token, other_token):
-    token.transfer(vault, token.balanceOf(gov), {"from": gov})
-    other_token.transfer(vault, other_token.balanceOf(gov), {"from": gov})
+    # Airdrop want token
+    airdropAmount = token.balanceOf(gov) // 2
+    token.transfer(vault, airdropAmount, {"from": gov})
 
-    # Vault wrapped token doesn't work
+    # Token and vault balance are correct
     assert token.address == vault.token()
     assert token.balanceOf(vault) > 0
-    with brownie.reverts():
-        vault.sweep(token, {"from": gov})
+
+    # Vault wrapped token work for airdrops
+    vault.sweep(token, {"from": gov})
+    assert token.balanceOf(vault) == 0
+
+    # Vault wrapped token doesn't work for idle funds
+    depositAmount = token.balanceOf(gov) - airdropAmount
+    token.approve(vault, depositAmount, {"from": gov})
+    vault.deposit(depositAmount, {"from": gov})
+    assert token.balanceOf(vault) == depositAmount
+    vault.sweep(token, depositAmount, {"from": gov})
+    assert token.balanceOf(vault) == depositAmount
+
+    # Airdrop random token
+    other_token.transfer(vault, other_token.balanceOf(gov), {"from": gov})
 
     # But any other random token works
     assert other_token.address != vault.token()
@@ -269,7 +283,6 @@ def test_sandwich_attack(
     vault.addStrategy(strategy, 4_000, 0, MAX_UINT256, 0, {"from": gov})
     vault.updateStrategyPerformanceFee(strategy, 0, {"from": gov})
 
-    chain.sleep(1)
     strategy.harvest({"from": strategist})
     # strategy is returning 0.02%. Equivalent to 35.6% a year at 5 harvests a day
     profit_to_be_returned = token.balanceOf(strategy) / 5000

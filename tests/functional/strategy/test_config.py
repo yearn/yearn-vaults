@@ -59,7 +59,6 @@ def test_strategy_setEmergencyExit(strategy, gov, strategist, rando, chain):
 def test_strategy_harvest_permission(
     strategy, gov, strategist, guardian, management, keeper, rando, chain
 ):
-    chain.sleep(1)
     strategy.harvest({"from": gov})
     chain.sleep(1)
     strategy.harvest({"from": strategist})
@@ -74,14 +73,14 @@ def test_strategy_harvest_permission(
 
 
 @pytest.mark.parametrize(
-    "getter,setter,val,gov_allowed,strategist_allowed,authority_error",
+    "getter,setter,val,gov_allowed,strategist_allowed",
     [
-        ("rewards", "setRewards", None, False, True, "!strategist"),
-        ("keeper", "setKeeper", None, True, True, "!authorized"),
-        ("minReportDelay", "setMinReportDelay", 1000, True, True, "!authorized"),
-        ("maxReportDelay", "setMaxReportDelay", 2000, True, True, "!authorized"),
-        ("profitFactor", "setProfitFactor", 1000, True, True, "!authorized"),
-        ("debtThreshold", "setDebtThreshold", 1000, True, True, "!authorized"),
+        ("rewards", "setRewards", None, True, True),
+        ("keeper", "setKeeper", None, True, True),
+        ("minReportDelay", "setMinReportDelay", 1000, True, True),
+        ("maxReportDelay", "setMaxReportDelay", 2000, True, True),
+        ("profitFactor", "setProfitFactor", 1000, True, True),
+        ("debtThreshold", "setDebtThreshold", 1000, True, True),
     ],
 )
 def test_strategy_setParams(
@@ -94,7 +93,6 @@ def test_strategy_setParams(
     val,
     gov_allowed,
     strategist_allowed,
-    authority_error,
 ):
     if val is None:
         # Can't access fixtures, so use None to mean any random address
@@ -103,7 +101,7 @@ def test_strategy_setParams(
     prev_val = getattr(strategy, getter)()
 
     # None of these params can be set by a rando
-    with brownie.reverts(authority_error):
+    with brownie.reverts():
         getattr(strategy, setter)(val, {"from": rando})
 
     def try_setParam(caller, allowed):
@@ -114,7 +112,7 @@ def test_strategy_setParams(
             getattr(strategy, setter)(prev_val, {"from": caller})
             assert getattr(strategy, getter)() == prev_val
         else:
-            with brownie.reverts(authority_error):
+            with brownie.reverts():
                 getattr(strategy, setter)(val, {"from": caller})
 
     try_setParam(strategist, strategist_allowed)
@@ -126,15 +124,21 @@ def test_set_strategist_authority(strategy, strategist, rando):
     # so this test handles it.
 
     # Only gov or strategist can setStrategist
-    with brownie.reverts("!authorized"):
+    with brownie.reverts():
         strategy.setStrategist(rando, {"from": rando})
 
     # As strategist, set strategist to rando.
     strategy.setStrategist(rando, {"from": strategist})
 
     # Now the original strategist shouldn't be able to set strategist again
-    with brownie.reverts("!authorized"):
+    with brownie.reverts():
         strategy.setStrategist(rando, {"from": strategist})
+
+
+def test_set_rewards(strategy, rando):
+    # Only gov or strategist can setRewards
+    with brownie.reverts():
+        strategy.setRewards(rando, {"from": rando})
 
 
 def test_strategy_setParams_bad_vals(gov, strategist, strategy):

@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity >=0.6.0 <0.7.0;
-pragma experimental ABIEncoderV2;
+pragma solidity >=0.8.15;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 struct StrategyParams {
     uint256 performanceFee;
@@ -32,7 +31,9 @@ interface VaultAPI is IERC20 {
         address spender,
         uint256 amount,
         uint256 expiry,
-        bytes calldata signature
+        uint8 v,
+        bytes32 r,
+        bytes32 s
     ) external returns (bool);
 
     // NOTE: Vyper produces multiple signatures for a given function with "default" args
@@ -187,7 +188,6 @@ interface HealthCheck {
  */
 
 abstract contract BaseStrategy {
-    using SafeMath for uint256;
     using SafeERC20 for IERC20;
     string public metadataURI;
 
@@ -203,7 +203,7 @@ abstract contract BaseStrategy {
      * @return A string which holds the current API version of this contract.
      */
     function apiVersion() public pure returns (string memory) {
-        return "0.4.3";
+        return "0.4.4";
     }
 
     /**
@@ -287,46 +287,75 @@ abstract contract BaseStrategy {
 
     // modifiers
     modifier onlyAuthorized() {
-        require(msg.sender == strategist || msg.sender == governance(), "!authorized");
+        _onlyAuthorized();
         _;
     }
 
     modifier onlyEmergencyAuthorized() {
-        require(
-            msg.sender == strategist || msg.sender == governance() || msg.sender == vault.guardian() || msg.sender == vault.management(),
-            "!authorized"
-        );
+        _onlyEmergencyAuthorized();
         _;
     }
 
     modifier onlyStrategist() {
-        require(msg.sender == strategist, "!strategist");
+        _onlyStrategist();
         _;
     }
 
     modifier onlyGovernance() {
-        require(msg.sender == governance(), "!authorized");
+        _onlyGovernance();
+        _;
+    }
+
+    modifier onlyRewarder() {
+        _onlyRewarder();
         _;
     }
 
     modifier onlyKeepers() {
+        _onlyKeepers();
+        _;
+    }
+
+    modifier onlyVaultManagers() {
+        _onlyVaultManagers();
+        _;
+    }
+
+    function _onlyAuthorized() internal {
+        require(msg.sender == strategist || msg.sender == governance());
+    }
+
+    function _onlyEmergencyAuthorized() internal {
+        require(msg.sender == strategist || msg.sender == governance() || msg.sender == vault.guardian() || msg.sender == vault.management());
+    }
+
+    function _onlyStrategist() internal {
+        require(msg.sender == strategist);
+    }
+
+    function _onlyGovernance() internal {
+        require(msg.sender == governance());
+    }
+
+    function _onlyRewarder() internal {
+        require(msg.sender == governance() || msg.sender == strategist);
+    }
+
+    function _onlyKeepers() internal {
         require(
             msg.sender == keeper ||
                 msg.sender == strategist ||
                 msg.sender == governance() ||
                 msg.sender == vault.guardian() ||
-                msg.sender == vault.management(),
-            "!authorized"
+                msg.sender == vault.management()
         );
-        _;
     }
 
-    modifier onlyVaultManagers() {
-        require(msg.sender == vault.management() || msg.sender == governance(), "!authorized");
-        _;
+    function _onlyVaultManagers() internal {
+        require(msg.sender == vault.management() || msg.sender == governance());
     }
 
-    constructor(address _vault) public {
+    constructor(address _vault) {
         _initialize(_vault, msg.sender, msg.sender, msg.sender);
     }
 
@@ -352,7 +381,7 @@ abstract contract BaseStrategy {
 
         vault = VaultAPI(_vault);
         want = IERC20(vault.token());
-        want.safeApprove(_vault, uint256(-1)); // Give Vault unlimited access (might save gas)
+        want.safeApprove(_vault, type(uint256).max); // Give Vault unlimited access (might save gas)
         strategist = _strategist;
         rewards = _rewards;
         keeper = _keeper;
@@ -363,7 +392,7 @@ abstract contract BaseStrategy {
         profitFactor = 100;
         debtThreshold = 0;
 
-        vault.approve(rewards, uint256(-1)); // Allow rewards to be pulled
+        vault.approve(rewards, type(uint256).max); // Allow rewards to be pulled
     }
 
     function setHealthCheck(address _healthCheck) external onlyVaultManagers {
@@ -416,11 +445,11 @@ abstract contract BaseStrategy {
      *  This may only be called by the strategist.
      * @param _rewards The address to use for pulling rewards.
      */
-    function setRewards(address _rewards) external onlyStrategist {
+    function setRewards(address _rewards) external onlyRewarder {
         require(_rewards != address(0));
         vault.approve(rewards, 0);
         rewards = _rewards;
-        vault.approve(rewards, uint256(-1));
+        vault.approve(rewards, type(uint256).max);
         emit UpdatedRewards(_rewards);
     }
 
@@ -710,10 +739,10 @@ abstract contract BaseStrategy {
         if (params.activation == 0) return false;
 
         // Should not trigger if we haven't waited long enough since previous harvest
-        if (block.timestamp.sub(params.lastReport) < minReportDelay) return false;
+        if ((block.timestamp - params.lastReport) < minReportDelay) return false;
 
         // Should trigger if hasn't been called in a while
-        if (block.timestamp.sub(params.lastReport) >= maxReportDelay) return true;
+        if ((block.timestamp - params.lastReport) >= maxReportDelay) return true;
 
         // If some amount is owed, pay it back
         // NOTE: Since debt is based on deposits, it makes sense to guard against large
@@ -726,15 +755,15 @@ abstract contract BaseStrategy {
         // Check for profits and losses
         uint256 total = estimatedTotalAssets();
         // Trigger if we have a loss to report
-        if (total.add(debtThreshold) < params.totalDebt) return true;
+        if ((total + debtThreshold) < params.totalDebt) return true;
 
         uint256 profit = 0;
-        if (total > params.totalDebt) profit = total.sub(params.totalDebt); // We've earned a profit!
+        if (total > params.totalDebt) profit = (total - params.totalDebt); // We've earned a profit!
 
         // Otherwise, only trigger if it "makes sense" economically (gas cost
         // is <N% of value moved)
         uint256 credit = vault.creditAvailable();
-        return (profitFactor.mul(callCost) < credit.add(profit));
+        return ((profitFactor * callCost) < (credit + profit));
     }
 
     /**
@@ -763,11 +792,11 @@ abstract contract BaseStrategy {
             // Free up as much capital as possible
             uint256 amountFreed = liquidateAllPositions();
             if (amountFreed < debtOutstanding) {
-                loss = debtOutstanding.sub(amountFreed);
+                loss = debtOutstanding - amountFreed;
             } else if (amountFreed > debtOutstanding) {
-                profit = amountFreed.sub(debtOutstanding);
+                profit = amountFreed - debtOutstanding;
             }
-            debtPayment = debtOutstanding.sub(loss);
+            debtPayment = debtOutstanding - loss;
         } else {
             // Free up returns for Vault to pull
             (profit, loss, debtPayment) = prepareReturn(debtOutstanding);
@@ -849,7 +878,9 @@ abstract contract BaseStrategy {
      */
     function setEmergencyExit() external onlyEmergencyAuthorized {
         emergencyExit = true;
-        vault.revokeStrategy();
+        if (vault.strategies(address(this)).debtRatio != 0) {
+            vault.revokeStrategy();
+        }
 
         emit EmergencyExitEnabled();
     }
@@ -906,7 +937,7 @@ abstract contract BaseStrategyInitializable is BaseStrategy {
     bool public isOriginal = true;
     event Cloned(address indexed clone);
 
-    constructor(address _vault) public BaseStrategy(_vault) {}
+    constructor(address _vault) BaseStrategy(_vault) {}
 
     function initialize(
         address _vault,
@@ -918,8 +949,7 @@ abstract contract BaseStrategyInitializable is BaseStrategy {
     }
 
     function clone(address _vault) external returns (address) {
-        require(isOriginal, "!clone");
-        return this.clone(_vault, msg.sender, msg.sender, msg.sender);
+        return clone(_vault, msg.sender, msg.sender, msg.sender);
     }
 
     function clone(
@@ -927,7 +957,8 @@ abstract contract BaseStrategyInitializable is BaseStrategy {
         address _strategist,
         address _rewards,
         address _keeper
-    ) external returns (address newStrategy) {
+    ) public returns (address newStrategy) {
+        require(isOriginal, "!clone");
         // Copied from https://github.com/optionality/clone-factory/blob/master/contracts/CloneFactory.sol
         bytes20 addressBytes = bytes20(address(this));
 
