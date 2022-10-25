@@ -31,9 +31,7 @@ interface VaultAPI is IERC20 {
         address spender,
         uint256 amount,
         uint256 expiry,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        bytes calldata signature
     ) external returns (bool);
 
     // NOTE: Vyper produces multiple signatures for a given function with "default" args
