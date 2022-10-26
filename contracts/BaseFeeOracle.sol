@@ -5,6 +5,13 @@ interface IBaseFee {
     function basefee_global() external view returns (uint256);
 }
 
+/**
+ * @dev Interprets the base fee from our base fee provider
+ *  contract to determine if a harvest is permissable.
+ *
+ * Version 0.1.0
+ */
+
 contract BaseFeeOracle {
     address public baseFeeProvider; /// @notice Provider to read current block's base fee. This will vary based on network.
     uint256 public maxAcceptableBaseFee; /// @notice Max acceptable base fee for the operation
