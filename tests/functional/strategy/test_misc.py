@@ -38,7 +38,6 @@ def test_harvest_tend_trigger(chain, gov, vault, token, TestStrategy, base_fee_o
     strategy.harvest({"from": gov})  # Sends funds into strategy
     strategy.setMinReportDelay(10, {"from": gov})
     assert not strategy.harvestTrigger(0)
-    strategy.harvest({"from": gov})  # Resets the reporting
 
     # After maxReportDelay has expired,  doesn't matter
     last_report = vault.strategies(strategy).dict()["lastReport"]
@@ -82,6 +81,7 @@ def test_harvest_tend_trigger(chain, gov, vault, token, TestStrategy, base_fee_o
     # Stops after it runs out of balance
     while strategy.harvestTrigger(0):
         chain.sleep(1)
+        chain.mine(1)
         strategy.harvest({"from": gov})
 
     assert strategy.estimatedTotalAssets() == 0
