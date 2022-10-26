@@ -35,7 +35,7 @@
     https://github.com/iearn-finance/yearn-vaults/blob/main/SPECIFICATION.md
 """
 
-API_VERSION: constant(String[28]) = "0.4.4"
+API_VERSION: constant(String[28]) = "0.4.5"
 
 from vyper.interfaces import ERC20
 

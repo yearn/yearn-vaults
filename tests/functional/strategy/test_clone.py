@@ -69,9 +69,10 @@ def test_clone(
 
     # test state variables have been initialized with default (hardcoded) values
     assert new_strategy.minReportDelay() == 0
-    assert new_strategy.maxReportDelay() == 86400
-    assert new_strategy.profitFactor() == 100
-    assert new_strategy.debtThreshold() == 0
+    assert new_strategy.maxReportDelay() == 86400 * 7
+    assert new_strategy.creditThreshold() == 1_000_000 * 10 ** other_vault.decimals()
+    assert new_strategy.forceHarvestTriggerOnce() == False
+    assert new_strategy.baseFeeOracle() == ZERO_ADDRESS
 
 
 def test_double_initialize(TestStrategy, vault, other_vault, gov):
