@@ -775,7 +775,8 @@ abstract contract BaseStrategy {
      * liquidate all of the Strategy's positions back to the Vault.
      */
     function isBaseFeeAcceptable() public view returns (bool) {
-        return IBaseFee(baseFeeOracle).isCurrentBaseFeeAcceptable();
+        if (baseFeeOracle == address(0)) return true;
+        else return IBaseFee(baseFeeOracle).isCurrentBaseFeeAcceptable();
     }
 
     /**
