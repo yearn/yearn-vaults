@@ -17,6 +17,7 @@ contract BaseFeeOracle {
     uint256 public maxAcceptableBaseFee; /// @notice Max acceptable base fee for the operation
 
     address public governance; /// @notice Governance can grant and revoke access to the setter
+    address public pendingGovernance; /// @notice New address must be set by current gov and then accept to transfer power.
     mapping(address => bool) public authorizedAddresses; /// @notice Addresses that can set the max acceptable base fee
 
     bool public manualBaseFeeBool; /// @notice Use this if our network hasn't implemented the base fee method yet
@@ -25,6 +26,8 @@ contract BaseFeeOracle {
         governance = msg.sender; // our deployer should be gov, they can set up the rest
         manualBaseFeeBool = true; // start as permissive
     }
+
+    event NewGovernance(address governance);
 
     /// @notice Returns whether we should allow harvests based on current base fee.
     function isCurrentBaseFeeAcceptable() public view returns (bool) {
@@ -36,40 +39,69 @@ contract BaseFeeOracle {
         }
     }
 
-    /// @notice Set the maximum base fee we want for our keepers to accept. Gwei is 1e9.
+    /**
+     * @notice Set the maximum base fee we want for our keepers to accept.
+     *  Gwei is 1e9.
+     * @dev Throws if the caller is not authorized or gov.
+     * @param _maxAcceptableBaseFee The acceptable maximum price to pay in wei.
+     */
     function setMaxAcceptableBaseFee(uint256 _maxAcceptableBaseFee) external {
         _onlyAuthorized();
         maxAcceptableBaseFee = _maxAcceptableBaseFee;
     }
 
-    /// @notice If we don't have a provider, then manually determine if true or not. Useful in testing as well.
+    /**
+     * @notice If we don't have a provider, then manually determine if true or not.
+     *  Useful in testing as well.
+     * @dev Throws if the caller is not authorized or gov.
+     * @param _manualBaseFeeBool Boolean to allow/block harvests if we don't
+     *  have a provider set up.
+     */
     function setManualBaseFeeBool(bool _manualBaseFeeBool) external {
         _onlyAuthorized();
         manualBaseFeeBool = _manualBaseFeeBool;
     }
 
-    /// @notice Set authorized addresses to set the acceptable base fee
-    function setAuthorized(address _target) external {
+    /**
+     * @notice Controls whether a non-gov address can adjust certain params.
+     * @dev Throws if the caller is not current governance.
+     * @param _target The address to add/remove authorization for.
+     * @param _value Boolean to grant or revoke access.
+     */
+    function setAuthorized(address _target, bool _value) external {
         _onlyGovernance();
-        authorizedAddresses[_target] = true;
+        authorizedAddresses[_target] = _value;
     }
 
-    /// @notice Update our governance address
-    function setGovernance(address _target) external {
+    /**
+     * @notice Starts the 1st phase of the governance transfer.
+     * @dev Throws if the caller is not current governance.
+     * @param _governance The next governance address
+     */
+    function setGovernance(address _governance) external {
         _onlyGovernance();
-        governance = _target;
+        pendingGovernance = _governance;
     }
 
-    /// @notice Set the address used to pull the current network base fee
+    /**
+     * @notice Completes the 2nd phase of the governance transfer.
+     * @dev Throws if the caller is not the pending caller.
+     *  Emits a `NewGovernance` event.
+     */
+    function acceptGovernance() external {
+        require(msg.sender == pendingGovernance, "!authorized");
+        governance = msg.sender;
+        emit NewGovernance(msg.sender);
+    }
+
+    /**
+     * @notice Sets the address used to pull the current network base fee.
+     * @dev Throws if the caller is not current governance.
+     * @param _baseFeeProvider The network's baseFeeProvider address
+     */
     function setBaseFeeProvider(address _baseFeeProvider) external {
         _onlyGovernance();
         baseFeeProvider = _baseFeeProvider;
-    }
-
-    /// @notice Revoke an authorized address if they misbehave
-    function revokeAuthorized(address _target) external {
-        _onlyGovernance();
-        authorizedAddresses[_target] = false;
     }
 
     function _onlyAuthorized() internal view {

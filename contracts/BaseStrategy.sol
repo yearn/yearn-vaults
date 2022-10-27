@@ -392,8 +392,7 @@ abstract contract BaseStrategy {
         keeper = _keeper;
 
         // initialize variables
-        minReportDelay = 0;
-        maxReportDelay = 7 days;
+        maxReportDelay = 30 days;
         creditThreshold = 1_000_000 * 10**vault.decimals(); // set this high by default so we don't get tons of false triggers if not changed
 
         vault.approve(rewards, type(uint256).max); // Allow rewards to be pulled
@@ -731,7 +730,7 @@ abstract contract BaseStrategy {
      *  This call and `tendTrigger` should never return `true` at the
      *  same time.
      *
-     *  See `min/maxReportDelay`, `creditThreshold` to adjust the
+     *  See `maxReportDelay`, `creditThreshold` to adjust the
      *  strategist-controlled parameters that will influence whether this call
      *  returns `true` or not. These parameters will be used in conjunction
      *  with the parameters reported to the Vault (see `params`) to determine
@@ -739,6 +738,9 @@ abstract contract BaseStrategy {
      *
      *  This trigger also checks the network's base fee to avoid harvesting during
      *  times of high network congestion.
+     *
+     *  Consider use of super.harvestTrigger() in any override to build on top
+     *  of this logic instead of replacing it. For example, if using `minReportDelay`.
      *
      *  It is expected that an external system will check `harvestTrigger()`.
      *  This could be a script run off a desktop or cloud bot (e.g.
@@ -758,11 +760,8 @@ abstract contract BaseStrategy {
         // trigger if we want to manually harvest, but only if our gas price is acceptable
         if (forceHarvestTriggerOnce) return true;
 
-        // Should not trigger if we haven't waited long enough since previous harvest
-        StrategyParams memory params = vault.strategies(address(this));
-        if ((block.timestamp - params.lastReport) < minReportDelay) return false;
-
         // Should trigger if hasn't been called in a while
+        StrategyParams memory params = vault.strategies(address(this));
         if ((block.timestamp - params.lastReport) >= maxReportDelay) return true;
 
         // harvest our credit if it's above our threshold or return false
@@ -770,9 +769,10 @@ abstract contract BaseStrategy {
     }
 
     /**
-     * Liquidate everything and returns the amount that got freed.
-     * This function is used during emergency exit instead of `prepareReturn()` to
-     * liquidate all of the Strategy's positions back to the Vault.
+     * @notice
+     *  Check if the current network base fee is below our external target. If
+     *  not, then harvestTrigger will return false.
+     * @return `true` if `harvest()` should be allowed, `false` otherwise.
      */
     function isBaseFeeAcceptable() public view returns (bool) {
         if (baseFeeOracle == address(0)) return true;
