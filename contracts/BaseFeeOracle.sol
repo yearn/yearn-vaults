@@ -78,7 +78,7 @@ contract BaseFeeOracle {
      * @dev Throws if the caller is not current governance.
      * @param _governance The next governance address
      */
-    function setGovernance(address _governance) external {
+    function setPendingGovernance(address _governance) external {
         _onlyGovernance();
         pendingGovernance = _governance;
     }

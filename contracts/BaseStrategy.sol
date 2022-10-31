@@ -261,7 +261,7 @@ abstract contract BaseStrategy {
 
     event UpdatedCreditThreshold(uint256 creditThreshold);
 
-    event ForcedHarvestTrigger();
+    event ForcedHarvestTrigger(bool triggerState);
 
     event EmergencyExitEnabled();
 
@@ -516,7 +516,7 @@ abstract contract BaseStrategy {
      */
     function setForceHarvestTriggerOnce(bool _forceHarvestTriggerOnce) external onlyVaultManagers {
         forceHarvestTriggerOnce = _forceHarvestTriggerOnce;
-        emit ForcedHarvestTrigger();
+        emit ForcedHarvestTrigger(_forceHarvestTriggerOnce);
     }
 
     /**
@@ -817,6 +817,7 @@ abstract contract BaseStrategy {
 
         // we're done harvesting, so reset our trigger if we used it
         forceHarvestTriggerOnce = false;
+        emit ForcedHarvestTrigger(false);
 
         // Allow Vault to take up to the "harvested" balance of this contract,
         // which is the amount it has earned since the last time it reported to

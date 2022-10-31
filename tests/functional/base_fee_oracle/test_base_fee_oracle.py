@@ -4,13 +4,13 @@ import brownie
 
 def test_set_goverance(gov, rando, base_fee_oracle):
     with brownie.reverts():
-        base_fee_oracle.setGovernance(rando, {"from": rando})
-    base_fee_oracle.setGovernance(rando, {"from": gov})
+        base_fee_oracle.setPendingGovernance(rando, {"from": rando})
+    base_fee_oracle.setPendingGovernance(rando, {"from": gov})
     with brownie.reverts():
         base_fee_oracle.acceptGovernance({"from": gov})
     base_fee_oracle.acceptGovernance({"from": rando})
     with brownie.reverts():
-        base_fee_oracle.setGovernance(rando, {"from": gov})
+        base_fee_oracle.setPendingGovernance(rando, {"from": gov})
     assert base_fee_oracle.governance() == rando.address
 
 
