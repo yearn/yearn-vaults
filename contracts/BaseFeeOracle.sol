@@ -28,15 +28,15 @@ contract BaseFeeOracle {
     }
 
     // events for subgraph
-    event NewGovernance(address governance);
+    event NewGovernance(address indexed governance);
 
-    event NewProvider(address provider);
+    event NewProvider(address indexed provider);
 
     event UpdatedMaxBaseFee(uint256 baseFee);
 
     event UpdatedManualBaseFee(bool manualFee);
 
-    event UpdatedAuthorization(address target, bool authorized);
+    event UpdatedAuthorization(address indexed target, bool authorized);
 
     /// @notice Returns whether we should allow harvests based on current base fee.
     function isCurrentBaseFeeAcceptable() public view returns (bool) {
