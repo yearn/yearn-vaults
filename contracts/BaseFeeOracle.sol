@@ -27,7 +27,16 @@ contract BaseFeeOracle {
         manualBaseFeeBool = true; // start as permissive
     }
 
+    // events for subgraph
     event NewGovernance(address governance);
+
+    event NewProvider(address provider);
+
+    event UpdatedMaxBaseFee(uint256 baseFee);
+
+    event UpdatedManualBaseFee(bool manualFee);
+
+    event UpdatedAuthorization(address target, bool authorized);
 
     /// @notice Returns whether we should allow harvests based on current base fee.
     function isCurrentBaseFeeAcceptable() public view returns (bool) {
@@ -48,6 +57,7 @@ contract BaseFeeOracle {
     function setMaxAcceptableBaseFee(uint256 _maxAcceptableBaseFee) external {
         _onlyAuthorized();
         maxAcceptableBaseFee = _maxAcceptableBaseFee;
+        emit UpdatedMaxBaseFee(_maxAcceptableBaseFee);
     }
 
     /**
@@ -60,6 +70,7 @@ contract BaseFeeOracle {
     function setManualBaseFeeBool(bool _manualBaseFeeBool) external {
         _onlyAuthorized();
         manualBaseFeeBool = _manualBaseFeeBool;
+        emit UpdatedManualBaseFee(_manualBaseFeeBool);
     }
 
     /**
@@ -71,6 +82,7 @@ contract BaseFeeOracle {
     function setAuthorized(address _target, bool _value) external {
         _onlyGovernance();
         authorizedAddresses[_target] = _value;
+        emit UpdatedAuthorization(_target, _value);
     }
 
     /**
@@ -102,6 +114,7 @@ contract BaseFeeOracle {
     function setBaseFeeProvider(address _baseFeeProvider) external {
         _onlyGovernance();
         baseFeeProvider = _baseFeeProvider;
+        emit NewProvider(_baseFeeProvider);
     }
 
     function _onlyAuthorized() internal view {
