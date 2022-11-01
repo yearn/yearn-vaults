@@ -30,10 +30,11 @@ The official yearn-vaults repository may have changed since the time you cloned 
 git fetch origin
 ```
 
-Then synchronize your main branch:
+Then synchronize your master branch:
 
 ```bash
-git pull origin main
+git pull origin master
+
 ```
 
 To stage the changed files that are be committed, issue the command:
