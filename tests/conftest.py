@@ -187,7 +187,7 @@ def sign_vault_permit():
             },
         }
         permit = encode_structured_data(data)
-        return owner.sign_message(permit)
+        return owner.sign_message(permit).signature
 
     return sign_vault_permit
 

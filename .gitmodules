@@ -1,0 +1,3 @@
+[submodule "contracts/base-fee-provider"]
+	path = contracts/base-fee-provider
+	url = https://github.com/yearn/base-fee-provider

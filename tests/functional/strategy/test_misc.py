@@ -23,63 +23,65 @@ def test_harvest_tend_authority(gov, keeper, strategist, strategy, rando, chain)
         strategy.harvest({"from": rando})
 
 
-def test_harvest_tend_trigger(chain, gov, vault, token, TestStrategy):
+def test_harvest_tend_trigger(chain, gov, vault, token, TestStrategy, base_fee_oracle):
     strategy = gov.deploy(TestStrategy, vault)
-    # Trigger doesn't work until strategy is added
+
+    # setup our base fee oracle for testing
+    strategy.setBaseFeeOracle(base_fee_oracle, {"from": gov})
+
+    # Trigger doesn't work until strategy is attached and funds added
     assert not strategy.harvestTrigger(0)
 
+    # Must wait at least the minimum amount of time for it to be active
     vault.addStrategy(strategy, 2_000, 0, MAX_UINT256, 50, {"from": gov})
     last_report = vault.strategies(strategy).dict()["lastReport"]
+    strategy.harvest({"from": gov})  # Sends funds into strategy
     strategy.setMinReportDelay(10, {"from": gov})
-    # Must wait at least the minimum amount of time for it to be active
     assert not strategy.harvestTrigger(0)
-    chain.mine(timedelta=strategy.minReportDelay() - (chain.time() - last_report))
-    assert strategy.harvestTrigger(0)
 
-    # Not high enough profit:cost ratio
-    assert not strategy.harvestTrigger(MAX_UINT256 // strategy.profitFactor())
-
-    # After maxReportDelay has expired, profit doesn't matter
+    # After maxReportDelay has expired,  doesn't matter
+    last_report = vault.strategies(strategy).dict()["lastReport"]
     chain.mine(timedelta=strategy.maxReportDelay() - (chain.time() - last_report))
     assert strategy.harvestTrigger(MAX_UINT256)
     strategy.harvest({"from": gov})  # Resets the reporting
 
-    # Check that trigger works if gas costs is less than profitFactor
-    profit = 10 ** token.decimals()
-    token.transfer(strategy, profit, {"from": gov})
-    chain.mine(timedelta=strategy.minReportDelay() + 5)
-    assert not strategy.harvestTrigger(profit // strategy.profitFactor())
-    assert strategy.harvestTrigger(profit // strategy.profitFactor() - 1)
-    strategy.harvest({"from": gov})
+    # Will fail if our gas oracle blocks it
+    last_report = vault.strategies(strategy).dict()["lastReport"]
+    chain.mine(timedelta=strategy.maxReportDelay() - (chain.time() - last_report))
+    assert strategy.harvestTrigger(0)
+    base_fee_oracle.setManualBaseFeeBool(False, {"from": gov})
+    assert not strategy.harvestTrigger(0)
+    base_fee_oracle.setManualBaseFeeBool(True, {"from": gov})
+    assert strategy.harvestTrigger(0)
+    strategy.harvest({"from": gov})  # Resets the reporting
 
-    # Check that trigger works if strategy is in debt using debt threshold
-    chain.mine(timedelta=strategy.minReportDelay() + 5)
-    assert vault.debtOutstanding(strategy) == 0
-    vault.revokeStrategy(strategy, {"from": gov})
-    assert vault.debtOutstanding(strategy) > strategy.debtThreshold()
-    assert strategy.harvestTrigger(MAX_UINT256)
+    # harvest if we have any credit at all, first add loose want
+    assert not strategy.harvestTrigger(0)
+    last_report = vault.strategies(strategy).dict()["lastReport"]
+    chain.mine(timedelta=strategy.minReportDelay() - (chain.time() - last_report))
+    token.approve(vault, token.balanceOf(gov) // 20, {"from": gov})
+    vault.deposit(token.balanceOf(gov) // 20, {"from": gov})
+    strategy.setCreditThreshold(1, {"from": gov})
+    assert strategy.harvestTrigger(0)
+    strategy.harvest({"from": gov})  # Resets the reporting
 
-    chain.undo()
-
-    # Check that trigger works if strategy has no outstanding debt but does have a loss
-    chain.mine(timedelta=strategy.minReportDelay())
-    loss = token.balanceOf(strategy) // 10
-    strategy._takeFunds(loss, {"from": gov})
-    assert vault.debtOutstanding(strategy) == 0
-    assert vault.debtOutstanding(strategy) <= strategy.debtThreshold()
-    totalDebt = vault.strategies(strategy).dict()["totalDebt"]
-    assert strategy.estimatedTotalAssets() + strategy.debtThreshold() < totalDebt
-    assert strategy.harvestTrigger(MAX_UINT256)
-
-    chain.undo()
+    # can force it as long as we have assets and gas is okay
+    assert not strategy.harvestTrigger(0)
+    strategy.setForceHarvestTriggerOnce(True, {"from": gov})
+    assert strategy.harvestTrigger(0)
+    strategy.setForceHarvestTriggerOnce(False, {"from": gov})
+    assert not strategy.harvestTrigger(0)
 
     # Check that trigger works in emergency exit mode
     strategy.setEmergencyExit({"from": gov})
+    last_report = vault.strategies(strategy).dict()["lastReport"]
+    chain.mine(timedelta=strategy.maxReportDelay() - (chain.time() - last_report))
     assert strategy.harvestTrigger(MAX_UINT256)
 
     # Stops after it runs out of balance
     while strategy.harvestTrigger(0):
         chain.sleep(1)
+        chain.mine(1)
         strategy.harvest({"from": gov})
 
     assert strategy.estimatedTotalAssets() == 0

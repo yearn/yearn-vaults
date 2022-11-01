@@ -64,6 +64,11 @@ def vault(gov, management, token, create_vault):
 
 
 @pytest.fixture
+def base_fee_oracle(gov, BaseFeeOracle):
+    yield gov.deploy(BaseFeeOracle)
+
+
+@pytest.fixture
 def strategist(accounts):
     yield accounts[4]
 
