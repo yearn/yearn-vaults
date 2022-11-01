@@ -33,7 +33,7 @@ git fetch origin
 Then synchronize your master branch:
 
 ```bash
-git pull origin Then synchronize your master branch:
+git pull origin master
 
 ```
 
