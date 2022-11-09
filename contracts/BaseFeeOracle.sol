@@ -9,18 +9,27 @@ interface IBaseFee {
  * @dev Interprets the base fee from our base fee provider
  *  contract to determine if a harvest is permissable.
  *
- * Version 0.1.0
+ * Version 0.1.1
  */
 
 contract BaseFeeOracle {
-    address public baseFeeProvider; /// @notice Provider to read current block's base fee. This will vary based on network.
-    uint256 public maxAcceptableBaseFee; /// @notice Max acceptable base fee for the operation
+    /// @notice Provider to read current block's base fee. This will vary based on network.
+    address public baseFeeProvider;
 
-    address public governance; /// @notice Governance can grant and revoke access to the setter
-    address public pendingGovernance; /// @notice New address must be set by current gov and then accept to transfer power.
-    mapping(address => bool) public authorizedAddresses; /// @notice Addresses that can set the max acceptable base fee
+    /// @notice Max acceptable base fee for the operation.
+    uint256 public maxAcceptableBaseFee;
 
-    bool public manualBaseFeeBool; /// @notice Use this if our network hasn't implemented the base fee method yet
+    /// @notice Governance can grant and revoke access to the setter.
+    address public governance;
+
+    /// @notice New address must be set by current gov and then accept to transfer power.
+    address public pendingGovernance;
+
+    /// @notice Addresses that can set the max acceptable base fee.
+    mapping(address => bool) public authorizedAddresses;
+
+    /// @notice Use this if our network hasn't implemented the base fee method yet.
+    bool public manualBaseFeeBool;
 
     constructor() {
         governance = msg.sender; // our deployer should be gov, they can set up the rest
@@ -38,7 +47,8 @@ contract BaseFeeOracle {
 
     event UpdatedAuthorization(address indexed target, bool authorized);
 
-    /// @notice Returns whether we should allow harvests based on current base fee.
+    /// @notice Check the current state of the network's base fee.
+    /// @return Whether our current base fee is lower than our set limit.
     function isCurrentBaseFeeAcceptable() public view returns (bool) {
         if (baseFeeProvider == address(0)) {
             return manualBaseFeeBool;
@@ -88,7 +98,7 @@ contract BaseFeeOracle {
     /**
      * @notice Starts the 1st phase of the governance transfer.
      * @dev Throws if the caller is not current governance.
-     * @param _governance The next governance address
+     * @param _governance The next governance address.
      */
     function setPendingGovernance(address _governance) external {
         _onlyGovernance();
@@ -98,7 +108,7 @@ contract BaseFeeOracle {
     /**
      * @notice Completes the 2nd phase of the governance transfer.
      * @dev Throws if the caller is not the pending caller.
-     *  Emits a `NewGovernance` event.
+     *  Emits a NewGovernance event.
      */
     function acceptGovernance() external {
         require(msg.sender == pendingGovernance, "!authorized");
@@ -109,7 +119,7 @@ contract BaseFeeOracle {
     /**
      * @notice Sets the address used to pull the current network base fee.
      * @dev Throws if the caller is not current governance.
-     * @param _baseFeeProvider The network's baseFeeProvider address
+     * @param _baseFeeProvider The network's baseFeeProvider address.
      */
     function setBaseFeeProvider(address _baseFeeProvider) external {
         _onlyGovernance();
