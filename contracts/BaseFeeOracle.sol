@@ -7,7 +7,7 @@ interface IBaseFee {
 
 /**
  * @dev Interprets the base fee from our base fee provider
- *  contract to determine if a harvest is permissable.
+ *  contract to determine if a harvest is permissible.
  *
  * Version 0.1.0
  */
