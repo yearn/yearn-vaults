@@ -21,7 +21,7 @@ def arg_types(args):
         args = args[0]["components"]
 
     # NOTE: Need to filter out `name` and `internalType`,
-    #       it isn't useful and hurts our comparisions
+    #       it isn't useful and hurts our comparisons
     return [
         {k: v for k, v in arg.items() if k not in ("internalType", "name")}
         for arg in args

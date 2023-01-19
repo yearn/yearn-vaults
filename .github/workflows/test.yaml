@@ -90,7 +90,7 @@ jobs:
     - name: Compile Code
       run: brownie compile --size
 
-    - name: Run Splitted Tests
+    - name: Run Split Tests
       if: steps.check_test_durations.outputs.files_exists == 'true' 
       run: brownie test tests/functional --gas --coverage --splits 6 --group ${{ matrix.group }};
 
