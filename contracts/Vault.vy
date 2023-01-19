@@ -35,7 +35,7 @@
     https://github.com/iearn-finance/yearn-vaults/blob/main/SPECIFICATION.md
 """
 
-API_VERSION: constant(String[28]) = "0.4.5"
+API_VERSION: constant(String[28]) = "0.4.6"
 
 from vyper.interfaces import ERC20
 
@@ -360,7 +360,7 @@ def DOMAIN_SEPARATOR() -> bytes32:
     return self.domain_separator()
 
 @external
-def setName(name: String[42]):
+def setName(name: String[64]):
     """
     @notice
         Used to change the value of `name`.
@@ -373,7 +373,7 @@ def setName(name: String[42]):
 
 
 @external
-def setSymbol(symbol: String[20]):
+def setSymbol(symbol: String[32]):
     """
     @notice
         Used to change the value of `symbol`.
