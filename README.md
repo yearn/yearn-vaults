@@ -14,7 +14,7 @@ on Ethereum.
 
 To run the project you need:
 
-- Python 3.8 local development environment and Node.js 10.x development environment for Ganache.
+- Python 3.9 local development environment and Node.js 10.x development environment for Ganache.
 - Brownie local environment setup. See instructions for how to install it
   [here](https://eth-brownie.readthedocs.io/en/stable/install.html).
 - Local env variables for [Etherscan API](https://etherscan.io/apis) and
@@ -57,13 +57,13 @@ Any command `in code blocks` is meant to be executed from a Mac/Linux terminal o
    - If you're using the WSL
      - Wait to install Solidity & Vyper, you'll do this in a later step
      - Install [Remote - WSL](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl)
-3. Install [Python 3.8](https://www.python.org/downloads/release/python-380/)
+3. Install [Python 3.9](https://www.python.org/downloads/release/python-390/)
    - Linux: Refer to your distro documentation
-   - [Mac installer](https://www.python.org/ftp/python/3.8.0/python-3.8.0-macosx10.9.pkg)
-   - [Windows installer](https://www.python.org/ftp/python/3.8.0/python-3.8.0-amd64.exe)
+   - [Mac installer](https://www.python.org/ftp/python/3.9.0/python-3.9.0-macosx10.9.pkg)
+   - [Windows installer](https://www.python.org/ftp/python/3.9.0/python-3.9.0-amd64.exe)
 4. [Setup Brownie](https://github.com/eth-brownie/brownie)
    - `python3 -m pip install --user pipx`
-     - Note, if get you an error to the effect of python3 not being installed or recognized, run `python --version`, if it returns back something like `Python 3.8.x` then just replace `python3` with `python` for all python commands in these instructions
+     - Note, if get you an error to the effect of python3 not being installed or recognized, run `python --version`, if it returns back something like `Python 3.9.x` then just replace `python3` with `python` for all python commands in these instructions
    - `python3 -m pipx ensurepath`
    - `pipx install eth-brownie`
      - If you're on Windows (pure Windows, not WSL), you'll need to install the [C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) before executing this
