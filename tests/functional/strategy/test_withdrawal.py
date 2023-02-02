@@ -1,7 +1,7 @@
 import brownie
 
 
-def test_withdraw(chain, gov, token, vault, strategy, rando):
+def test_withdraw(impersonate, chain, gov, token, vault, strategy, rando):
     token.approve(vault, token.balanceOf(gov), {"from": gov})
     vault.deposit(token.balanceOf(gov) // 2, {"from": gov})
     chain.sleep(8640)
@@ -9,7 +9,8 @@ def test_withdraw(chain, gov, token, vault, strategy, rando):
     assert strategy.estimatedTotalAssets() > 0
 
     balance = strategy.estimatedTotalAssets()
-    strategy.withdraw(balance // 2, {"from": vault.address})
+    with impersonate(vault):
+        strategy.withdraw(balance // 2, {"from": vault.address})
     # NOTE: This may be +1 more than just dividing it
     assert strategy.estimatedTotalAssets() == balance - balance // 2
 

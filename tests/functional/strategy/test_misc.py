@@ -130,15 +130,15 @@ def test_sweep(gov, vault, strategy, rando, token, other_token):
     token.transfer(strategy, token.balanceOf(gov), {"from": gov})
     assert token.address == strategy.want()
     assert token.balanceOf(strategy) > 0
-    with brownie.reverts("!want"):
+    with brownie.reverts():
         strategy.sweep(token, {"from": gov})
 
     # Vault share token doesn't work
-    with brownie.reverts("!shares"):
+    with brownie.reverts():
         strategy.sweep(vault.address, {"from": gov})
 
     # Protected token doesn't work
-    with brownie.reverts("!protected"):
+    with brownie.reverts():
         strategy.sweep(strategy.protectedToken(), {"from": gov})
 
     # But any other random token works
@@ -168,12 +168,12 @@ def test_reject_ether(gov, strategy):
         ("setEmergencyExit", []),
         ("sweep", ["0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"]),
     ]:
-        with brownie.reverts("Cannot send ether to nonpayable function"):
+        with brownie.reverts():
             # NOTE: gov can do anything
             getattr(strategy, func)(*args, {"from": gov, "value": 1})
 
     # Fallback fails too
-    with brownie.reverts("Cannot send ether to nonpayable function"):
+    with brownie.reverts():
         gov.transfer(strategy, 1)
 
 

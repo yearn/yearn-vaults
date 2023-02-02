@@ -34,7 +34,7 @@ def other_token(gov, Token):
     yield gov.deploy(Token, 18)
 
 
-def test_liquidation_after_hack(chain, gov, vault, token, TestStrategy):
+def test_liquidation_after_hack(impersonate, gov, vault, token, TestStrategy):
     # Deposit into vault
     token.approve(vault, MAX_UINT256, {"from": gov})
     vault.deposit(1000, {"from": gov})
@@ -61,7 +61,8 @@ def test_liquidation_after_hack(chain, gov, vault, token, TestStrategy):
     assert loss <= amountToWithdraw
 
     # Liquidate strategy
-    strategy.withdraw(amountToWithdraw, {"from": vault})
+    with impersonate(vault):
+        strategy.withdraw(amountToWithdraw, {"from": vault})
 
 
 @pytest.fixture
@@ -471,7 +472,7 @@ def test_addStategyToQueue(
         vault.addStrategyToQueue(strategy, {"from": gov})
 
 
-def test_reporting(vault, token, strategy, gov, rando):
+def test_reporting(impersonate, vault, token, strategy, gov, rando):
     # Not just anyone can call `Vault.report()`
     with brownie.reverts():
         vault.report(0, 0, 0, {"from": rando})
@@ -489,10 +490,13 @@ def test_reporting(vault, token, strategy, gov, rando):
     assert debt == 0
     assert loss >= debt
     with brownie.reverts():
-        vault.report(0, loss, 0, {"from": strategy})
+        with impersonate(strategy):
+            vault.report(0, loss, 0, {"from": strategy})
 
 
-def test_reporting_gains_without_fee(chain, vault, token, strategy, gov, rando):
+def test_reporting_gains_without_fee(
+    impersonate, chain, vault, token, strategy, gov, rando
+):
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
     vault.addStrategy(strategy, 100, 10, 20, 1000, {"from": gov})
@@ -502,10 +506,12 @@ def test_reporting_gains_without_fee(chain, vault, token, strategy, gov, rando):
 
     # Can't lie about total available to withdraw
     with brownie.reverts():
-        vault.report(gain, 0, 0, {"from": strategy})
+        with impersonate(strategy):
+            vault.report(gain, 0, 0, {"from": strategy})
 
     token.transfer(strategy, gain, {"from": gov})
-    vault.report(gain, 0, 0, {"from": strategy})
+    with impersonate(strategy):
+        vault.report(gain, 0, 0, {"from": strategy})
 
 
 def test_withdrawalQueue(chain, gov, management, vault, strategy, other_strategy):

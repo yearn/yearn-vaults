@@ -63,7 +63,7 @@ def test_losses(chain, vault, strategy, gov, token):
     assert params["totalDebt"] == 0
 
 
-def test_total_loss(chain, vault, strategy, gov, token):
+def test_total_loss(impersonate, chain, vault, strategy, gov, token):
     vault.addStrategy(strategy, 10_000, 0, 2**256 - 1, 1_000, {"from": gov})
     token.approve(vault, 2**256 - 1, {"from": gov})
     vault.deposit(5000, {"from": gov})
@@ -71,7 +71,8 @@ def test_total_loss(chain, vault, strategy, gov, token):
     assert token.balanceOf(strategy) == 5000
 
     # send all our tokens back to the token contract
-    token.transfer(token, token.balanceOf(strategy), {"from": strategy})
+    with impersonate(strategy):
+        token.transfer(token, token.balanceOf(strategy), {"from": strategy})
 
     chain.sleep(1)
     strategy.harvest({"from": gov})
@@ -81,7 +82,9 @@ def test_total_loss(chain, vault, strategy, gov, token):
     assert params["debtRatio"] == 0
 
 
-def test_loss_should_be_removed_from_locked_profit(chain, vault, strategy, gov, token):
+def test_loss_should_be_removed_from_locked_profit(
+    impersonate, chain, vault, strategy, gov, token
+):
     vault.setLockedProfitDegradation(1e10, {"from": gov})
 
     vault.addStrategy(strategy, 1000, 0, 1000, 0, {"from": gov})
@@ -96,7 +99,8 @@ def test_loss_should_be_removed_from_locked_profit(chain, vault, strategy, gov, 
 
     assert vault.lockedProfit() == 90  # 100 - performance fees
 
-    token.transfer(token, 40, {"from": strategy})
+    with impersonate(strategy):
+        token.transfer(token, 40, {"from": strategy})
     chain.sleep(1)
     strategy.harvest({"from": gov})
     assert vault.lockedProfit() == 50
