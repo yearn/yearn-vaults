@@ -33,7 +33,7 @@ jobs:
     - name: Setup node.js
       uses: actions/setup-node@v1
       with:
-        node-version: '14.x'
+        node-version: '16.x'
 
     - name: Install ganache
       run: npm install -g ganache
