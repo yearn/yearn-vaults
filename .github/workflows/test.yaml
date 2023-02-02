@@ -12,13 +12,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-
   functional:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-         group: [1, 2, 3, 4, 5, 6]
-
+         group: ["base_fee_oracle", "registry", "strategy", "vault"]
     steps:
     - uses: actions/checkout@v1
 
@@ -33,10 +31,10 @@ jobs:
     - name: Setup node.js
       uses: actions/setup-node@v1
       with:
-        node-version: '14.x'
+        node-version: '16.x'
 
-    - name: Install ganache
-      run: npm install -g ganache
+    - name: Install Foundry
+      uses: foundry-rs/foundry-toolchain@v1
 
     - name: Set up python 3.8
       uses: actions/setup-python@v2
@@ -59,45 +57,18 @@ jobs:
           ${{ runner.os }}-pip-${{ hashFiles('**/requirements-dev.txt') }}
           ${{ runner.os }}-pip-
 
-    - name: Get Month
-      id: get-month
-      run: echo "::set-output name=date::$(/bin/date -u "+%Y%m")"
-      shell: bash
-
-    - name: Restore duration cache
-      uses: actions/cache@v2
-      id: test_durations_cache
-      with:
-        path: .test_durations
-        key: ${{ runner.os }}-${{ steps.get-month.outputs.date }}-test-durations-cache-
-  
-    - name: Check file existence
-      id: check_test_durations
-      uses: andstor/file-existence-action@v1
-      with:
-        files: .test_durations
-
-    - name: cat
-      if: steps.check_test_durations.outputs.files_exists == 'true'
-      run: cat .test_durations
-
     - name: Install python dependencies
       run: pip install -r requirements-dev.txt
-    
-    - name: Install pytest-split 
-      run: pip install pytest-split
 
     - name: Compile Code
       run: brownie compile --size
 
-    - name: Run Splitted Tests
-      if: steps.check_test_durations.outputs.files_exists == 'true' 
-      run: brownie test tests/functional --gas --coverage --splits 6 --group ${{ matrix.group }};
+    - name: start anvil
+      run: anvil --port 8545 & # test hang if started from brownie
 
-    - name: Run build test_duration
-      if: steps.check_test_durations.outputs.files_exists == 'false' # has to run on all, otherwise the first one that finishes creates an empty cache and lock the cache for others
-      id: build_cache_duration
-      run: brownie test tests/functional --store-durations --gas --coverage
+    - name: Run test functional
+      id: test_functional
+      run: brownie test tests/functional/${{ matrix.group }} --network anvil 
 
   integration:
     runs-on: ubuntu-latest
@@ -116,7 +87,7 @@ jobs:
     - name: Setup node.js
       uses: actions/setup-node@v1
       with:
-        node-version: '12.x'
+        node-version: '16.x'
 
     - name: Install ganache
       run: npm install -g ganache-cli@6.12.1

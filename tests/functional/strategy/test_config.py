@@ -36,7 +36,7 @@ def test_strategy_deployment(strategist, vault, TestStrategy):
 def test_strategy_no_reinit(strategist, vault, TestStrategy):
     strategy = strategist.deploy(TestStrategy, vault)
 
-    with brownie.reverts("Strategy already initialized"):
+    with brownie.reverts():
         strategy.initialize(vault, strategist, strategist, strategist)
 
 

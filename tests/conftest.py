@@ -7,7 +7,15 @@ import yaml
 from eth_account import Account
 from eth_account.messages import encode_structured_data
 
-from brownie import compile_source, Token, Vault, web3, chain
+from brownie import compile_source, Token, Vault, web3, chain, network
+
+
+@pytest.fixture(scope="function", autouse=True)
+def max_fee(web3):
+    if chain.id == 31337:
+        network.max_fee("5 gwei")
+        network.priority_fee("1 gwei")
+
 
 PACKAGE_VERSION = yaml.safe_load(
     (Path(__file__).parents[1] / "ethpm-config.yaml").read_text()
@@ -77,6 +85,7 @@ def patch_vault_version():
             return Vault
         else:
             source = VAULT_SOURCE_CODE.replace(PACKAGE_VERSION, version)
+            print(source)
             return compile_source(source).Vyper
 
     return patch_vault_version
@@ -197,3 +206,26 @@ def sign_vault_permit():
 @pytest.fixture(scope="function", autouse=True)
 def shared_setup(fn_isolation):
     pass
+
+
+@pytest.fixture(scope="module", autouse=True)
+def impersonate():
+    yield Impersonate
+
+
+class Impersonate:
+    def __init__(self, account):
+        self.account = account
+
+    def __enter__(self):
+        if chain.id == 31337:
+            web3.provider.make_request(
+                "anvil_impersonateAccount", [self.account.address]
+            )
+            web3.provider.make_request(
+                "anvil_setBalance", [self.account.address, 10**19]
+            )
+
+    def __exit__(self, *args):
+        if chain.id == 31337:
+            web3.provider.make_request("anvil_stopImpersonatingAccount", [])
