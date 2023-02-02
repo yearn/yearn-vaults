@@ -68,10 +68,10 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Set up python 3.8
+      - name: Set up python 3.9
         uses: actions/setup-python@v2
         with:
-          python-version: 3.8
+          python-version: 3.9
 
       - name: Set pip cache directory path
         id: pip-cache-dir-path
