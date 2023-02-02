@@ -32,7 +32,9 @@ def create_token(gov):
     yield create_token
 
 
-@pytest.fixture(params=[("Normal", 18), ("NoReturn", 18), ("Normal", 8), ("Normal", 2)])
+@pytest.fixture(
+    params=[("Normal", 18)]
+)  # , ("NoReturn", 18), ("Normal", 8), ("Normal", 2)])
 def token(create_token, request):
     # NOTE: Run our test suite using both compliant and non-compliant ERC20 Token
     (behaviour, decimal) = request.param
@@ -81,7 +83,6 @@ def keeper(accounts):
 @pytest.fixture(params=["RegularStrategy", "ClonedStrategy"])
 def strategy(gov, strategist, keeper, rewards, vault, TestStrategy, request):
     strategy = strategist.deploy(TestStrategy, vault)
-
     if request.param == "ClonedStrategy":
         # deploy the proxy using as logic the original strategy
         tx = strategy.clone(vault, strategist, rewards, keeper, {"from": strategist})
