@@ -63,6 +63,9 @@ jobs:
     - name: Compile Code
       run: brownie compile --size
 
+    - name: start anvil
+      run: anvil --port 8545 & # test hang if started from brownie
+
     - name: Run test functional
       id: test_functional
       run: brownie test tests/functional/${{ matrix.group }} --network anvil 
