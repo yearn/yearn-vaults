@@ -7,7 +7,7 @@ interface IBaseFee {
 
 /**
  * @dev Interprets the base fee from our base fee provider
- *  contract to determine if a harvest is permissable.
+ *  contract to determine if a harvest is permissible.
  *
  * Version 0.1.0
  */
@@ -18,9 +18,10 @@ contract BaseFeeOracle {
 
     address public governance; /// @notice Governance can grant and revoke access to the setter
     address public pendingGovernance; /// @notice New address must be set by current gov and then accept to transfer power.
+    bool public manualBaseFeeBool; /// @notice Use this if our network hasn't implemented the base fee method yet
+
     mapping(address => bool) public authorizedAddresses; /// @notice Addresses that can set the max acceptable base fee
 
-    bool public manualBaseFeeBool; /// @notice Use this if our network hasn't implemented the base fee method yet
 
     constructor() {
         governance = msg.sender; // our deployer should be gov, they can set up the rest
