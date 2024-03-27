@@ -691,7 +691,7 @@ abstract contract BaseStrategy {
      */
     function tendTrigger(uint256 callCostInWei) public view virtual returns (bool) {
         // We usually don't need tend, but if there are positions that need
-        // active maintainence, overriding this function is how you would
+        // active maintenance, overriding this function is how you would
         // signal for that.
         // If your implementation uses the cost of the call in want, you can
         // use uint256 callCost = ethToWant(callCostInWei);
